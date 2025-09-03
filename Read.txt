@@ -1,0 +1,30 @@
+Permission Checking
+// Check if user can create patients
+if ($user->hasPermissionInClinic('patients.create', $clinicId)) {
+    // Allow patient creation
+}
+
+// Check multiple permissions
+if ($user->hasAnyPermissionInClinic(['patients.edit', 'patients.manage'], $clinicId)) {
+    // User can edit patients
+}
+========
+Role Management
+// Create custom role
+$role = Role::create([
+    'name' => 'senior_doctor',
+    'description' => 'Senior doctor with additional privileges'
+]);
+
+// Assign permissions
+$role->permissions()->attach([
+    Permission::where('slug', 'patients.manage')->first()->id,
+    Permission::where('slug', 'reports.view')->first()->id,
+]);
+=======
+// Single permission check
+$user->hasPermissionInClinic('patients.create', $clinicId)
+
+// Multiple permission checks
+$user->hasAnyPermissionInClinic(['patients.edit', 'patients.manage'], $clinicId)
+$user->hasAllPermissionsInClinic(['patients.view', 'patients.edit'], $clinicId)
