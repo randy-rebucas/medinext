@@ -6,6 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -50,5 +52,33 @@ class User extends Authenticatable
             'phone' => 'string',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the roles associated with the user.
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'user_clinic_roles')
+                    ->withPivot('clinic_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Get the user clinic roles.
+     */
+    public function userClinicRoles(): HasMany
+    {
+        return $this->hasMany(UserClinicRole::class);
+    }
+
+    /**
+     * Get the clinics associated with the user.
+     */
+    public function clinics(): BelongsToMany
+    {
+        return $this->belongsToMany(Clinic::class, 'user_clinic_roles')
+                    ->withPivot('role_id')
+                    ->withTimestamps();
     }
 }
