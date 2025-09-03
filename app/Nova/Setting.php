@@ -12,6 +12,7 @@ use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
 use App\Nova\Actions\BulkUpdate;
 use App\Nova\Filters\StatusFilter;

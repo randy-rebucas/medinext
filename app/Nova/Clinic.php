@@ -10,6 +10,7 @@ use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
 use App\Nova\Actions\BulkUpdate;
 use App\Nova\Filters\StatusFilter;

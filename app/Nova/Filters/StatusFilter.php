@@ -24,7 +24,13 @@ class StatusFilter extends Filter
      */
     public function apply(Request $request, $query, $value)
     {
-        return $query->where('status', $value);
+        if ($value === 'active') {
+            return $query->where('is_active', true);
+        } elseif ($value === 'inactive') {
+            return $query->where('is_active', false);
+        }
+        
+        return $query;
     }
 
     /**
@@ -38,9 +44,6 @@ class StatusFilter extends Filter
         return [
             'Active' => 'active',
             'Inactive' => 'inactive',
-            'Pending' => 'pending',
-            'Completed' => 'completed',
-            'Cancelled' => 'cancelled',
         ];
     }
 }

@@ -67,7 +67,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                 MenuSection::make('System Management', [
                     MenuItem::resource(\App\Nova\Setting::class),
                     MenuItem::resource(\App\Nova\FileAsset::class),
-                    MenuItem::resource(\App\Nova\ActivityLog::class),
+                    MenuItem::resource(\App\Nova\ActivityLog::class)
                 ])->icon('cog')->collapsable(),
             ];
         });
@@ -175,7 +175,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             // System Management Group
             \App\Nova\Setting::class,
             \App\Nova\FileAsset::class,
-            \App\Nova\ActivityLog::class,
+            \App\Nova\ActivityLog::class
         ];
     }
 

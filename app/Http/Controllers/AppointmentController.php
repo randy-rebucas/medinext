@@ -9,6 +9,7 @@ use App\Models\Clinic;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
 
 class AppointmentController extends Controller
 {
@@ -17,7 +18,15 @@ class AppointmentController extends Controller
      */
     public function index(): View
     {
-        $appointments = Appointment::with(['patient', 'doctor', 'clinic', 'room'])
+        $user = Auth::user();
+        $clinicId = session('current_clinic_id') ?? $user->clinics->first()?->id;
+
+        if (!$clinicId) {
+            abort(403, 'No clinic access.');
+        }
+
+        $appointments = Appointment::where('clinic_id', $clinicId)
+            ->with(['patient', 'doctor', 'clinic', 'room'])
             ->orderBy('start_at', 'asc')
             ->paginate(12);
 

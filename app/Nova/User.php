@@ -8,14 +8,8 @@ use Laravel\Nova\Fields\Gravatar;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Password;
 use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\BelongsToMany;
-use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use App\Nova\Actions\ExportData;
-use App\Nova\Actions\BulkUpdate;
-use App\Nova\Filters\StatusFilter;
-use App\Nova\Filters\DateRangeFilter;
-use App\Nova\Lenses\ActiveRecords;
+use Laravel\Nova\Resource;
 
 class User extends Resource
 {
@@ -45,26 +39,6 @@ class User extends Resource
     ];
 
     /**
-     * Get the displayable label of the resource.
-     *
-     * @return string
-     */
-    public static function label()
-    {
-        return 'Users';
-    }
-
-    /**
-     * Get the displayable singular label of the resource.
-     *
-     * @return string
-     */
-    public static function singularLabel()
-    {
-        return 'User';
-    }
-
-    /**
      * Get the fields displayed by the resource.
      *
      * @return array<int, \Laravel\Nova\Fields\Field|\Laravel\Nova\Panel|\Laravel\Nova\ResourceTool|\Illuminate\Http\Resources\MergeValue>
@@ -90,12 +64,6 @@ class User extends Resource
                 ->onlyOnForms()
                 ->creationRules($this->passwordRules())
                 ->updateRules($this->optionalPasswordRules()),
-
-            BelongsToMany::make('Roles', 'roles', Role::class)
-                ->searchable()
-                ->showCreateRelationButton(),
-
-            HasMany::make('User Clinic Roles', 'userClinicRoles'),
         ];
     }
 
@@ -116,10 +84,7 @@ class User extends Resource
      */
     public function filters(NovaRequest $request): array
     {
-        return [
-            new StatusFilter,
-            new DateRangeFilter,
-        ];
+        return [];
     }
 
     /**
@@ -129,9 +94,7 @@ class User extends Resource
      */
     public function lenses(NovaRequest $request): array
     {
-        return [
-            new ActiveRecords,
-        ];
+        return [];
     }
 
     /**
@@ -141,9 +104,6 @@ class User extends Resource
      */
     public function actions(NovaRequest $request): array
     {
-        return [
-            new ExportData,
-            new BulkUpdate,
-        ];
+        return [];
     }
 }

@@ -23,9 +23,7 @@ class ActiveRecords extends Lens
     public static function query(LensRequest $request, $query)
     {
         return $request->withOrdering($request->withFilters(
-            $query->where('active', true)
-                  ->orWhere('status', 'active')
-                  ->orWhere('is_system_role', false)
+            $query->where('is_active', true)
         ));
     }
 
@@ -40,7 +38,8 @@ class ActiveRecords extends Lens
         return [
             ID::make(__('ID'), 'id')->sortable(),
             Text::make('Name')->sortable(),
-            Boolean::make('Active')->sortable(),
+            Text::make('Email')->sortable(),
+            Boolean::make('Is Active', 'is_active')->sortable(),
             DateTime::make('Created At')->sortable(),
         ];
     }

@@ -58,9 +58,9 @@ class BulkUpdate extends Action
         return [
             Select::make('Field')
                 ->options([
-                    'status' => 'Status',
-                    'active' => 'Active',
-                    'is_system_role' => 'Is System Role',
+                    'is_active' => 'Is Active',
+                    'name' => 'Name',
+                    'email' => 'Email',
                 ])
                 ->rules('required'),
                 
