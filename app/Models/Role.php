@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Role extends Model
 {
@@ -19,6 +20,40 @@ class Role extends Model
         'is_system_role' => 'boolean',
         'permissions_config' => 'array',
     ];
+
+    /**
+     * Boot the model
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Add any global scopes if needed
+    }
+
+    /**
+     * Scope to filter by system roles
+     */
+    public function scopeSystemRoles(Builder $query): Builder
+    {
+        return $query->where('is_system_role', true);
+    }
+
+    /**
+     * Scope to filter by non-system roles
+     */
+    public function scopeNonSystemRoles(Builder $query): Builder
+    {
+        return $query->where('is_system_role', false);
+    }
+
+    /**
+     * Scope to filter by role name
+     */
+    public function scopeByName(Builder $query, string $name): Builder
+    {
+        return $query->where('name', $name);
+    }
 
     public function userClinicRoles(): HasMany
     {
@@ -209,5 +244,138 @@ class Role extends Model
         ];
 
         return $defaultPermissions[$this->name] ?? [];
+    }
+
+    /**
+     * Get role capabilities description
+     */
+    public function getCapabilitiesDescriptionAttribute(): string
+    {
+        $capabilities = [
+            'admin' => 'Full system access and management - can manage all clinics, users, and system settings',
+            'doctor' => 'Manage appointments, medical records, prescriptions - full clinical workflow access',
+            'patient' => 'Book appointments, view records, download prescriptions - patient self-service access',
+            'receptionist' => 'Schedule appointments, manage patient check-ins, handle billing support - front desk operations',
+            'medrep' => 'Manage product details, schedule doctor meetings, track interactions - medical representative operations',
+        ];
+
+        return $capabilities[$this->name] ?? 'Custom role with specific permissions';
+    }
+
+    /**
+     * Get role security level
+     */
+    public function getSecurityLevelAttribute(): string
+    {
+        $levels = [
+            'superadmin' => 'Critical',
+            'admin' => 'High',
+            'doctor' => 'Medium-High',
+            'receptionist' => 'Medium',
+            'medrep' => 'Medium',
+            'patient' => 'Low',
+        ];
+
+        return $levels[$this->name] ?? 'Custom';
+    }
+
+    /**
+     * Check if role can be modified
+     */
+    public function canBeModified(): bool
+    {
+        return !$this->is_system_role;
+    }
+
+    /**
+     * Check if role can be deleted
+     */
+    public function canBeDeleted(): bool
+    {
+        return !$this->is_system_role && !$this->userClinicRoles()->exists();
+    }
+
+    /**
+     * Get role usage statistics
+     */
+    public function getUsageStatisticsAttribute(): array
+    {
+        return [
+            'total_users' => $this->userClinicRoles()->count(),
+            'total_clinics' => $this->userClinicRoles()->distinct('clinic_id')->count(),
+            'is_system_role' => $this->is_system_role,
+            'permission_count' => $this->permissions()->count(),
+        ];
+    }
+
+    /**
+     * Validate role permissions
+     */
+    public function validatePermissions(): array
+    {
+        $errors = [];
+        $permissions = $this->permissions;
+
+        // Check for conflicting permissions
+        $conflicts = [
+            'patients.delete' => ['patients.view'],
+            'appointments.delete' => ['appointments.view'],
+            'prescriptions.delete' => ['prescriptions.view'],
+        ];
+
+        foreach ($conflicts as $permission => $required) {
+            if ($this->hasPermission($permission)) {
+                foreach ($required as $req) {
+                    if (!$this->hasPermission($req)) {
+                        $errors[] = "Permission '{$permission}' requires '{$req}'";
+                    }
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Get recommended permissions for this role
+     */
+    public function getRecommendedPermissionsAttribute(): array
+    {
+        $recommendations = [
+            'doctor' => [
+                'schedule.manage' => 'Manage personal schedule',
+                'reports.export' => 'Export patient reports',
+                'billing.view' => 'View billing information',
+            ],
+            'receptionist' => [
+                'patients.delete' => 'Remove patient records',
+                'reports.export' => 'Export appointment reports',
+                'settings.view' => 'View clinic settings',
+            ],
+            'medrep' => [
+                'reports.export' => 'Export interaction reports',
+                'schedule.manage' => 'Manage meeting schedule',
+                'products.delete' => 'Remove product records',
+            ],
+        ];
+
+        return $recommendations[$this->name] ?? [];
+    }
+
+    /**
+     * Check if role has minimum required permissions
+     */
+    public function hasMinimumPermissions(): bool
+    {
+        $minimumPermissions = [
+            'admin' => ['clinics.view', 'users.view'],
+            'doctor' => ['patients.view', 'appointments.view'],
+            'patient' => ['appointments.view', 'profile.edit'],
+            'receptionist' => ['patients.view', 'appointments.view'],
+            'medrep' => ['doctors.view', 'schedule.view'],
+        ];
+
+        $required = $minimumPermissions[$this->name] ?? [];
+        return $this->hasAllPermissions($required);
     }
 }

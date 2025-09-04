@@ -11,6 +11,8 @@ use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\DateTime;
+use Laravel\Nova\Fields\Badge;
+use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
@@ -65,6 +67,16 @@ class Role extends Resource
     }
 
     /**
+     * Get the URI key for the resource.
+     *
+     * @return string
+     */
+    public static function uriKey()
+    {
+        return 'roles';
+    }
+
+    /**
      * Get the fields displayed by the resource.
      *
      * @return array<int, \Laravel\Nova\Fields\Field>
@@ -76,11 +88,33 @@ class Role extends Resource
 
             Text::make('Name')
                 ->sortable()
-                ->rules('required', 'max:255', 'unique:roles,name,{{resourceId}}'),
+                ->rules('required', 'max:255', 'unique:roles,name,{{resourceId}}')
+                ->help('Role identifier (e.g., admin, doctor, patient)'),
+
+            Text::make('Display Name', function () {
+                return $this->display_name;
+            })->onlyOnDetail(),
 
             Textarea::make('Description')
                 ->nullable()
-                ->hideFromIndex(),
+                ->hideFromIndex()
+                ->help('Detailed description of the role\'s purpose and responsibilities'),
+
+            Heading::make('Role Information'),
+
+            Badge::make('Security Level', function () {
+                return $this->security_level;
+            })->map([
+                'Critical' => 'danger',
+                'High' => 'warning',
+                'Medium-High' => 'info',
+                'Medium' => 'info',
+                'Low' => 'success',
+            ])->sortable(),
+
+            Text::make('Capabilities', function () {
+                return $this->capabilities_description;
+            })->onlyOnDetail(),
 
             Boolean::make('Is System Role', 'is_system_role')
                 ->sortable()
@@ -89,15 +123,45 @@ class Role extends Resource
                     return $this->is_system_role;
                 }),
 
+            Heading::make('Permissions'),
+
+            BelongsToMany::make('Permissions')
+                ->searchable()
+                ->showCreateRelationButton()
+                ->help('Assign permissions to this role'),
+
             Code::make('Permissions Config', 'permissions_config')
                 ->json()
                 ->nullable()
                 ->hideFromIndex()
                 ->help('JSON configuration for role permissions'),
 
-            BelongsToMany::make('Permissions')
-                ->searchable()
-                ->showCreateRelationButton(),
+            Heading::make('Usage Statistics'),
+
+            Text::make('Total Users', function () {
+                return $this->usage_statistics['total_users'] ?? 0;
+            })->onlyOnDetail(),
+
+            Text::make('Total Clinics', function () {
+                return $this->usage_statistics['total_clinics'] ?? 0;
+            })->onlyOnDetail(),
+
+            Text::make('Permission Count', function () {
+                return $this->usage_statistics['permission_count'] ?? 0;
+            })->onlyOnDetail(),
+
+            Heading::make('Validation'),
+
+            Text::make('Minimum Permissions', function () {
+                return $this->hasMinimumPermissions() ? 'Valid' : 'Invalid';
+            })->onlyOnDetail(),
+
+            Text::make('Permission Validation', function () {
+                $errors = $this->validatePermissions();
+                return empty($errors) ? 'Valid' : 'Has ' . count($errors) . ' issues';
+            })->onlyOnDetail(),
+
+            Heading::make('Relationships'),
 
             HasMany::make('User Clinic Roles', 'userClinicRoles'),
 
@@ -124,7 +188,7 @@ class Role extends Resource
     /**
      * Get the filters available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Filters\Filter>
+     * @return array<int, \Laravel\Nova\Filter>
      */
     public function filters(NovaRequest $request): array
     {
@@ -137,7 +201,7 @@ class Role extends Resource
     /**
      * Get the lenses available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Lenses\Lens>
+     * @return array<int, \Laravel\Nova\Lens>
      */
     public function lenses(NovaRequest $request): array
     {
@@ -149,7 +213,7 @@ class Role extends Resource
     /**
      * Get the actions available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Actions\Action>
+     * @return array<int, \Laravel\Nova\Action>
      */
     public function actions(NovaRequest $request): array
     {

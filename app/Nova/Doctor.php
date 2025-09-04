@@ -10,6 +10,10 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\DateTime;
+use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\Image;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
@@ -61,6 +65,16 @@ class Doctor extends Resource
     public static function singularLabel()
     {
         return 'Doctor';
+     }
+
+    /**
+     * Get the URI key for the resource.
+     *
+     * @return string
+     */
+    public static function uriKey()
+    {
+        return 'doctors';
     }
 
     /**
@@ -76,12 +90,14 @@ class Doctor extends Resource
             BelongsTo::make('User')
                 ->sortable()
                 ->searchable()
-                ->rules('required', 'exists:users,id'),
+                ->rules('required', 'exists:users,id')
+                ->help('Select the user account for this doctor'),
 
             BelongsTo::make('Clinic')
                 ->sortable()
                 ->searchable()
-                ->rules('required', 'exists:clinics,id'),
+                ->rules('required', 'exists:clinics,id')
+                ->help('Select the clinic where this doctor works'),
 
             Select::make('Specialty')
                 ->options([
@@ -104,17 +120,37 @@ class Doctor extends Resource
                     'Urology' => 'Urology'
                 ])
                 ->sortable()
-                ->rules('required'),
+                ->rules('required')
+                ->help('Doctor\'s medical specialty'),
 
             Text::make('License Number', 'license_no')
                 ->sortable()
                 ->rules('required', 'max:100', 'unique:doctors,license_no,{{resourceId}}')
                 ->help('Medical license number'),
 
-            Text::make('Signature URL', 'signature_url')
+            Boolean::make('Active', 'is_active')
+                ->default(true)
+                ->sortable()
+                ->help('Whether this doctor is currently active'),
+
+            Number::make('Consultation Fee', 'consultation_fee')
+                ->step(0.01)
                 ->nullable()
                 ->hideFromIndex()
-                ->help('URL to doctor\'s digital signature'),
+                ->help('Standard consultation fee for this doctor'),
+
+            Code::make('Availability Schedule', 'availability_schedule')
+                ->language('json')
+                ->nullable()
+                ->hideFromIndex()
+                ->help('Weekly availability schedule in JSON format'),
+
+            Image::make('Signature', 'signature_url')
+                ->disk('public')
+                ->path('doctors/signatures')
+                ->nullable()
+                ->hideFromIndex()
+                ->help('Digital signature image'),
 
             DateTime::make('Created At')
                 ->sortable()
@@ -124,11 +160,12 @@ class Doctor extends Resource
                 ->sortable()
                 ->hideFromForms(),
 
-            HasMany::make('Appointments'),
-            HasMany::make('Encounters'),
-            HasMany::make('Prescriptions'),
-            HasMany::make('Lab Results'),
-            HasMany::make('Medrep Visits', 'medrepVisits'),
+            // Relationships
+            HasMany::make('Appointments', 'appointments', Appointment::class),
+            HasMany::make('Encounters', 'encounters', Encounter::class),
+            HasMany::make('Prescriptions', 'prescriptions', Prescription::class),
+            HasMany::make('Lab Results', 'labResults', LabResult::class),
+            HasMany::make('Medrep Visits', 'medrepVisits', MedrepVisit::class),
         ];
     }
 
@@ -145,7 +182,7 @@ class Doctor extends Resource
     /**
      * Get the filters available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Filters\Filter>
+     * @return array<int, \Laravel\Nova\Filter>
      */
     public function filters(NovaRequest $request): array
     {
@@ -158,7 +195,7 @@ class Doctor extends Resource
     /**
      * Get the lenses available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Lenses\Lens>
+     * @return array<int, \Laravel\Nova\Lens>
      */
     public function lenses(NovaRequest $request): array
     {
@@ -170,7 +207,7 @@ class Doctor extends Resource
     /**
      * Get the actions available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Actions\Action>
+     * @return array<int, \Laravel\Nova\Action>
      */
     public function actions(NovaRequest $request): array
     {

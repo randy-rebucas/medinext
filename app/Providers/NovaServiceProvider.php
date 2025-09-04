@@ -3,8 +3,8 @@
 namespace App\Providers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Laravel\Fortify\Features;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Menu\MenuItem;
@@ -20,6 +20,9 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
     {
         parent::boot();
 
+        // Debug: Log that NovaServiceProvider is booting
+        Log::info('NovaServiceProvider is booting');
+
         // Customize Nova branding for medical clinic
         Nova::name('MediNext Admin');
 
@@ -28,12 +31,47 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
 
         // Enable breadcrumbs for better navigation
         Nova::withBreadcrumbs();
+        // Organize resources into logical menu groups
+        Nova::resources([
+
+            // User Management Group
+            \App\Nova\User::class,
+            \App\Nova\Role::class,
+            \App\Nova\Permission::class,
+            \App\Nova\UserClinicRole::class,
+
+            // Clinic Management Group
+            \App\Nova\Clinic::class,
+            \App\Nova\Room::class,
+
+            // Medical Staff Group
+            \App\Nova\Doctor::class,
+            \App\Nova\Medrep::class,
+            \App\Nova\MedrepVisit::class,
+
+            // Patient Management Group
+            \App\Nova\Patient::class,
+            \App\Nova\Encounter::class,
+
+            // Clinical Services Group
+            \App\Nova\Appointment::class,
+            \App\Nova\Prescription::class,
+            \App\Nova\PrescriptionItem::class,
+            \App\Nova\LabResult::class,
+
+            // System Management Group
+            \App\Nova\Setting::class,
+            \App\Nova\FileAsset::class,
+            \App\Nova\ActivityLog::class,
+        ]);
 
         // Customize Nova main menu
-        Nova::mainMenu(function (Request $request) {
+        Nova::mainMenu(function () {
             return [
+
                 MenuSection::dashboard(\App\Nova\Dashboards\Main::class)->icon('chart-bar'),
 
+                // User Management Group
                 MenuSection::make('User Management', [
                     MenuItem::resource(\App\Nova\User::class),
                     MenuItem::resource(\App\Nova\Role::class),
@@ -41,22 +79,26 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                     MenuItem::resource(\App\Nova\UserClinicRole::class),
                 ])->icon('users')->collapsable(),
 
+                // Clinic Management Group
                 MenuSection::make('Clinic Management', [
                     MenuItem::resource(\App\Nova\Clinic::class),
                     MenuItem::resource(\App\Nova\Room::class),
                 ])->icon('building-office')->collapsable(),
 
+                // Medical Staff Group
                 MenuSection::make('Medical Staff', [
                     MenuItem::resource(\App\Nova\Doctor::class),
                     MenuItem::resource(\App\Nova\Medrep::class),
                     MenuItem::resource(\App\Nova\MedrepVisit::class),
                 ])->icon('user-group')->collapsable(),
 
+                // Patient Management Group
                 MenuSection::make('Patient Management', [
                     MenuItem::resource(\App\Nova\Patient::class),
                     MenuItem::resource(\App\Nova\Encounter::class),
                 ])->icon('heart')->collapsable(),
 
+                // Clinical Services Group
                 MenuSection::make('Clinical Services', [
                     MenuItem::resource(\App\Nova\Appointment::class),
                     MenuItem::resource(\App\Nova\Prescription::class),
@@ -64,6 +106,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                     MenuItem::resource(\App\Nova\LabResult::class),
                 ])->icon('document-text')->collapsable(),
 
+                // System Management Group
                 MenuSection::make('System Management', [
                     MenuItem::resource(\App\Nova\Setting::class),
                     MenuItem::resource(\App\Nova\FileAsset::class),
@@ -71,6 +114,8 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                 ])->icon('cog')->collapsable(),
             ];
         });
+
+        Log::info('Nova resources organized into menu groups');
     }
 
     /**
@@ -126,15 +171,6 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
         ];
     }
 
-    /**
-     * Get the tools that should be listed in the Nova sidebar.
-     *
-     * @return array<int, \Laravel\Nova\Tool>
-     */
-    public function tools(): array
-    {
-        return [];
-    }
 
     /**
      * Get the resources that should be listed in the Nova sidebar.
@@ -143,7 +179,10 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
      */
     protected function resources(): array
     {
-        return [
+        // Debug: Log that resources method is being called
+        Log::info('NovaServiceProvider resources method called');
+
+        $resources = [
             // Dashboard
             \App\Nova\Dashboards\Main::class,
 
@@ -177,9 +216,22 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             \App\Nova\FileAsset::class,
             \App\Nova\ActivityLog::class
         ];
+        // Debug: Log the resources being returned
+        Log::info('NovaServiceProvider returning resources', ['count' => count($resources)]);
+
+        return $resources;
     }
 
 
+    /**
+     * Get the tools that should be listed in the Nova sidebar.
+     *
+     * @return array<int, \Laravel\Nova\Tool>
+     */
+    public function tools(): array
+    {
+        return [];
+    }
 
     /**
      * Register any application services.

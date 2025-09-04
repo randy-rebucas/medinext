@@ -9,6 +9,12 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\DateTime;
+use Laravel\Nova\Fields\Select;
+use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\Image;
+use Laravel\Nova\Fields\URL;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
@@ -63,6 +69,16 @@ class Clinic extends Resource
     }
 
     /**
+     * Get the URI key for the resource.
+     *
+     * @return string
+     */
+    public static function uriKey()
+    {
+        return 'clinics';
+    }
+
+    /**
      * Get the fields displayed by the resource.
      *
      * @return array<int, \Laravel\Nova\Fields\Field>
@@ -74,27 +90,68 @@ class Clinic extends Resource
 
             Text::make('Name')
                 ->sortable()
-                ->rules('required', 'max:255'),
+                ->rules('required', 'max:255')
+                ->help('Enter the clinic name'),
 
-            Textarea::make('Address')
+            Text::make('Slug')
                 ->nullable()
-                ->hideFromIndex(),
+                ->hideFromIndex()
+                ->help('URL-friendly identifier for the clinic'),
+
+            Select::make('Timezone')
+                ->options([
+                    'Asia/Manila' => 'Asia/Manila (Philippines)',
+                    'Asia/Tokyo' => 'Asia/Tokyo (Japan)',
+                    'Asia/Seoul' => 'Asia/Seoul (South Korea)',
+                    'Asia/Singapore' => 'Asia/Singapore',
+                    'Asia/Bangkok' => 'Asia/Bangkok (Thailand)',
+                    'Asia/Ho_Chi_Minh' => 'Asia/Ho_Chi_Minh (Vietnam)',
+                    'Asia/Jakarta' => 'Asia/Jakarta (Indonesia)',
+                    'Asia/Kuala_Lumpur' => 'Asia/Kuala_Lumpur (Malaysia)',
+                    'UTC' => 'UTC (Coordinated Universal Time)',
+                ])
+                ->default('Asia/Manila')
+                ->sortable()
+                ->rules('required'),
+
+            Image::make('Logo', 'logo_url')
+                ->disk('public')
+                ->path('clinics/logos')
+                ->nullable()
+                ->hideFromIndex()
+                ->help('Upload clinic logo (recommended: 200x200px)'),
 
             Text::make('Phone')
                 ->sortable()
-                ->rules('required', 'max:20'),
+                ->rules('required', 'max:20')
+                ->help('Primary contact phone number'),
 
             Text::make('Email')
                 ->sortable()
-                ->rules('required', 'email', 'max:254'),
+                ->rules('required', 'email', 'max:254')
+                ->help('Primary contact email address'),
 
-            Text::make('Website')
+            URL::make('Website')
                 ->nullable()
-                ->hideFromIndex(),
+                ->hideFromIndex()
+                ->help('Clinic website URL'),
 
             Textarea::make('Description')
                 ->nullable()
-                ->hideFromIndex(),
+                ->hideFromIndex()
+                ->help('Brief description of the clinic'),
+
+            Code::make('Address')
+                ->language('json')
+                ->nullable()
+                ->hideFromIndex()
+                ->help('Clinic address in JSON format (street, city, state, country)'),
+
+            Code::make('Settings')
+                ->language('json')
+                ->nullable()
+                ->hideFromIndex()
+                ->help('Clinic-specific settings and configuration'),
 
             DateTime::make('Created At')
                 ->sortable()
@@ -104,11 +161,12 @@ class Clinic extends Resource
                 ->sortable()
                 ->hideFromForms(),
 
-            HasMany::make('Patients'),
-            HasMany::make('Doctors'),
-            HasMany::make('Rooms'),
-            HasMany::make('Appointments'),
-            HasMany::make('User Clinic Roles', 'userClinicRoles'),
+            // Relationships
+            HasMany::make('Doctors', 'doctors', Doctor::class),
+            HasMany::make('Patients', 'patients', Patient::class),
+            HasMany::make('Rooms', 'rooms', Room::class),
+            HasMany::make('Appointments', 'appointments', Appointment::class),
+            HasMany::make('User Clinic Roles', 'userClinicRoles', UserClinicRole::class),
         ];
     }
 
@@ -125,7 +183,7 @@ class Clinic extends Resource
     /**
      * Get the filters available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Filters\Filter>
+     * @return array<int, \Laravel\Nova\Filter>
      */
     public function filters(NovaRequest $request): array
     {
@@ -138,7 +196,7 @@ class Clinic extends Resource
     /**
      * Get the lenses available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Lenses\Lens>
+     * @return array<int, \Laravel\Nova\Lens>
      */
     public function lenses(NovaRequest $request): array
     {
@@ -150,7 +208,7 @@ class Clinic extends Resource
     /**
      * Get the actions available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Actions\Action>
+     * @return array<int, \Laravel\Nova\Action>
      */
     public function actions(NovaRequest $request): array
     {
