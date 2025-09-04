@@ -33,7 +33,7 @@ class Patient extends Resource
      *
      * @var string
      */
-    public static $title = 'name';
+    public static $title = 'first_name';
 
     /**
      * The columns that should be searched.
@@ -41,7 +41,7 @@ class Patient extends Resource
      * @var array
      */
     public static $search = [
-        'id', 'name', 'email', 'phone', 'medical_record_number'
+        'id', 'first_name', 'last_name', 'code'
     ];
 
     /**
@@ -75,6 +75,30 @@ class Patient extends Resource
     }
 
     /**
+     * Build an "index" query for the given resource.
+     *
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public static function indexQuery(NovaRequest $request, $query)
+    {
+        return $query->with(['clinic', 'appointments', 'encounters']);
+    }
+
+    /**
+     * Build a "detail" query for the given resource.
+     *
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public static function detailQuery(NovaRequest $request, $query)
+    {
+        return $query->with(['clinic', 'appointments.doctor', 'encounters.doctor', 'prescriptions', 'labResults']);
+    }
+
+    /**
      * Get the fields displayed by the resource.
      *
      * @return array<int, \Laravel\Nova\Fields\Field>
@@ -84,29 +108,23 @@ class Patient extends Resource
         return [
             ID::make()->sortable(),
 
-            Text::make('Name')
+            Text::make('Code')
+                ->sortable()
+                ->rules('required', 'max:50'),
+
+            Text::make('First Name', 'first_name')
                 ->sortable()
                 ->rules('required', 'max:255'),
 
-            Text::make('Email')
+            Text::make('Last Name', 'last_name')
                 ->sortable()
-                ->rules('required', 'email', 'max:254')
-                ->creationRules('unique:patients,email')
-                ->updateRules('unique:patients,email,{{resourceId}}'),
+                ->rules('required', 'max:255'),
 
-            Text::make('Phone')
-                ->sortable()
-                ->rules('required', 'max:20'),
-
-            Text::make('Medical Record Number', 'medical_record_number')
-                ->sortable()
-                ->rules('required', 'max:50', 'unique:patients,medical_record_number,{{resourceId}}'),
-
-            Date::make('Date of Birth', 'date_of_birth')
+            Date::make('Date of Birth', 'dob')
                 ->sortable()
                 ->rules('required', 'date', 'before:today'),
 
-            Select::make('Gender')
+            Select::make('Sex')
                 ->options([
                     'male' => 'Male',
                     'female' => 'Female',
@@ -116,36 +134,48 @@ class Patient extends Resource
                 ->sortable()
                 ->rules('required'),
 
-            Text::make('Blood Type')
-                ->sortable()
-                ->rules('nullable', 'max:10'),
+            BelongsTo::make('Clinic')
+                ->searchable()
+                ->sortable(),
 
-            Textarea::make('Allergies')
-                ->nullable()
-                ->hideFromIndex(),
+            \Laravel\Nova\Fields\Text::make('Full Name', function () {
+                return $this->first_name . ' ' . $this->last_name;
+            })->sortable()
+                ->exceptOnForms(),
 
-            Textarea::make('Medical History')
-                ->nullable()
-                ->hideFromIndex(),
+            \Laravel\Nova\Fields\Number::make('Age', function () {
+                return $this->dob ? $this->dob->age : null;
+            })->sortable()
+                ->exceptOnForms(),
 
-            Textarea::make('Current Medications')
-                ->nullable()
-                ->hideFromIndex(),
+            \Laravel\Nova\Fields\Number::make('Total Appointments', function () {
+                return $this->appointments()->count();
+            })->sortable()
+                ->exceptOnForms(),
 
-            BelongsTo::make('Clinic'),
+            \Laravel\Nova\Fields\Number::make('Total Encounters', function () {
+                return $this->encounters()->count();
+            })->sortable()
+                ->exceptOnForms(),
 
             DateTime::make('Created At')
                 ->sortable()
-                ->exceptOnForms(),
+                ->exceptOnForms()
+                ->hideFromIndex(),
 
             DateTime::make('Updated At')
                 ->sortable()
-                ->exceptOnForms(),
+                ->exceptOnForms()
+                ->hideFromIndex(),
 
-            HasMany::make('Appointments'),
-            HasMany::make('Encounters'),
-            HasMany::make('Prescriptions'),
-            HasMany::make('Lab Results'),
+            HasMany::make('Appointments')
+                ->hideFromIndex(),
+            HasMany::make('Encounters')
+                ->hideFromIndex(),
+            HasMany::make('Prescriptions')
+                ->hideFromIndex(),
+            HasMany::make('Lab Results')
+                ->hideFromIndex(),
         ];
     }
 

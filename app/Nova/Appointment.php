@@ -74,6 +74,30 @@ class Appointment extends Resource
     }
 
     /**
+     * Build an "index" query for the given resource.
+     *
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public static function indexQuery(NovaRequest $request, $query)
+    {
+        return $query->with(['patient', 'doctor', 'clinic', 'room']);
+    }
+
+    /**
+     * Build a "detail" query for the given resource.
+     *
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public static function detailQuery(NovaRequest $request, $query)
+    {
+        return $query->with(['patient', 'doctor', 'clinic', 'room']);
+    }
+
+    /**
      * Get the fields displayed by the resource.
      *
      * @return array<int, \Laravel\Nova\Fields\Field>
@@ -160,13 +184,33 @@ class Appointment extends Resource
                 ->exceptOnForms()
                 ->help('Calculated duration in minutes'),
 
+            \Laravel\Nova\Fields\Badge::make('Status')
+                ->map([
+                    'scheduled' => 'info',
+                    'confirmed' => 'success',
+                    'in_progress' => 'warning',
+                    'completed' => 'success',
+                    'cancelled' => 'danger',
+                    'no_show' => 'danger',
+                ]),
+
+            \Laravel\Nova\Fields\Text::make('Patient Name', function () {
+                return $this->patient ? $this->patient->name : 'N/A';
+            })->onlyOnIndex(),
+
+            \Laravel\Nova\Fields\Text::make('Doctor Name', function () {
+                return $this->doctor ? $this->doctor->name : 'N/A';
+            })->onlyOnIndex(),
+
             DateTime::make('Created At')
                 ->sortable()
-                ->exceptOnForms(),
+                ->exceptOnForms()
+                ->hideFromIndex(),
 
             DateTime::make('Updated At')
                 ->sortable()
-                ->exceptOnForms(),
+                ->exceptOnForms()
+                ->hideFromIndex(),
         ];
     }
 

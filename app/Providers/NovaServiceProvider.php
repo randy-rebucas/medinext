@@ -138,7 +138,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
     protected function routes(): void
     {
         Nova::routes()
-            ->withAuthenticationRoutes(default: true)
+            ->withAuthenticationRoutes(default: false)
             ->withPasswordResetRoutes()
             ->withoutEmailVerificationRoutes()
             ->register();
@@ -152,10 +152,39 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
     protected function gate(): void
     {
         Gate::define('viewNova', function (User $user) {
-            return in_array($user->email, [
-                'rebucasrandy1986@gmail.com',
-                // Add other admin emails here
-            ]);
+            // return in_array($user->email, [
+            //     'rebucasrandy1986@gmail.com',
+            //     // Add other admin emails here
+            // ]);
+
+            // Allow access if user is active and has admin or doctor role
+            if (!$user->is_active) {
+                return false;
+            }
+
+            // Check if user has admin role in any clinic
+            $hasAdminRole = $user->userClinicRoles()
+                ->whereHas('role', function ($query) {
+                    $query->whereIn('name', ['admin', 'superadmin']);
+                })
+                ->exists();
+
+            // Check if user has doctor role in any clinic
+            $hasDoctorRole = $user->userClinicRoles()
+                ->whereHas('role', function ($query) {
+                    $query->where('name', 'doctor');
+                })
+                ->exists();
+
+            // Check if user has receptionist role in any clinic
+            $hasReceptionistRole = $user->userClinicRoles()
+                ->whereHas('role', function ($query) {
+                    $query->where('name', 'receptionist');
+                })
+                ->exists();
+
+            // Allow access for admin, doctor, and receptionist roles
+            return $hasAdminRole || $hasDoctorRole || $hasReceptionistRole;
         });
     }
 

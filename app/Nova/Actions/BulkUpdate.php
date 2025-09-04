@@ -31,9 +31,9 @@ class BulkUpdate extends Action
         $field = $fields->get('field');
         $value = $fields->get('value');
         $booleanValue = $fields->get('boolean_value');
-        
+
         $updatedCount = 0;
-        
+
         foreach ($models as $model) {
             if ($field && $value !== null) {
                 $model->update([$field => $value]);
@@ -43,7 +43,7 @@ class BulkUpdate extends Action
                 $updatedCount++;
             }
         }
-        
+
         return Action::message("Successfully updated {$updatedCount} records");
     }
 
@@ -55,22 +55,65 @@ class BulkUpdate extends Action
      */
     public function fields(NovaRequest $request)
     {
+        $resourceName = $request->resource();
+
+        // Dynamic field options based on resource
+        $fieldOptions = $this->getFieldOptions($resourceName);
+
         return [
             Select::make('Field')
-                ->options([
-                    'is_active' => 'Is Active',
-                    'name' => 'Name',
-                    'email' => 'Email',
-                ])
-                ->rules('required'),
-                
+                ->options($fieldOptions)
+                ->rules('required')
+                ->help('Select the field to update'),
+
             Text::make('Value')
                 ->nullable()
-                ->help('Leave empty for boolean fields'),
-                
+                ->help('Enter the new value for text fields'),
+
             Boolean::make('Boolean Value')
                 ->nullable()
-                ->help('Use for boolean fields'),
+                ->help('Use for boolean fields like is_active'),
         ];
+    }
+
+    /**
+     * Get field options based on resource
+     */
+    private function getFieldOptions($resourceName)
+    {
+        $options = [
+            'is_active' => 'Active Status',
+        ];
+
+        switch ($resourceName) {
+            case 'patients':
+                $options = array_merge($options, [
+                    'gender' => 'Gender',
+                    'blood_type' => 'Blood Type',
+                ]);
+                break;
+            case 'appointments':
+                $options = array_merge($options, [
+                    'status' => 'Status',
+                    'source' => 'Source',
+                ]);
+                break;
+            case 'prescriptions':
+                $options = array_merge($options, [
+                    'status' => 'Status',
+                    'prescription_type' => 'Type',
+                ]);
+                break;
+            case 'users':
+                $options = array_merge($options, [
+                    'name' => 'Name',
+                    'email' => 'Email',
+                    'position' => 'Position',
+                    'department' => 'Department',
+                ]);
+                break;
+        }
+
+        return $options;
     }
 }

@@ -50,7 +50,7 @@ class EncounterSeeder extends Seeder
                     'status' => $status,
                     'notes_soap' => $this->generateSOAPNotes($type),
                     'vitals' => $this->generateVitals(),
-                    'diagnosis_codes' => $this->generateDiagnosisCodes($type),
+                    'diagnosis_codes' => json_encode($this->generateDiagnosisCodes($type)),
                 ]);
             }
         }
