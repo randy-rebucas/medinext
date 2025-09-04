@@ -105,11 +105,11 @@ class Room extends Resource
 
             DateTime::make('Created At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
 
             DateTime::make('Updated At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
 
             HasMany::make('Appointments'),
         ];

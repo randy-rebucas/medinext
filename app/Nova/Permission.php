@@ -148,7 +148,7 @@ class Permission extends Resource
 
             Heading::make('Classification'),
 
-            Badge::make('Category', function () {
+            Text::make('Category', function () {
                 return $this->category;
             })->sortable(),
 
@@ -195,11 +195,11 @@ class Permission extends Resource
 
             DateTime::make('Created At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
 
             DateTime::make('Updated At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
         ];
     }
 

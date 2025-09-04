@@ -154,11 +154,11 @@ class Doctor extends Resource
 
             DateTime::make('Created At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
 
             DateTime::make('Updated At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
 
             // Relationships
             HasMany::make('Appointments', 'appointments', Appointment::class),

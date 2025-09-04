@@ -110,7 +110,7 @@ class FileAsset extends Resource
                     return $this->human_size;
                 })
                 ->sortable()
-                ->hideFromForms()
+                ->exceptOnForms()
                 ->help('File size in human readable format'),
 
             Text::make('Checksum')
@@ -153,11 +153,11 @@ class FileAsset extends Resource
 
             DateTime::make('Created At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
 
             DateTime::make('Updated At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
         ];
     }
 

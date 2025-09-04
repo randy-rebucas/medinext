@@ -157,16 +157,16 @@ class Appointment extends Resource
                     return null;
                 })
                 ->sortable()
-                ->hideFromForms()
+                ->exceptOnForms()
                 ->help('Calculated duration in minutes'),
 
             DateTime::make('Created At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
 
             DateTime::make('Updated At')
                 ->sortable()
-                ->hideFromForms(),
+                ->exceptOnForms(),
         ];
     }
 
