@@ -113,4 +113,28 @@ class Patient extends Model
             ->orderBy('created_at', 'desc')
             ->get();
     }
+
+    /**
+     * Get the displayable singular label of the model.
+     * This method exists to prevent errors when code incorrectly calls
+     * signularLabel() (with typo) or singularLabel() on the model.
+     *
+     * @return string
+     */
+    public static function singularLabel(): string
+    {
+        return 'Patient';
+    }
+
+    /**
+     * Get the displayable singular label of the model (with typo).
+     * This method exists to prevent errors when code incorrectly calls
+     * signularLabel() (with typo) on the model.
+     *
+     * @return string
+     */
+    public static function signularLabel(): string
+    {
+        return 'Patient';
+    }
 }
