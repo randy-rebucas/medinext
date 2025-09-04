@@ -23,9 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->api(append: [
-            \App\Http\Middleware\ApiAuth::class,
-        ]);
+        // Removed global ApiAuth middleware - it should be applied per route group
+        // $middleware->api(append: [
+        //     \App\Http\Middleware\ApiAuth::class,
+        // ]);
 
         $middleware->alias([
             'api.auth' => \App\Http\Middleware\ApiAuth::class,

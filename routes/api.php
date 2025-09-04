@@ -34,27 +34,27 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
-    
+
     // Public clinic information
     Route::get('/clinics', [ClinicController::class, 'publicIndex']);
     Route::get('/clinics/{clinic}', [ClinicController::class, 'publicShow']);
 });
 
 // Protected routes (authentication required)
-Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
-    
+Route::prefix('v1')->middleware(['api.auth'])->group(function () {
+
     // Authentication management
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/refresh', [AuthController::class, 'refresh']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::put('/auth/password', [AuthController::class, 'updatePassword']);
-    
+
     // Dashboard and analytics
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/notifications', [DashboardController::class, 'notifications']);
-    
+
     // Clinic management
     Route::apiResource('clinics', ClinicController::class);
     Route::get('/clinics/{clinic}/users', [ClinicController::class, 'users']);
@@ -62,7 +62,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/clinics/{clinic}/patients', [ClinicController::class, 'patients']);
     Route::get('/clinics/{clinic}/appointments', [ClinicController::class, 'appointments']);
     Route::get('/clinics/{clinic}/statistics', [ClinicController::class, 'statistics']);
-    
+
     // Patient management
     Route::apiResource('patients', PatientController::class);
     Route::get('/patients/{patient}/appointments', [PatientController::class, 'appointments']);
@@ -73,7 +73,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/patients/{patient}/file-assets', [PatientController::class, 'fileAssets']);
     Route::post('/patients/{patient}/file-assets', [PatientController::class, 'uploadFile']);
     Route::get('/patients/search', [PatientController::class, 'search']);
-    
+
     // Doctor management
     Route::apiResource('doctors', DoctorController::class);
     Route::get('/doctors/{doctor}/appointments', [DoctorController::class, 'appointments']);
@@ -82,7 +82,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/doctors/{doctor}/availability', [DoctorController::class, 'availability']);
     Route::get('/doctors/{doctor}/statistics', [DoctorController::class, 'statistics']);
     Route::post('/doctors/{doctor}/availability', [DoctorController::class, 'updateAvailability']);
-    
+
     // Appointment management
     Route::apiResource('appointments', AppointmentController::class);
     Route::post('/appointments/{appointment}/check-in', [AppointmentController::class, 'checkIn']);
@@ -94,7 +94,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/appointments/conflicts', [AppointmentController::class, 'checkConflicts']);
     Route::get('/appointments/today', [AppointmentController::class, 'today']);
     Route::get('/appointments/upcoming', [AppointmentController::class, 'upcoming']);
-    
+
     // Encounter management
     Route::apiResource('encounters', EncounterController::class);
     Route::get('/encounters/{encounter}/prescriptions', [EncounterController::class, 'prescriptions']);
@@ -103,7 +103,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::post('/encounters/{encounter}/file-assets', [EncounterController::class, 'uploadFile']);
     Route::put('/encounters/{encounter}/soap-notes', [EncounterController::class, 'updateSoapNotes']);
     Route::post('/encounters/{encounter}/complete', [EncounterController::class, 'complete']);
-    
+
     // Prescription management
     Route::apiResource('prescriptions', PrescriptionController::class);
     Route::get('/prescriptions/{prescription}/items', [PrescriptionController::class, 'items']);
@@ -118,7 +118,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/prescriptions/active', [PrescriptionController::class, 'active']);
     Route::get('/prescriptions/expired', [PrescriptionController::class, 'expired']);
     Route::get('/prescriptions/needs-refill', [PrescriptionController::class, 'needsRefill']);
-    
+
     // Lab result management
     Route::apiResource('lab-results', LabResultController::class);
     Route::get('/lab-results/{labResult}/file-assets', [LabResultController::class, 'fileAssets']);
@@ -126,14 +126,14 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::post('/lab-results/{labResult}/review', [LabResultController::class, 'review']);
     Route::get('/lab-results/pending', [LabResultController::class, 'pending']);
     Route::get('/lab-results/abnormal', [LabResultController::class, 'abnormal']);
-    
+
     // File asset management
     Route::apiResource('file-assets', FileAssetController::class);
     Route::get('/file-assets/{fileAsset}/download', [FileAssetController::class, 'download']);
     Route::get('/file-assets/{fileAsset}/preview', [FileAssetController::class, 'preview']);
     Route::post('/file-assets/upload', [FileAssetController::class, 'upload']);
     Route::get('/file-assets/categories', [FileAssetController::class, 'categories']);
-    
+
     // Medrep management
     Route::apiResource('medreps', MedrepController::class);
     Route::get('/medreps/{medrep}/visits', [MedrepController::class, 'visits']);
@@ -142,7 +142,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::delete('/medreps/{medrep}/visits/{visit}', [MedrepController::class, 'cancelVisit']);
     Route::get('/medrep-visits', [MedrepController::class, 'allVisits']);
     Route::get('/medrep-visits/upcoming', [MedrepController::class, 'upcomingVisits']);
-    
+
     // Settings and configuration
     Route::get('/settings', [SettingsController::class, 'index']);
     Route::put('/settings', [SettingsController::class, 'update']);
@@ -150,20 +150,20 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
     Route::put('/settings/clinic', [SettingsController::class, 'updateClinicSettings']);
     Route::get('/settings/user', [SettingsController::class, 'userSettings']);
     Route::put('/settings/user', [SettingsController::class, 'updateUserSettings']);
-    
+
     // Search and filtering
     Route::get('/search/patients', [PatientController::class, 'search']);
     Route::get('/search/doctors', [DoctorController::class, 'search']);
     Route::get('/search/appointments', [AppointmentController::class, 'search']);
     Route::get('/search/prescriptions', [PrescriptionController::class, 'search']);
-    
+
     // Reports and analytics
     Route::get('/reports/appointments', [AppointmentController::class, 'reports']);
     Route::get('/reports/prescriptions', [PrescriptionController::class, 'reports']);
     Route::get('/reports/patients', [PatientController::class, 'reports']);
     Route::get('/reports/doctors', [DoctorController::class, 'reports']);
     Route::get('/reports/lab-results', [LabResultController::class, 'reports']);
-    
+
     // Mobile-specific routes
     Route::prefix('mobile')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'mobile']);
@@ -174,7 +174,7 @@ Route::prefix('v1')->middleware(['auth:sanctum'])->group(function () {
         Route::get('/today-appointments', [AppointmentController::class, 'today']);
         Route::get('/pending-tasks', [DashboardController::class, 'pendingTasks']);
     });
-    
+
     // Web-specific routes
     Route::prefix('web')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'web']);

@@ -35,24 +35,22 @@ class AuthController extends BaseController
             }
 
             $credentials = $request->only('email', 'password');
-            $remember = $request->boolean('remember', false);
 
-            if (!Auth::attempt($credentials, $remember)) {
+            // Find user by email
+            $user = User::where('email', $credentials['email'])->first();
+
+            if (!$user || !Hash::check($credentials['password'], $user->password)) {
                 return $this->errorResponse('Invalid credentials', null, 401);
             }
 
-            $user = Auth::user();
-
             // Check if user is active
             if (!$user->is_active) {
-                Auth::logout();
                 return $this->errorResponse('Account is deactivated', null, 401);
             }
 
             // Check clinic access if clinic_id is provided
             if ($request->has('clinic_id')) {
                 if (!$user->clinics()->where('clinic_id', $request->clinic_id)->exists()) {
-                    Auth::logout();
                     return $this->errorResponse('No access to specified clinic', null, 403);
                 }
             }
@@ -145,7 +143,8 @@ class AuthController extends BaseController
     public function logout(Request $request): JsonResponse
     {
         try {
-            $request->user()->currentAccessToken()->delete();
+            $user = $request->get('authenticated_user') ?? $request->user();
+            $user->currentAccessToken()->delete();
 
             return $this->successResponse(null, 'Logout successful');
         } catch (\Exception $e) {
@@ -159,11 +158,11 @@ class AuthController extends BaseController
     public function refresh(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
-            
+            $user = $request->get('authenticated_user') ?? $request->user();
+
             // Delete current token
-            $request->user()->currentAccessToken()->delete();
-            
+            $user->currentAccessToken()->delete();
+
             // Create new token
             $token = $user->createToken('api-token', ['*'], now()->addDays(30))->plainTextToken;
 
@@ -184,7 +183,7 @@ class AuthController extends BaseController
     public function me(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
+            $user = $request->get('authenticated_user') ?? $request->user();
             $user->load(['clinics', 'roles']);
 
             return $this->successResponse([
@@ -210,7 +209,7 @@ class AuthController extends BaseController
     public function updateProfile(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
+            $user = $request->get('authenticated_user') ?? $request->user();
 
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
@@ -248,7 +247,7 @@ class AuthController extends BaseController
                 return $this->validationErrorResponse($validator->errors());
             }
 
-            $user = $request->user();
+            $user = $request->get('authenticated_user') ?? $request->user();
 
             if (!Hash::check($request->current_password, $user->password)) {
                 return $this->errorResponse('Current password is incorrect', null, 422);
