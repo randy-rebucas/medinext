@@ -18,7 +18,7 @@ class UserRoleSeeder extends Seeder
     {
         // Get existing clinic or create a default one if none exists
         $clinic = Clinic::first();
-        
+
         if (!$clinic) {
             $clinic = Clinic::create([
                 'name' => 'Main Clinic',
@@ -46,14 +46,50 @@ class UserRoleSeeder extends Seeder
             ]);
         }
 
-        // Create roles if they don't exist
+        // Create roles if they don't exist with proper descriptions
         $roles = [
-            'superadmin' => Role::firstOrCreate(['name' => 'superadmin']),
-            'admin' => Role::firstOrCreate(['name' => 'admin']),
-            'doctor' => Role::firstOrCreate(['name' => 'doctor']),
-            'receptionist' => Role::firstOrCreate(['name' => 'receptionist']),
-            'patient' => Role::firstOrCreate(['name' => 'patient']),
-            'medrep' => Role::firstOrCreate(['name' => 'medrep']),
+            'superadmin' => Role::firstOrCreate(
+                ['name' => 'superadmin'],
+                [
+                    'description' => 'Platform administrator with full system access. Manages tenants, clinics, plans, and global settings.',
+                    'is_system_role' => true,
+                ]
+            ),
+            'admin' => Role::firstOrCreate(
+                ['name' => 'admin'],
+                [
+                    'description' => 'Clinic owner/manager with full access within clinic. Can manage staff, billing, and settings.',
+                    'is_system_role' => false,
+                ]
+            ),
+            'doctor' => Role::firstOrCreate(
+                ['name' => 'doctor'],
+                [
+                    'description' => 'Medical professional who can view own schedule, manage assigned patients\' EMR, issue prescriptions, and view med samples.',
+                    'is_system_role' => false,
+                ]
+            ),
+            'receptionist' => Role::firstOrCreate(
+                ['name' => 'receptionist'],
+                [
+                    'description' => 'Front desk staff who can manage calendar, patients, visits, and billing support. No access to clinical notes by default.',
+                    'is_system_role' => false,
+                ]
+            ),
+            'patient' => Role::firstOrCreate(
+                ['name' => 'patient'],
+                [
+                    'description' => 'Self-service portal access. Can book, reschedule, cancel appointments, view summary, and download prescriptions.',
+                    'is_system_role' => false,
+                ]
+            ),
+            'medrep' => Role::firstOrCreate(
+                ['name' => 'medrep'],
+                [
+                    'description' => 'Medical representative who can schedule visits with doctors and upload product sheets. No access to patient data.',
+                    'is_system_role' => false,
+                ]
+            ),
         ];
 
         // Create users for each role

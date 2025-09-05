@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-class CheckPermission
+class CheckAllPermissions
 {
     /**
      * Handle an incoming request.
@@ -27,8 +27,8 @@ class CheckPermission
             return response()->json(['error' => 'Clinic context required'], 400);
         }
 
-        // Check if user has any of the required permissions in the clinic
-        if ($user->hasAnyPermissionInClinic($permissions, $clinicId)) {
+        // Check if user has all of the required permissions in the clinic
+        if ($user->hasAllPermissionsInClinic($permissions, $clinicId)) {
             return $next($request);
         }
 

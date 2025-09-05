@@ -32,6 +32,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.auth' => \App\Http\Middleware\ApiAuth::class,
             'api.clinic' => \App\Http\Middleware\ApiClinicAccess::class,
             'api.permission' => \App\Http\Middleware\ApiPermission::class,
+            'role' => \App\Http\Middleware\CheckRole::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
+            'permission.all' => \App\Http\Middleware\CheckAllPermissions::class,
+            'clinical.access' => \App\Http\Middleware\CheckClinicalAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

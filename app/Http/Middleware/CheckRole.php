@@ -7,14 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-class CheckPermission
+class CheckRole
 {
     /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string ...$permissions): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         if (!Auth::check()) {
             return redirect()->route('login');
@@ -27,12 +27,14 @@ class CheckPermission
             return response()->json(['error' => 'Clinic context required'], 400);
         }
 
-        // Check if user has any of the required permissions in the clinic
-        if ($user->hasAnyPermissionInClinic($permissions, $clinicId)) {
-            return $next($request);
+        // Check if user has any of the required roles in the clinic
+        foreach ($roles as $role) {
+            if ($user->hasRoleInClinic($role, $clinicId)) {
+                return $next($request);
+            }
         }
 
-        // If user is super admin, allow access regardless of clinic permissions
+        // If user is super admin, allow access regardless of clinic role
         if ($user->isSuperAdmin()) {
             return $next($request);
         }

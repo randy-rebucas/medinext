@@ -76,7 +76,7 @@ class Role extends Model
         return $this->permissions()->where(function ($query) use ($permission) {
             $query->where('slug', $permission)
                   ->orWhere('name', $permission)
-                  ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+                  ->orWhereRaw("module || '.' || action = ?", [$permission]);
         })->exists();
     }
 
@@ -89,7 +89,7 @@ class Role extends Model
             foreach ($permissions as $permission) {
                 $query->orWhere('slug', $permission)
                       ->orWhere('name', $permission)
-                      ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+                      ->orWhereRaw("module || '.' || action = ?", [$permission]);
             }
         })->exists();
     }
@@ -103,7 +103,7 @@ class Role extends Model
             foreach ($permissions as $permission) {
                 $query->orWhere('slug', $permission)
                       ->orWhere('name', $permission)
-                      ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+                      ->orWhereRaw("module || '.' || action = ?", [$permission]);
             }
         })->count();
 
@@ -132,114 +132,62 @@ class Role extends Model
     public function getDefaultPermissions(): array
     {
         $defaultPermissions = [
+            'superadmin' => [
+                // Platform management
+                'tenants.manage', 'plans.manage', 'global.settings',
+                // Full access to all modules
+                'patient.manage', 'emr.manage', 'schedule.manage', 'rx.issue', 'rx.view', 'rx.edit', 'rx.download',
+                'billing.manage', 'settings.manage', 'staff.manage', 'clinical_notes.read', 'clinical_notes.write',
+                // Legacy permissions for backward compatibility
+                'clinics.manage', 'doctors.manage', 'patients.manage', 'appointments.manage',
+                'prescriptions.manage', 'users.manage', 'roles.manage', 'billing.manage',
+                'reports.view', 'reports.export', 'settings.manage'
+            ],
             'admin' => [
-                'clinics.manage',
-                'clinics.view',
-                'clinics.create',
-                'clinics.edit',
-                'clinics.delete',
-                'doctors.manage',
-                'doctors.view',
-                'doctors.create',
-                'doctors.edit',
-                'doctors.delete',
-                'patients.manage',
-                'patients.view',
-                'patients.create',
-                'patients.edit',
-                'patients.delete',
-                'appointments.manage',
-                'appointments.view',
-                'appointments.create',
-                'appointments.edit',
-                'appointments.delete',
-                'prescriptions.manage',
-                'prescriptions.view',
-                'prescriptions.create',
-                'prescriptions.edit',
-                'prescriptions.delete',
-                'users.manage',
-                'users.view',
-                'users.create',
-                'users.edit',
-                'users.delete',
-                'roles.manage',
-                'roles.view',
-                'roles.create',
-                'roles.edit',
-                'roles.delete',
-                'billing.manage',
-                'billing.view',
-                'billing.create',
-                'billing.edit',
-                'billing.delete',
-                'reports.view',
-                'reports.export',
-                'settings.manage',
+                // Full clinic management
+                'patient.manage', 'emr.manage', 'schedule.manage', 'rx.issue', 'rx.view', 'rx.edit', 'rx.download',
+                'billing.manage', 'settings.manage', 'staff.manage', 'clinical_notes.read', 'clinical_notes.write',
+                // Legacy permissions
+                'clinics.manage', 'doctors.manage', 'patients.manage', 'appointments.manage',
+                'prescriptions.manage', 'users.manage', 'billing.manage', 'reports.view',
+                'reports.export'
             ],
             'doctor' => [
-                'clinics.view',
-                'doctors.view',
-                'patients.view',
-                'patients.edit',
-                'appointments.view',
-                'appointments.create',
-                'appointments.edit',
-                'appointments.cancel',
-                'prescriptions.view',
-                'prescriptions.create',
-                'prescriptions.edit',
-                'prescriptions.delete',
-                'medical_records.view',
-                'medical_records.create',
-                'medical_records.edit',
-                'schedule.view',
-                'schedule.manage',
-                'reports.view',
-            ],
-            'patient' => [
-                'clinics.view',
-                'doctors.view',
-                'appointments.view',
-                'appointments.create',
-                'appointments.cancel',
-                'prescriptions.view',
-                'prescriptions.download',
-                'medical_records.view',
-                'profile.edit',
+                // Core doctor permissions
+                'patient.read', 'patient.write', 'emr.read', 'emr.write', 'schedule.view', 'schedule.manage',
+                'rx.issue', 'rx.view', 'rx.edit', 'rx.download', 'clinical_notes.read', 'clinical_notes.write',
+                // Legacy permissions
+                'clinics.view', 'doctors.view', 'patients.view', 'patients.edit',
+                'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel',
+                'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 'prescriptions.delete',
+                'medical_records.view', 'medical_records.create', 'medical_records.edit',
+                'schedule.view', 'schedule.manage', 'reports.view'
             ],
             'receptionist' => [
-                'clinics.view',
-                'doctors.view',
-                'patients.view',
-                'patients.create',
-                'patients.edit',
-                'appointments.view',
-                'appointments.create',
-                'appointments.edit',
-                'appointments.cancel',
-                'appointments.checkin',
-                'billing.view',
-                'billing.create',
-                'billing.edit',
-                'schedule.view',
-                'reports.view',
+                // Receptionist permissions (no clinical notes access)
+                'patient.read', 'patient.write', 'schedule.view', 'schedule.manage', 'billing.view', 'billing.create', 'billing.edit',
+                // Legacy permissions
+                'clinics.view', 'doctors.view', 'patients.view', 'patients.create', 'patients.edit',
+                'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel',
+                'appointments.checkin', 'billing.view', 'billing.create', 'billing.edit',
+                'schedule.view', 'reports.view'
+            ],
+            'patient' => [
+                // Patient self-service permissions
+                'patient.read', 'schedule.view', 'rx.view', 'rx.download', 'profile.edit',
+                // Legacy permissions
+                'clinics.view', 'doctors.view', 'appointments.view', 'appointments.create',
+                'appointments.cancel', 'prescriptions.view', 'prescriptions.download',
+                'medical_records.view', 'profile.edit'
             ],
             'medrep' => [
-                'clinics.view',
-                'doctors.view',
-                'products.view',
-                'products.create',
-                'products.edit',
-                'meetings.view',
-                'meetings.create',
-                'meetings.edit',
-                'meetings.delete',
-                'interactions.view',
-                'interactions.create',
-                'interactions.edit',
-                'schedule.view',
-                'reports.view',
+                // MedRep specific permissions (no patient data access)
+                'medrep.schedule', 'medrep.upload', 'medrep.view', 'schedule.view', 'schedule.manage',
+                // Legacy permissions
+                'clinics.view', 'doctors.view', 'products.view', 'products.create', 'products.edit',
+                'meetings.view', 'meetings.create', 'meetings.edit', 'meetings.delete',
+                'interactions.view', 'interactions.create', 'interactions.edit',
+                'schedule.view', 'reports.view'
             ],
         ];
 
@@ -252,11 +200,12 @@ class Role extends Model
     public function getCapabilitiesDescriptionAttribute(): string
     {
         $capabilities = [
-            'admin' => 'Full system access and management - can manage all clinics, users, and system settings',
-            'doctor' => 'Manage appointments, medical records, prescriptions - full clinical workflow access',
-            'patient' => 'Book appointments, view records, download prescriptions - patient self-service access',
-            'receptionist' => 'Schedule appointments, manage patient check-ins, handle billing support - front desk operations',
-            'medrep' => 'Manage product details, schedule doctor meetings, track interactions - medical representative operations',
+            'superadmin' => 'Platform administrator with full system access. Manages tenants, clinics, plans, and global settings.',
+            'admin' => 'Clinic owner/manager with full access within clinic. Can manage staff, billing, and settings.',
+            'doctor' => 'Medical professional who can view own schedule, manage assigned patients\' EMR, issue prescriptions, and view med samples.',
+            'receptionist' => 'Front desk staff who can manage calendar, patients, visits, and billing support. No access to clinical notes by default.',
+            'patient' => 'Self-service portal access. Can book, reschedule, cancel appointments, view summary, and download prescriptions.',
+            'medrep' => 'Medical representative who can schedule visits with doctors and upload product sheets. No access to patient data.',
         ];
 
         return $capabilities[$this->name] ?? 'Custom role with specific permissions';
@@ -368,11 +317,12 @@ class Role extends Model
     public function hasMinimumPermissions(): bool
     {
         $minimumPermissions = [
-            'admin' => ['clinics.view', 'users.view'],
-            'doctor' => ['patients.view', 'appointments.view'],
-            'patient' => ['appointments.view', 'profile.edit'],
-            'receptionist' => ['patients.view', 'appointments.view'],
-            'medrep' => ['doctors.view', 'schedule.view'],
+            'superadmin' => ['tenants.manage', 'global.settings'],
+            'admin' => ['patient.manage', 'billing.manage'],
+            'doctor' => ['patient.read', 'emr.read', 'rx.issue'],
+            'patient' => ['patient.read', 'schedule.view'],
+            'receptionist' => ['patient.read', 'schedule.view'],
+            'medrep' => ['medrep.schedule', 'schedule.view'],
         ];
 
         $required = $minimumPermissions[$this->name] ?? [];

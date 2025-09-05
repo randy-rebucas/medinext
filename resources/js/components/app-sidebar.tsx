@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { BookOpen, Calendar, FileText, Folder, LayoutGrid, Microscope, Pill, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -13,6 +13,31 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Patients',
+        href: '/patients',
+        icon: Users,
+    },
+    {
+        title: 'Appointments',
+        href: '/appointments',
+        icon: Calendar,
+    },
+    {
+        title: 'Medical Records',
+        href: '/medical-records',
+        icon: FileText,
+    },
+    {
+        title: 'Prescriptions',
+        href: '/prescriptions',
+        icon: Pill,
+    },
+    {
+        title: 'Lab Results',
+        href: '/lab-results',
+        icon: Microscope,
     },
 ];
 

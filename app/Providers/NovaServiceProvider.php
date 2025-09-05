@@ -46,6 +46,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
 
             // Medical Staff Group
             \App\Nova\Doctor::class,
+            \App\Nova\Receptionist::class,
             \App\Nova\Medrep::class,
             \App\Nova\MedrepVisit::class,
 
@@ -88,6 +89,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                 // Medical Staff Group
                 MenuSection::make('Medical Staff', [
                     MenuItem::resource(\App\Nova\Doctor::class),
+                    MenuItem::resource(\App\Nova\Receptionist::class),
                     MenuItem::resource(\App\Nova\Medrep::class),
                     MenuItem::resource(\App\Nova\MedrepVisit::class),
                 ])->icon('user-group')->collapsable(),
@@ -227,6 +229,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
 
             // Medical Staff Group
             \App\Nova\Doctor::class,
+            \App\Nova\Receptionist::class,
             \App\Nova\Medrep::class,
             \App\Nova\MedrepVisit::class,
 

@@ -7,14 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
-class CheckPermission
+class CheckClinicalAccess
 {
     /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string ...$permissions): Response
+    public function handle(Request $request, Closure $next): Response
     {
         if (!Auth::check()) {
             return redirect()->route('login');
@@ -27,8 +27,8 @@ class CheckPermission
             return response()->json(['error' => 'Clinic context required'], 400);
         }
 
-        // Check if user has any of the required permissions in the clinic
-        if ($user->hasAnyPermissionInClinic($permissions, $clinicId)) {
+        // Check if user can access clinical notes/data
+        if ($user->canAccessClinicalNotes($clinicId)) {
             return $next($request);
         }
 
@@ -37,7 +37,7 @@ class CheckPermission
             return $next($request);
         }
 
-        return response()->json(['error' => 'Insufficient permissions'], 403);
+        return response()->json(['error' => 'Access to clinical data not permitted'], 403);
     }
 
     /**
