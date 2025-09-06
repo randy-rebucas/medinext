@@ -1,10 +1,12 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { doctorLabResults } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
     Table,
     TableBody,
     TableCell,
@@ -12,16 +14,27 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { 
-    TestTube, 
-    Search, 
-    Eye, 
+import {
+    TestTube,
+    Search,
+    Eye,
     Download,
     Filter,
     Calendar,
     User,
     AlertCircle
 } from 'lucide-react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Doctor Dashboard',
+        href: '/doctor/dashboard',
+    },
+    {
+        title: 'Lab Results',
+        href: doctorLabResults(),
+    },
+];
 
 export default function LabResults() {
     const labResults = [
@@ -86,10 +99,9 @@ export default function LabResults() {
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Lab Results" />
-            
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Lab Results</h1>

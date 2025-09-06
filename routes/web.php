@@ -189,12 +189,86 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Doctor routes
     Route::prefix('doctor')->group(function () {
+        Route::get('dashboard', function () {
+            return Inertia::render('doctor/dashboard', [
+                'stats' => [
+                    'todayAppointments' => 0,
+                    'upcomingAppointments' => 0,
+                    'totalPatients' => 0,
+                    'pendingPrescriptions' => 0,
+                    'recentAppointments' => [],
+                    'recentPrescriptions' => []
+                ]
+            ]);
+        })->name('doctor.dashboard');
+
+        Route::get('appointments', function () {
+            return Inertia::render('doctor/appointments', [
+                'appointments' => [],
+                'patients' => [],
+                'rooms' => [],
+                'filters' => [
+                    'status' => '',
+                    'type' => '',
+                    'date' => ''
+                ]
+            ]);
+        })->name('doctor.appointments');
+
+        Route::get('medical-records', function () {
+            return Inertia::render('doctor/medical-records', [
+                'patients' => [],
+                'encounters' => [],
+                'labResults' => [],
+                'prescriptions' => [],
+                'filters' => [
+                    'patient_id' => '',
+                    'date_range' => '',
+                    'type' => ''
+                ]
+            ]);
+        })->name('doctor.medical-records');
+
+        Route::get('prescriptions', function () {
+            return Inertia::render('doctor/prescriptions', [
+                'prescriptions' => [],
+                'patients' => [],
+                'filters' => [
+                    'status' => '',
+                    'type' => '',
+                    'patient_id' => '',
+                    'date_range' => ''
+                ]
+            ]);
+        })->name('doctor.prescriptions');
+
+        Route::get('advice', function () {
+            return Inertia::render('doctor/advice', [
+                'advice' => [],
+                'patients' => [],
+                'filters' => [
+                    'category' => '',
+                    'priority' => '',
+                    'status' => '',
+                    'patient_id' => '',
+                    'date_range' => ''
+                ]
+            ]);
+        })->name('doctor.advice');
+
+        Route::get('queue', function () {
+            return Inertia::render('doctor/queue', [
+                'queueItems' => [],
+                'completedEncounters' => []
+            ]);
+        })->name('doctor.queue');
+
         Route::get('patient-history', function () {
-            return Inertia::render('doctor/patient-history/index');
+            return Inertia::render('doctor/patient-history');
         })->name('doctor.patient-history');
 
         Route::get('lab-results', function () {
-            return Inertia::render('doctor/lab-results/index');
+            return Inertia::render('doctor/lab-results');
         })->name('doctor.lab-results');
     });
 });

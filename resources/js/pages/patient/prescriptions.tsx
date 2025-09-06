@@ -1,5 +1,18 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { patientPrescriptions } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Patient Portal',
+        href: '/patient/dashboard',
+    },
+    {
+        title: 'My Prescriptions',
+        href: patientPrescriptions(),
+    },
+];
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,7 +84,7 @@ export default function PatientPrescriptions() {
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="My Prescriptions" />
             
             <div className="space-y-6">

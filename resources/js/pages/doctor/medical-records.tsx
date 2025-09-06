@@ -9,21 +9,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-    FileText, 
-    Search, 
-    Filter, 
-    Plus, 
-    Eye, 
-    Edit, 
-    Download, 
+import {
+    FileText,
+    Search,
+    Filter,
+    Plus,
+    Eye,
+    Edit,
+    Download,
     Upload,
     Calendar,
     User,
     Stethoscope,
     Pill,
     Activity,
-    FileImage,
     AlertTriangle
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
@@ -38,7 +37,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Medical Records',
-        href: doctorMedicalRecords().url,
+        href: doctorMedicalRecords(),
     },
 ];
 
@@ -93,23 +92,27 @@ interface Prescription {
 }
 
 interface DoctorMedicalRecordsProps {
-    patients: Patient[];
-    encounters: Encounter[];
-    labResults: LabResult[];
-    prescriptions: Prescription[];
-    filters: {
+    patients?: Patient[];
+    encounters?: Encounter[];
+    labResults?: LabResult[];
+    prescriptions?: Prescription[];
+    filters?: {
         search: string;
         patient_id: string;
         date_range: string;
     };
 }
 
-export default function DoctorMedicalRecords({ 
-    patients, 
-    encounters, 
-    labResults, 
-    prescriptions, 
-    filters 
+export default function DoctorMedicalRecords({
+    patients = [],
+    encounters = [],
+    labResults = [],
+    prescriptions = [],
+    filters = {
+        search: '',
+        patient_id: '',
+        date_range: ''
+    }
 }: DoctorMedicalRecordsProps) {
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [selectedPatient, setSelectedPatient] = useState(filters.patient_id || '');
@@ -144,21 +147,21 @@ export default function DoctorMedicalRecords({
         const matchesSearch = encounter.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             encounter.chief_complaint.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             encounter.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPatient = !selectedPatient || encounter.patient_id.toString() === selectedPatient;
+        const matchesPatient = !selectedPatient || selectedPatient === 'all' || encounter.patient_id.toString() === selectedPatient;
         return matchesSearch && matchesPatient;
     });
 
     const filteredLabResults = labResults.filter(result => {
         const matchesSearch = result.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             result.test_name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPatient = !selectedPatient || result.patient_id.toString() === selectedPatient;
+        const matchesPatient = !selectedPatient || selectedPatient === 'all' || result.patient_id.toString() === selectedPatient;
         return matchesSearch && matchesPatient;
     });
 
     const filteredPrescriptions = prescriptions.filter(prescription => {
         const matchesSearch = prescription.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             prescription.medication.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPatient = !selectedPatient || prescription.patient_id.toString() === selectedPatient;
+        const matchesPatient = !selectedPatient || selectedPatient === 'all' || prescription.patient_id.toString() === selectedPatient;
         return matchesSearch && matchesPatient;
     });
 
@@ -221,7 +224,7 @@ export default function DoctorMedicalRecords({
                                         <SelectValue placeholder="All patients" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All patients</SelectItem>
+                                        <SelectItem value="all">All patients</SelectItem>
                                         {patients.map((patient) => (
                                             <SelectItem key={patient.id} value={patient.id.toString()}>
                                                 {patient.name}
@@ -237,7 +240,7 @@ export default function DoctorMedicalRecords({
                                         <SelectValue placeholder="All dates" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All dates</SelectItem>
+                                        <SelectItem value="all">All dates</SelectItem>
                                         <SelectItem value="today">Today</SelectItem>
                                         <SelectItem value="week">This week</SelectItem>
                                         <SelectItem value="month">This month</SelectItem>
@@ -382,7 +385,7 @@ export default function DoctorMedicalRecords({
                                                     Record a new patient encounter
                                                 </DialogDescription>
                                             </DialogHeader>
-                                            <CreateEncounterForm 
+                                            <CreateEncounterForm
                                                 patients={patients}
                                                 onSuccess={() => setIsCreateEncounterOpen(false)}
                                             />
@@ -610,7 +613,7 @@ export default function DoctorMedicalRecords({
 }
 
 // Create Encounter Form Component
-function CreateEncounterForm({ patients, onSuccess }: { 
+function CreateEncounterForm({ patients, onSuccess }: {
     patients: Patient[];
     onSuccess: () => void;
 }) {
@@ -755,7 +758,7 @@ function PatientDetailsView({ patient }: { patient: Patient }) {
                     <p className="text-sm">{new Date().getFullYear() - new Date(patient.dob).getFullYear()} years</p>
                 </div>
             </div>
-            
+
             <div className="space-y-2">
                 <Label>Contact Information</Label>
                 <div className="space-y-1">

@@ -1,23 +1,33 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { doctorPatientHistory } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-    ClipboardList, 
-    Search, 
-    Eye, 
-    Download,
+import {
+    Search,
+    Eye,
     Filter,
-    Calendar,
     User,
     FileText,
     TestTube,
     Pill,
     Stethoscope
 } from 'lucide-react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Doctor Dashboard',
+        href: '/doctor/dashboard',
+    },
+    {
+        title: 'Patient History',
+        href: doctorPatientHistory(),
+    },
+];
 
 export default function PatientHistory() {
     const patients = [
@@ -81,10 +91,9 @@ export default function PatientHistory() {
     ];
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Patient History" />
-            
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Patient History</h1>

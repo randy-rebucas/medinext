@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { doctorQueue } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,30 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-    Clock, 
-    User, 
-    FileText, 
-    Stethoscope, 
-    Activity, 
-    Pill, 
+import {
+    Clock,
+    User,
+    Stethoscope,
+    Activity,
+    Pill,
     Upload,
     Download,
     CheckCircle,
     AlertCircle,
     Plus,
-    Eye,
-    Edit,
-    Calendar,
-    Heart,
-    Thermometer,
-    Gauge
+    Eye
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -39,7 +33,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Patient Queue',
-        href: '/doctor/queue',
+        href: doctorQueue(),
     },
 ];
 
@@ -96,17 +90,13 @@ interface QueueItem {
 }
 
 interface DoctorQueueProps {
-    queueItems: QueueItem[];
-    completedEncounters: QueueItem[];
+    queueItems?: QueueItem[];
+    completedEncounters?: QueueItem[];
 }
 
-export default function DoctorQueue({ queueItems, completedEncounters }: DoctorQueueProps) {
+export default function DoctorQueue({ queueItems = [], completedEncounters = [] }: DoctorQueueProps) {
     const [selectedPatient, setSelectedPatient] = useState<QueueItem | null>(null);
     const [isEncounterDialogOpen, setIsEncounterDialogOpen] = useState(false);
-    const [isVitalsDialogOpen, setIsVitalsDialogOpen] = useState(false);
-    const [isPrescriptionDialogOpen, setIsPrescriptionDialogOpen] = useState(false);
-    const [isLabResultsDialogOpen, setIsLabResultsDialogOpen] = useState(false);
-    const [isFileUploadDialogOpen, setIsFileUploadDialogOpen] = useState(false);
 
     const handleSelectPatient = (patient: QueueItem) => {
         setSelectedPatient(patient);
@@ -347,12 +337,13 @@ export default function DoctorQueue({ queueItems, completedEncounters }: DoctorQ
                             </DialogDescription>
                         </DialogHeader>
                         {selectedPatient && (
-                            <ClinicalDocumentationForm 
+                            <ClinicalDocumentationForm
                                 patient={selectedPatient}
                                 onComplete={() => {
                                     setIsEncounterDialogOpen(false);
                                     handleCompleteEncounter(selectedPatient.encounter_id);
                                 }}
+                                onCancel={() => setIsEncounterDialogOpen(false)}
                             />
                         )}
                     </DialogContent>
@@ -363,12 +354,14 @@ export default function DoctorQueue({ queueItems, completedEncounters }: DoctorQ
 }
 
 // Clinical Documentation Form Component
-function ClinicalDocumentationForm({ 
-    patient, 
-    onComplete 
-}: { 
+function ClinicalDocumentationForm({
+    patient,
+    onComplete,
+    onCancel
+}: {
     patient: QueueItem;
     onComplete: () => void;
+    onCancel: () => void;
 }) {
     const [activeTab, setActiveTab] = useState('soap');
     const [formData, setFormData] = useState({
@@ -754,7 +747,7 @@ function ClinicalDocumentationForm({
 
             {/* Action Buttons */}
             <div className="flex justify-between pt-4">
-                <Button variant="outline" onClick={() => setIsEncounterDialogOpen(false)}>
+                <Button variant="outline" onClick={onCancel}>
                     Save Draft
                 </Button>
                 <div className="flex gap-2">

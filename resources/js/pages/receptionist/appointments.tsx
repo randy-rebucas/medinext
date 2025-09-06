@@ -1,5 +1,18 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { receptionistAppointments } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Receptionist Dashboard',
+        href: '/receptionist/dashboard',
+    },
+    {
+        title: 'Appointments',
+        href: receptionistAppointments(),
+    },
+];
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,7 +101,7 @@ export default function ReceptionistAppointments() {
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Appointments" />
             
             <div className="space-y-6">

@@ -46,15 +46,60 @@ export const doctorPrescriptions = () => '/doctor/prescriptions';
 export const doctorMedicalRecords = () => '/doctor/medical-records';
 export const doctorAdvice = () => '/doctor/advice';
 export const doctorQueue = () => '/doctor/queue';
+export const doctorPatientHistory = () => '/doctor/patient-history';
+export const doctorLabResults = () => '/doctor/lab-results';
+
+// Admin routes
+export const adminDashboard = () => '/admin/dashboard';
+export const adminDoctors = () => '/admin/doctors';
+export const adminStaff = () => '/admin/staff';
+export const adminPatients = () => '/admin/patients';
+export const adminAppointments = () => '/admin/appointments';
+export const adminReports = () => '/admin/reports';
+export const adminAnalytics = () => '/admin/analytics';
+export const adminClinicSettings = () => '/admin/clinic-settings';
+export const adminRooms = () => '/admin/rooms';
+export const adminSchedules = () => '/admin/schedules';
 
 // Receptionist routes
 export const receptionistDashboard = () => '/receptionist/dashboard';
+export const receptionistAppointments = () => '/receptionist/appointments';
+export const receptionistCheckIn = () => '/receptionist/check-in';
+export const receptionistEncounters = () => '/receptionist/encounters';
+export const receptionistInsurance = () => '/receptionist/insurance';
+export const receptionistPatientHistory = () => '/receptionist/patient-history';
+export const receptionistPatientSearch = () => '/receptionist/patient-search';
+export const receptionistQueue = () => '/receptionist/queue';
+export const receptionistRegisterPatient = () => '/receptionist/register-patient';
+export const receptionistReports = () => '/receptionist/reports';
 
 // Patient routes
 export const patientDashboard = () => '/patient/dashboard';
+export const patientAppointments = () => '/patient/appointments';
+export const patientBilling = () => '/patient/billing';
+export const patientBookAppointment = () => '/patient/book-appointment';
+export const patientDocuments = () => '/patient/documents';
+export const patientFollowUps = () => '/patient/follow-ups';
+export const patientInsurance = () => '/patient/insurance';
+export const patientLabResults = () => '/patient/lab-results';
+export const patientMedicalRecords = () => '/patient/medical-records';
+export const patientNotifications = () => '/patient/notifications';
+export const patientPrescriptions = () => '/patient/prescriptions';
+export const patientProfile = () => '/patient/profile';
 
 // Medical Representative routes
 export const medrepDashboard = () => '/medrep/dashboard';
+export const medrepAnalytics = () => '/medrep/analytics';
+export const medrepCommitments = () => '/medrep/commitments';
+export const medrepDoctors = () => '/medrep/doctors';
+export const medrepInteractions = () => '/medrep/interactions';
+export const medrepMarketing = () => '/medrep/marketing';
+export const medrepMeetingHistory = () => '/medrep/meeting-history';
+export const medrepPerformance = () => '/medrep/performance';
+export const medrepProducts = () => '/medrep/products';
+export const medrepSamples = () => '/medrep/samples';
+export const medrepScheduleMeeting = () => '/medrep/schedule-meeting';
+export const medrepTerritory = () => '/medrep/territory';
 
 // Settings routes
 export const settings = {

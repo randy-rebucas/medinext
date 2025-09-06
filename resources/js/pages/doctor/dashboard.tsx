@@ -1,4 +1,3 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import { doctorDashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -6,18 +5,18 @@ import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Users, FileText, Pill, Stethoscope, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, Users, FileText, Pill, Stethoscope, AlertCircle, CheckCircle, TrendingUp, Activity, ArrowUpRight } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Doctor Dashboard',
-        href: doctorDashboard().url,
+        href: doctorDashboard(),
     },
 ];
 
 interface DoctorDashboardProps {
-    stats: {
+    stats?: {
         todayAppointments: number;
         upcomingAppointments: number;
         totalPatients: number;
@@ -39,7 +38,14 @@ interface DoctorDashboardProps {
     };
 }
 
-export default function DoctorDashboard({ stats }: DoctorDashboardProps) {
+export default function DoctorDashboard({ stats = {
+    todayAppointments: 0,
+    upcomingAppointments: 0,
+    totalPatients: 0,
+    pendingPrescriptions: 0,
+    recentAppointments: [],
+    recentPrescriptions: []
+} }: DoctorDashboardProps) {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'scheduled':
@@ -186,9 +192,9 @@ export default function DoctorDashboard({ stats }: DoctorDashboardProps) {
                                                 </p>
                                                 <p className="text-sm text-muted-foreground">
                                                     {new Date(appointment.start_at).toLocaleDateString()} at{' '}
-                                                    {new Date(appointment.start_at).toLocaleTimeString([], { 
-                                                        hour: '2-digit', 
-                                                        minute: '2-digit' 
+                                                    {new Date(appointment.start_at).toLocaleTimeString([], {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
                                                     })}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
@@ -295,7 +301,7 @@ export default function DoctorDashboard({ stats }: DoctorDashboardProps) {
                                     </Button>
                                 </div>
                             )}
-                            
+
                             {stats.todayAppointments > 0 && (
                                 <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                     <CheckCircle className="h-5 w-5 text-blue-600" />

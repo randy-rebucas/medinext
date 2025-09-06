@@ -1,6 +1,19 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { adminReports } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Admin Dashboard',
+        href: '/admin/dashboard',
+    },
+    {
+        title: 'Reports',
+        href: adminReports(),
+    },
+];
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -86,7 +99,7 @@ export default function Reports() {
     ];
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reports - Medinext">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
@@ -170,27 +183,27 @@ export default function Reports() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <Button className="w-full justify-start h-12" variant="outline" className="border-slate-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400">
+                                <Button className="w-full justify-start h-12 border-slate-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400" variant="outline">
                                     <Users className="mr-3 h-4 w-4" />
                                     Patient Demographics
                                 </Button>
-                                <Button className="w-full justify-start h-12" variant="outline" className="border-slate-300 dark:border-slate-600 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400">
+                                <Button className="w-full justify-start h-12 border-slate-300 dark:border-slate-600 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400" variant="outline">
                                     <Stethoscope className="mr-3 h-4 w-4" />
                                     Doctor Performance
                                 </Button>
-                                <Button className="w-full justify-start h-12" variant="outline" className="border-slate-300 dark:border-slate-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400">
+                                <Button className="w-full justify-start h-12 border-slate-300 dark:border-slate-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400" variant="outline">
                                     <Calendar className="mr-3 h-4 w-4" />
                                     Appointment Summary
                                 </Button>
-                                <Button className="w-full justify-start h-12" variant="outline" className="border-slate-300 dark:border-slate-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400">
+                                <Button className="w-full justify-start h-12 border-slate-300 dark:border-slate-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400" variant="outline">
                                     <TrendingUp className="mr-3 h-4 w-4" />
                                     Revenue Report
                                 </Button>
-                                <Button className="w-full justify-start h-12" variant="outline" className="border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">
+                                <Button className="w-full justify-start h-12 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700" variant="outline">
                                     <BarChart3 className="mr-3 h-4 w-4" />
                                     Analytics Dashboard
                                 </Button>
-                                <Button className="w-full justify-start h-12" variant="outline" className="border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">
+                                <Button className="w-full justify-start h-12 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700" variant="outline">
                                     <PieChart className="mr-3 h-4 w-4" />
                                     Custom Report
                                 </Button>

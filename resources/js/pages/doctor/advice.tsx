@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/app-layout';
 import { doctorAdvice } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,6 @@ import {
     Filter,
     Plus,
     Eye,
-    Edit,
     Download,
     CheckCircle,
     XCircle,
@@ -29,11 +28,9 @@ import {
     Activity,
     Shield
 } from 'lucide-react';
-import { Link } from '@inertiajs/react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -42,7 +39,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Medical Advice',
-        href: doctorAdvice().url,
+        href: doctorAdvice(),
     },
 ];
 
@@ -71,9 +68,9 @@ interface Patient {
 }
 
 interface DoctorAdviceProps {
-    advice: MedicalAdvice[];
-    patients: Patient[];
-    filters: {
+    advice?: MedicalAdvice[];
+    patients?: Patient[];
+    filters?: {
         category: string;
         priority: string;
         status: string;
@@ -83,9 +80,15 @@ interface DoctorAdviceProps {
 }
 
 export default function DoctorAdvice({
-    advice,
-    patients,
-    filters
+    advice = [],
+    patients = [],
+    filters = {
+        category: '',
+        priority: '',
+        status: '',
+        patient_id: '',
+        date_range: ''
+    }
 }: DoctorAdviceProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState(filters.category || '');
@@ -98,84 +101,14 @@ export default function DoctorAdvice({
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
     const [selectedAdvice, setSelectedAdvice] = useState<MedicalAdvice | null>(null);
 
-    const getCategoryIcon = (category: string) => {
-        switch (category) {
-            case 'general':
-                return <Stethoscope className="h-4 w-4" />;
-            case 'cardiology':
-                return <Heart className="h-4 w-4" />;
-            case 'neurology':
-                return <Brain className="h-4 w-4" />;
-            case 'emergency':
-                return <AlertTriangle className="h-4 w-4" />;
-            case 'preventive':
-                return <Shield className="h-4 w-4" />;
-            case 'follow_up':
-                return <Activity className="h-4 w-4" />;
-            default:
-                return <FileText className="h-4 w-4" />;
-        }
-    };
-
-    const getCategoryColor = (category: string) => {
-        switch (category) {
-            case 'general':
-                return 'bg-blue-100 text-blue-800';
-            case 'cardiology':
-                return 'bg-red-100 text-red-800';
-            case 'neurology':
-                return 'bg-purple-100 text-purple-800';
-            case 'emergency':
-                return 'bg-orange-100 text-orange-800';
-            case 'preventive':
-                return 'bg-green-100 text-green-800';
-            case 'follow_up':
-                return 'bg-yellow-100 text-yellow-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getPriorityColor = (priority: string) => {
-        switch (priority) {
-            case 'urgent':
-            case 'emergency':
-                return 'bg-red-100 text-red-800';
-            case 'high':
-                return 'bg-orange-100 text-orange-800';
-            case 'normal':
-                return 'bg-blue-100 text-blue-800';
-            case 'low':
-                return 'bg-gray-100 text-gray-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active':
-            case 'completed':
-                return 'bg-green-100 text-green-800';
-            case 'pending':
-            case 'draft':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'cancelled':
-            case 'expired':
-                return 'bg-red-100 text-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
     const filteredAdvice = advice.filter(item => {
         const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             item.patient_name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = !categoryFilter || item.category === categoryFilter;
-        const matchesPriority = !priorityFilter || item.priority === priorityFilter;
-        const matchesStatus = !statusFilter || item.status === statusFilter;
-        const matchesPatient = !patientFilter || item.patient_id.toString() === patientFilter;
+        const matchesCategory = !categoryFilter || categoryFilter === 'all' || item.category === categoryFilter;
+        const matchesPriority = !priorityFilter || priorityFilter === 'all' || item.priority === priorityFilter;
+        const matchesStatus = !statusFilter || statusFilter === 'all' || item.status === statusFilter;
+        const matchesPatient = !patientFilter || patientFilter === 'all' || item.patient_id.toString() === patientFilter;
 
         return matchesSearch && matchesCategory && matchesPriority && matchesStatus && matchesPatient;
     });
@@ -279,7 +212,7 @@ export default function DoctorAdvice({
                                         <SelectValue placeholder="All categories" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All categories</SelectItem>
+                                        <SelectItem value="all">All categories</SelectItem>
                                         <SelectItem value="general">General</SelectItem>
                                         <SelectItem value="cardiology">Cardiology</SelectItem>
                                         <SelectItem value="neurology">Neurology</SelectItem>
@@ -296,7 +229,7 @@ export default function DoctorAdvice({
                                         <SelectValue placeholder="All priorities" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All priorities</SelectItem>
+                                        <SelectItem value="all">All priorities</SelectItem>
                                         <SelectItem value="low">Low</SelectItem>
                                         <SelectItem value="normal">Normal</SelectItem>
                                         <SelectItem value="high">High</SelectItem>
@@ -312,7 +245,7 @@ export default function DoctorAdvice({
                                         <SelectValue placeholder="All statuses" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All statuses</SelectItem>
+                                        <SelectItem value="all">All statuses</SelectItem>
                                         <SelectItem value="draft">Draft</SelectItem>
                                         <SelectItem value="active">Active</SelectItem>
                                         <SelectItem value="pending">Pending</SelectItem>
@@ -328,7 +261,7 @@ export default function DoctorAdvice({
                                         <SelectValue placeholder="All patients" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All patients</SelectItem>
+                                        <SelectItem value="all">All patients</SelectItem>
                                         {patients.map((patient) => (
                                             <SelectItem key={patient.id} value={patient.id.toString()}>
                                                 {patient.name}
@@ -344,7 +277,7 @@ export default function DoctorAdvice({
                                         <SelectValue placeholder="All dates" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All dates</SelectItem>
+                                        <SelectItem value="all">All dates</SelectItem>
                                         <SelectItem value="today">Today</SelectItem>
                                         <SelectItem value="week">This week</SelectItem>
                                         <SelectItem value="month">This month</SelectItem>

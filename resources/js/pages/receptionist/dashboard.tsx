@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { receptionistDashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Receptionist Dashboard',
-        href: '/receptionist/dashboard',
+        href: receptionistDashboard(),
     },
 ];
 

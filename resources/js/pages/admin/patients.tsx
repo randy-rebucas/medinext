@@ -1,6 +1,8 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { adminPatients } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +30,17 @@ import {
     Clock,
     Activity
 } from 'lucide-react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Admin Dashboard',
+        href: '/admin/dashboard',
+    },
+    {
+        title: 'Patient Management',
+        href: adminPatients(),
+    },
+];
 
 export default function PatientManagement() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -121,7 +134,7 @@ export default function PatientManagement() {
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Patient Management - Medinext">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />

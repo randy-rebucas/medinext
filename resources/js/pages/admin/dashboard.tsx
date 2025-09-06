@@ -1,18 +1,26 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { adminDashboard } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-    Users, 
-    Calendar, 
-    FileText, 
-    Stethoscope, 
-    Building2, 
-    Clock,
+import {
+    Users,
+    Calendar,
+    FileText,
+    Stethoscope,
+    Building2,
     TrendingUp,
     AlertCircle
 } from 'lucide-react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Admin Dashboard',
+        href: adminDashboard(),
+    },
+];
 
 export default function AdminDashboard() {
     const stats = [
@@ -78,10 +86,9 @@ export default function AdminDashboard() {
     ];
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Admin Dashboard" />
-            
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
                     <p className="text-muted-foreground">

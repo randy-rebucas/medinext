@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { patientDashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-    Calendar, 
-    FileText, 
-    Download, 
-    Eye, 
+import {
+    Calendar,
+    FileText,
+    Download,
+    Eye,
     Clock,
     User,
     Stethoscope,
@@ -28,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Patient Portal',
-        href: '/patient/dashboard',
+        href: patientDashboard(),
     },
 ];
 
@@ -101,14 +102,14 @@ interface PatientDashboardProps {
     availableSlots: Array<{ date: string; time: string; doctor_id: number; }>;
 }
 
-export default function PatientDashboard({ 
-    patient, 
-    upcomingAppointments, 
-    recentEncounters, 
-    recentPrescriptions, 
+export default function PatientDashboard({
+    patient,
+    upcomingAppointments,
+    recentEncounters,
+    recentPrescriptions,
     recentLabResults,
     doctors,
-    availableSlots 
+    availableSlots
 }: PatientDashboardProps) {
     const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
 
@@ -272,7 +273,7 @@ export default function PatientDashboard({
                                                     Select a doctor and available time slot
                                                 </DialogDescription>
                                             </DialogHeader>
-                                            <AppointmentBookingForm 
+                                            <AppointmentBookingForm
                                                 doctors={doctors}
                                                 availableSlots={availableSlots}
                                                 onSuccess={() => setIsBookingDialogOpen(false)}
@@ -524,11 +525,11 @@ export default function PatientDashboard({
 }
 
 // Appointment Booking Form Component
-function AppointmentBookingForm({ 
-    doctors, 
-    availableSlots, 
-    onSuccess 
-}: { 
+function AppointmentBookingForm({
+    doctors,
+    availableSlots,
+    onSuccess
+}: {
     doctors: Array<{ id: number; name: string; specialization: string; }>;
     availableSlots: Array<{ date: string; time: string; doctor_id: number; }>;
     onSuccess: () => void;
@@ -566,7 +567,7 @@ function AppointmentBookingForm({
         }
     };
 
-    const filteredSlots = availableSlots.filter(slot => 
+    const filteredSlots = availableSlots.filter(slot =>
         slot.doctor_id.toString() === formData.doctor_id && slot.date === formData.date
     );
 

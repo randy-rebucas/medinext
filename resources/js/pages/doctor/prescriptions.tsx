@@ -3,34 +3,30 @@ import AppLayout from '@/layouts/app-layout';
 import { doctorPrescriptions } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-    Pill, 
-    Search, 
-    Filter, 
-    Plus, 
-    Eye, 
-    Edit, 
-    Download, 
+import {
+    Pill,
+    Search,
+    Filter,
+    Plus,
+    Eye,
+    Download,
     CheckCircle,
     XCircle,
     Clock,
     AlertTriangle,
     FileText,
-    QrCode,
     Calendar,
     User
 } from 'lucide-react';
-import { Link } from '@inertiajs/react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -39,7 +35,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Prescriptions',
-        href: doctorPrescriptions().url,
+        href: doctorPrescriptions(),
     },
 ];
 
@@ -74,9 +70,9 @@ interface PrescriptionItem {
 }
 
 interface DoctorPrescriptionsProps {
-    prescriptions: Prescription[];
-    patients: Array<{ id: number; name: string }>;
-    filters: {
+    prescriptions?: Prescription[];
+    patients?: Array<{ id: number; name: string }>;
+    filters?: {
         status: string;
         type: string;
         patient_id: string;
@@ -84,10 +80,15 @@ interface DoctorPrescriptionsProps {
     };
 }
 
-export default function DoctorPrescriptions({ 
-    prescriptions, 
-    patients, 
-    filters 
+export default function DoctorPrescriptions({
+    prescriptions = [],
+    patients = [],
+    filters = {
+        status: '',
+        type: '',
+        patient_id: '',
+        date_range: ''
+    }
 }: DoctorPrescriptionsProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
@@ -99,51 +100,14 @@ export default function DoctorPrescriptions({
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
     const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active':
-                return 'bg-green-100 text-green-800';
-            case 'draft':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'dispensed':
-                return 'bg-blue-100 text-blue-800';
-            case 'expired':
-                return 'bg-red-100 text-red-800';
-            case 'cancelled':
-                return 'bg-gray-100 text-gray-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getTypeColor = (type: string) => {
-        switch (type) {
-            case 'emergency':
-                return 'bg-red-100 text-red-800';
-            case 'controlled':
-                return 'bg-orange-100 text-orange-800';
-            case 'new':
-                return 'bg-blue-100 text-blue-800';
-            case 'refill':
-                return 'bg-green-100 text-green-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getVerificationColor = (status: boolean | null) => {
-        if (status === null) return 'bg-yellow-100 text-yellow-800';
-        return status ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-    };
-
     const filteredPrescriptions = prescriptions.filter(prescription => {
         const matchesSearch = prescription.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             prescription.prescription_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             prescription.diagnosis.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = !statusFilter || prescription.status === statusFilter;
-        const matchesType = !typeFilter || prescription.prescription_type === typeFilter;
-        const matchesPatient = !patientFilter || prescription.patient_id.toString() === patientFilter;
-        
+        const matchesStatus = !statusFilter || statusFilter === 'all' || prescription.status === statusFilter;
+        const matchesType = !typeFilter || typeFilter === 'all' || prescription.prescription_type === typeFilter;
+        const matchesPatient = !patientFilter || patientFilter === 'all' || prescription.patient_id.toString() === patientFilter;
+
         return matchesSearch && matchesStatus && matchesType && matchesPatient;
     });
 
@@ -207,7 +171,7 @@ export default function DoctorPrescriptions({
                                         Write a new prescription for a patient
                                     </DialogDescription>
                                 </DialogHeader>
-                                <CreatePrescriptionForm 
+                                <CreatePrescriptionForm
                                     patients={patients}
                                     onSuccess={() => setIsCreateDialogOpen(false)}
                                 />
@@ -246,7 +210,7 @@ export default function DoctorPrescriptions({
                                         <SelectValue placeholder="All statuses" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All statuses</SelectItem>
+                                        <SelectItem value="all">All statuses</SelectItem>
                                         <SelectItem value="draft">Draft</SelectItem>
                                         <SelectItem value="active">Active</SelectItem>
                                         <SelectItem value="dispensed">Dispensed</SelectItem>
@@ -262,7 +226,7 @@ export default function DoctorPrescriptions({
                                         <SelectValue placeholder="All types" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All types</SelectItem>
+                                        <SelectItem value="all">All types</SelectItem>
                                         <SelectItem value="new">New</SelectItem>
                                         <SelectItem value="refill">Refill</SelectItem>
                                         <SelectItem value="emergency">Emergency</SelectItem>
@@ -278,7 +242,7 @@ export default function DoctorPrescriptions({
                                         <SelectValue placeholder="All patients" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All patients</SelectItem>
+                                        <SelectItem value="all">All patients</SelectItem>
                                         {patients.map((patient) => (
                                             <SelectItem key={patient.id} value={patient.id.toString()}>
                                                 {patient.name}
@@ -294,7 +258,7 @@ export default function DoctorPrescriptions({
                                         <SelectValue placeholder="All dates" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All dates</SelectItem>
+                                        <SelectItem value="all">All dates</SelectItem>
                                         <SelectItem value="today">Today</SelectItem>
                                         <SelectItem value="week">This week</SelectItem>
                                         <SelectItem value="month">This month</SelectItem>
@@ -332,7 +296,7 @@ export default function DoctorPrescriptions({
                     </TabsList>
 
                     <TabsContent value="all" className="space-y-4">
-                        <PrescriptionsList 
+                        <PrescriptionsList
                             prescriptions={filteredPrescriptions}
                             onView={handleViewPrescription}
                             onVerify={handleVerifyPrescription}
@@ -341,7 +305,7 @@ export default function DoctorPrescriptions({
                     </TabsContent>
 
                     <TabsContent value="active" className="space-y-4">
-                        <PrescriptionsList 
+                        <PrescriptionsList
                             prescriptions={filteredPrescriptions.filter(p => p.status === 'active')}
                             onView={handleViewPrescription}
                             onVerify={handleVerifyPrescription}
@@ -350,7 +314,7 @@ export default function DoctorPrescriptions({
                     </TabsContent>
 
                     <TabsContent value="draft" className="space-y-4">
-                        <PrescriptionsList 
+                        <PrescriptionsList
                             prescriptions={filteredPrescriptions.filter(p => p.status === 'draft')}
                             onView={handleViewPrescription}
                             onVerify={handleVerifyPrescription}
@@ -359,7 +323,7 @@ export default function DoctorPrescriptions({
                     </TabsContent>
 
                     <TabsContent value="expired" className="space-y-4">
-                        <PrescriptionsList 
+                        <PrescriptionsList
                             prescriptions={filteredPrescriptions.filter(p => p.status === 'expired')}
                             onView={handleViewPrescription}
                             onVerify={handleVerifyPrescription}
@@ -368,7 +332,7 @@ export default function DoctorPrescriptions({
                     </TabsContent>
 
                     <TabsContent value="pending" className="space-y-4">
-                        <PrescriptionsList 
+                        <PrescriptionsList
                             prescriptions={filteredPrescriptions.filter(p => p.verification_status === null)}
                             onView={handleViewPrescription}
                             onVerify={handleVerifyPrescription}
@@ -397,12 +361,12 @@ export default function DoctorPrescriptions({
 }
 
 // Prescriptions List Component
-function PrescriptionsList({ 
-    prescriptions, 
-    onView, 
-    onVerify, 
-    onDelete 
-}: { 
+function PrescriptionsList({
+    prescriptions,
+    onView,
+    onVerify,
+    onDelete
+}: {
     prescriptions: Prescription[];
     onView: (prescription: Prescription) => void;
     onVerify: (id: number, verified: boolean) => void;
@@ -476,7 +440,7 @@ function PrescriptionsList({
                                             {prescription.prescription_type}
                                         </Badge>
                                         <Badge variant="outline" className={getVerificationColor(prescription.verification_status)}>
-                                            {prescription.verification_status === null ? 'Pending' : 
+                                            {prescription.verification_status === null ? 'Pending' :
                                              prescription.verification_status ? 'Verified' : 'Rejected'}
                                         </Badge>
                                     </div>
@@ -552,7 +516,7 @@ function PrescriptionsList({
 }
 
 // Create Prescription Form Component
-function CreatePrescriptionForm({ patients, onSuccess }: { 
+function CreatePrescriptionForm({ patients, onSuccess }: {
     patients: Array<{ id: number; name: string }>;
     onSuccess: () => void;
 }) {
@@ -715,23 +679,23 @@ function CreatePrescriptionForm({ patients, onSuccess }: {
                         Add Medication
                     </Button>
                 </div>
-                
+
                 {formData.items.map((item, index) => (
                     <Card key={index} className="p-4">
                         <div className="flex items-center justify-between mb-4">
                             <h4 className="font-medium">Medication {index + 1}</h4>
                             {formData.items.length > 1 && (
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => removeMedication(index)}
                                 >
                                     <XCircle className="h-4 w-4" />
                                 </Button>
                             )}
                         </div>
-                        
+
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
                                 <Label>Medication Name *</Label>
@@ -796,7 +760,7 @@ function CreatePrescriptionForm({ patients, onSuccess }: {
                                 />
                             </div>
                         </div>
-                        
+
                         <div className="grid gap-4 md:grid-cols-2 mt-4">
                             <div className="space-y-2">
                                 <Label>Side Effects</Label>

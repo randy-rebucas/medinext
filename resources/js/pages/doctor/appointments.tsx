@@ -8,8 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Users, Search, Filter, Plus, Eye, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { Link } from '@inertiajs/react';
+import { Calendar, Clock, Users, Search, Filter, Plus, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,7 +20,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Appointments',
-        href: doctorAppointments().url,
+        href: doctorAppointments(),
     },
 ];
 
@@ -40,17 +39,26 @@ interface Appointment {
 }
 
 interface DoctorAppointmentsProps {
-    appointments: Appointment[];
-    patients: Array<{ id: number; name: string }>;
-    rooms: Array<{ id: number; name: string }>;
-    filters: {
+    appointments?: Appointment[];
+    patients?: Array<{ id: number; name: string }>;
+    rooms?: Array<{ id: number; name: string }>;
+    filters?: {
         status: string;
         type: string;
         date: string;
     };
 }
 
-export default function DoctorAppointments({ appointments, patients, rooms, filters }: DoctorAppointmentsProps) {
+export default function DoctorAppointments({
+    appointments = [],
+    patients = [],
+    rooms = [],
+    filters = {
+        status: '',
+        type: '',
+        date: ''
+    }
+}: DoctorAppointmentsProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [typeFilter, setTypeFilter] = useState(filters.type || '');
@@ -97,8 +105,8 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
     const filteredAppointments = appointments.filter(appointment => {
         const matchesSearch = appointment.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             appointment.reason.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = !statusFilter || appointment.status === statusFilter;
-        const matchesType = !typeFilter || appointment.type === typeFilter;
+        const matchesStatus = !statusFilter || statusFilter === 'all' || appointment.status === statusFilter;
+        const matchesType = !typeFilter || typeFilter === 'all' || appointment.type === typeFilter;
         const matchesDate = !dateFilter || appointment.start_at.startsWith(dateFilter);
 
         return matchesSearch && matchesStatus && matchesType && matchesDate;
@@ -142,8 +150,8 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                                     Schedule a new appointment for a patient
                                 </DialogDescription>
                             </DialogHeader>
-                            <CreateAppointmentForm 
-                                patients={patients} 
+                            <CreateAppointmentForm
+                                patients={patients}
                                 rooms={rooms}
                                 onSuccess={() => setIsCreateDialogOpen(false)}
                             />
@@ -181,7 +189,7 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                                         <SelectValue placeholder="All statuses" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All statuses</SelectItem>
+                                        <SelectItem value="all">All statuses</SelectItem>
                                         <SelectItem value="scheduled">Scheduled</SelectItem>
                                         <SelectItem value="confirmed">Confirmed</SelectItem>
                                         <SelectItem value="in_progress">In Progress</SelectItem>
@@ -198,7 +206,7 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                                         <SelectValue placeholder="All types" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All types</SelectItem>
+                                        <SelectItem value="all">All types</SelectItem>
                                         <SelectItem value="consultation">Consultation</SelectItem>
                                         <SelectItem value="follow_up">Follow-up</SelectItem>
                                         <SelectItem value="emergency">Emergency</SelectItem>
@@ -219,8 +227,8 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                             </div>
                             <div className="space-y-2">
                                 <Label>&nbsp;</Label>
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     onClick={() => {
                                         setSearchTerm('');
                                         setStatusFilter('');
@@ -267,12 +275,12 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                                                     </div>
                                                     <div className="flex items-center gap-1">
                                                         <Clock className="h-4 w-4" />
-                                                        {new Date(appointment.start_at).toLocaleTimeString([], { 
-                                                            hour: '2-digit', 
-                                                            minute: '2-digit' 
-                                                        })} - {new Date(appointment.end_at).toLocaleTimeString([], { 
-                                                            hour: '2-digit', 
-                                                            minute: '2-digit' 
+                                                        {new Date(appointment.start_at).toLocaleTimeString([], {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })} - {new Date(appointment.end_at).toLocaleTimeString([], {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
                                                         })}
                                                     </div>
                                                     {appointment.room_name && (
@@ -283,7 +291,7 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                                                     )}
                                                 </div>
                                                 <p className="text-sm text-muted-foreground">
-                                                    <strong>Type:</strong> {appointment.type.replace('_', ' ')} | 
+                                                    <strong>Type:</strong> {appointment.type.replace('_', ' ')} |
                                                     <strong> Reason:</strong> {appointment.reason}
                                                 </p>
                                                 {appointment.notes && (
@@ -293,8 +301,8 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Select 
-                                                    value={appointment.status} 
+                                                <Select
+                                                    value={appointment.status}
                                                     onValueChange={(value) => handleStatusChange(appointment.id, value)}
                                                 >
                                                     <SelectTrigger className="w-32">
@@ -359,10 +367,9 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
                             </DialogDescription>
                         </DialogHeader>
                         {selectedAppointment && (
-                            <EditAppointmentForm 
+                            <EditAppointmentForm
                                 appointment={selectedAppointment}
                                 patients={patients}
-                                rooms={rooms}
                                 onSuccess={() => {
                                     setIsEditDialogOpen(false);
                                     setSelectedAppointment(null);
@@ -377,8 +384,8 @@ export default function DoctorAppointments({ appointments, patients, rooms, filt
 }
 
 // Create Appointment Form Component
-function CreateAppointmentForm({ patients, rooms, onSuccess }: { 
-    patients: Array<{ id: number; name: string }>; 
+function CreateAppointmentForm({ patients, rooms, onSuccess }: {
+    patients: Array<{ id: number; name: string }>;
     rooms: Array<{ id: number; name: string }>;
     onSuccess: () => void;
 }) {
@@ -528,10 +535,9 @@ function CreateAppointmentForm({ patients, rooms, onSuccess }: {
 }
 
 // Edit Appointment Form Component
-function EditAppointmentForm({ appointment, patients, rooms, onSuccess }: { 
+function EditAppointmentForm({ appointment, patients, onSuccess }: {
     appointment: Appointment;
-    patients: Array<{ id: number; name: string }>; 
-    rooms: Array<{ id: number; name: string }>;
+    patients: Array<{ id: number; name: string }>;
     onSuccess: () => void;
 }) {
     const [formData, setFormData] = useState({
