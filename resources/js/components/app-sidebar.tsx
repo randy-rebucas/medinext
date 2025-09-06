@@ -14,7 +14,8 @@ import {
     medrepDashboard
 } from '@/routes';
 import { type NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
+import { useUserRole } from '@/hooks/use-user-role';
 import {
     BookOpen,
     Folder,
@@ -47,15 +48,7 @@ import {
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
-interface PageProps {
-    auth?: {
-        user?: {
-            role: string;
-        };
-    };
-}
-
-// Get user role from page props
+// Get navigation items based on user role
 function getMainNavItems(userRole: string): NavItem[] {
     switch (userRole) {
         case 'admin':
@@ -352,7 +345,7 @@ function getMainNavItems(userRole: string): NavItem[] {
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
+        href: 'https://github.com/randy-rebucas/medinext',
         icon: Folder,
     },
     {
@@ -363,8 +356,7 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const pageProps = usePage().props as PageProps;
-    const userRole = pageProps?.auth?.user?.role || '';
+    const { userRole } = useUserRole();
     const mainNavItems = getMainNavItems(userRole);
 
     return (

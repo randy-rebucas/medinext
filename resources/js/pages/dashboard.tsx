@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useUserRole } from '@/hooks/use-user-role';
 import {
     Users,
     Calendar,
@@ -76,15 +77,18 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ user, stats, permissions }: DashboardProps) {
+    const { userRole } = useUserRole();
+
     // Debug logging
     console.log('Dashboard props:', { user, stats, permissions });
+    console.log('User role from hook:', userRole);
 
     // Get role-specific dashboard content
     const getRoleDashboard = () => {
-        const userRole = user?.role || 'default';
-        console.log('User role:', userRole);
+        const role = userRole || user?.role || 'default';
+        console.log('User role:', role);
 
-        switch (userRole) {
+        switch (role) {
             case 'admin':
                 return <AdminDashboard stats={stats} permissions={permissions} />;
             case 'doctor':
@@ -117,13 +121,13 @@ export default function Dashboard({ user, stats, permissions }: DashboardProps) 
                                     Welcome back, {user?.name || 'User'}
                                 </h1>
                                 <p className="mt-2 text-blue-100">
-                                    {user?.clinic?.name || 'No Clinic'} • {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
+                                    {user?.clinic?.name || 'No Clinic'} • {userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
                                     <Shield className="h-3 w-3" />
-                                    {user?.role || 'User'}
+                                    {userRole || user?.role || 'User'}
                                 </Badge>
                                 {user?.clinic && (
                                     <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">

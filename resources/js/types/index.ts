@@ -1,3 +1,16 @@
+// Shared data types
+export interface SharedData {
+    name: string;
+    quote: { message: string; author: string };
+    auth: Auth;
+    sidebarOpen: boolean;
+    [key: string]: unknown;
+}
+
+export interface Auth {
+    user: User;
+}
+
 // User types
 export interface User {
     id: number;

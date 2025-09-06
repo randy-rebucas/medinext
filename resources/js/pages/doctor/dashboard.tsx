@@ -5,7 +5,7 @@ import { Head } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Users, FileText, Pill, Stethoscope, AlertCircle, CheckCircle, TrendingUp, Activity, ArrowUpRight } from 'lucide-react';
+import { Calendar, Clock, Users, FileText, Pill, Stethoscope, AlertCircle, CheckCircle } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
