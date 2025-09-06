@@ -174,9 +174,6 @@ return new class extends Migration
             if (!Schema::hasIndex('prescription_items', 'prescription_items_prescription_id_index')) {
                 $table->index('prescription_id');
             }
-            if (!Schema::hasIndex('prescription_items', 'prescription_items_drug_name_index')) {
-                $table->index('drug_name');
-            }
         });
 
         // Add indexes to activity_logs table
