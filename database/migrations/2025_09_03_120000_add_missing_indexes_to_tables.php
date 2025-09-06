@@ -56,9 +56,7 @@ return new class extends Migration
             if (!Schema::hasIndex('patients', 'patients_dob_index')) {
                 $table->index('dob');
             }
-            if (!Schema::hasIndex('patients', 'patients_sex_index')) {
-                $table->index('sex');
-            }
+
         });
 
         // Add indexes to rooms table
