@@ -49,9 +49,7 @@ return new class extends Migration
             if (!Schema::hasIndex('patients', 'patients_clinic_id_index')) {
                 $table->index('clinic_id');
             }
-            if (!Schema::hasIndex('patients', 'patients_code_index')) {
-                $table->index('code');
-            }
+
             if (!Schema::hasIndex('patients', 'patients_first_name_last_name_index')) {
                 $table->index(['first_name', 'last_name']);
             }
