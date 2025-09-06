@@ -21,13 +21,33 @@ class DashboardController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $clinicId = $user->clinic_id;
+
+        // Get user's clinic and role from the pivot table
+        $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
+
+        if (!$userClinicRole) {
+            // If no clinic/role found, return with default data
+            return Inertia::render('dashboard', [
+                'user' => $user,
+                'stats' => $this->getDefaultStats(),
+                'permissions' => [],
+            ]);
+        }
+
+        $clinicId = $userClinicRole->clinic_id;
+        $role = $userClinicRole->role->name ?? 'user';
+        $clinic = $userClinicRole->clinic;
 
         // Get dashboard statistics
-        $stats = $this->getDashboardStats($clinicId, $user->role);
+        $stats = $this->getDashboardStats($clinicId, $role);
 
         // Get user permissions based on role
-        $permissions = $this->getUserPermissions($user->role);
+        $permissions = $this->getUserPermissions($role);
+
+        // Add clinic and role info to user object for frontend
+        $user->clinic_id = $clinicId;
+        $user->role = $role;
+        $user->clinic = $clinic;
 
         return Inertia::render('dashboard', [
             'user' => $user,
@@ -96,7 +116,9 @@ class DashboardController extends Controller
                 $stats['totalUsers'] = \App\Models\User::count();
                 break;
             case 'admin':
-                $stats['totalUsers'] = \App\Models\User::where('clinic_id', $clinicId)->count();
+                $stats['totalUsers'] = \App\Models\User::whereHas('userClinicRoles', function ($query) use ($clinicId) {
+                    $query->where('clinic_id', $clinicId);
+                })->count();
                 break;
             case 'doctor':
                 // Doctor-specific stats
@@ -190,5 +212,28 @@ class DashboardController extends Controller
     private function getCurrentUserId()
     {
         return request()->user()->id;
+    }
+
+    /**
+     * Get default stats when user has no clinic/role
+     */
+    private function getDefaultStats()
+    {
+        return [
+            'totalUsers' => 0,
+            'totalPatients' => 0,
+            'totalAppointments' => 0,
+            'totalEncounters' => 0,
+            'totalPrescriptions' => 0,
+            'totalProducts' => 0,
+            'totalMeetings' => 0,
+            'totalInteractions' => 0,
+            'todayAppointments' => 0,
+            'activeQueue' => 0,
+            'completedEncounters' => 0,
+            'pendingPrescriptions' => 0,
+            'upcomingMeetings' => 0,
+            'recentActivity' => [],
+        ];
     }
 }

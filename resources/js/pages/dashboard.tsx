@@ -21,8 +21,9 @@ import {
     Eye,
     BarChart3,
     UserCheck,
-    ClipboardList,
-    Building2
+    Building2,
+    TrendingUp,
+    ArrowUpRight
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
@@ -75,12 +76,15 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ user, stats, permissions }: DashboardProps) {
+    // Debug logging
+    console.log('Dashboard props:', { user, stats, permissions });
 
     // Get role-specific dashboard content
     const getRoleDashboard = () => {
-        switch (user.role) {
-            case 'superadmin':
-                return <SuperAdminDashboard stats={stats} permissions={permissions} />;
+        const userRole = user?.role || 'default';
+        console.log('User role:', userRole);
+
+        switch (userRole) {
             case 'admin':
                 return <AdminDashboard stats={stats} permissions={permissions} />;
             case 'doctor':
@@ -98,182 +102,47 @@ export default function Dashboard({ user, stats, permissions }: DashboardProps) 
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Welcome back, {user.name}
-                        </h1>
-                        <p className="text-muted-foreground">
-                            {user.clinic?.name} • {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                        </p>
+            <Head title="Dashboard - Medinext">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
+            </Head>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    {/* Modern Header */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-xl">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">
+                                    Welcome back, {user?.name || 'User'}
+                                </h1>
+                                <p className="mt-2 text-blue-100">
+                                    {user?.clinic?.name || 'No Clinic'} • {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <Shield className="h-3 w-3" />
+                                    {user?.role || 'User'}
+                                </Badge>
+                                {user?.clinic && (
+                                    <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                        <Building2 className="h-3 w-3" />
+                                        {user.clinic.name}
+                                    </Badge>
+                                )}
+                            </div>
+                        </div>
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="flex items-center gap-1">
-                            <Shield className="h-3 w-3" />
-                            {user.role}
-                        </Badge>
-                        {user.clinic && (
-                            <Badge variant="secondary" className="flex items-center gap-1">
-                                <Building2 className="h-3 w-3" />
-                                {user.clinic.name}
-                            </Badge>
-                        )}
-                    </div>
-                </div>
 
-                {/* Role-specific Dashboard */}
-                {getRoleDashboard()}
+                    {/* Role-specific Dashboard */}
+                    {getRoleDashboard()}
+                </div>
             </div>
         </AppLayout>
-    );
-}
-
-// Super Admin Dashboard
-function SuperAdminDashboard({ stats, permissions }: { stats: DashboardStats; permissions: string[] }) {
-    const hasPermission = (permission: string) => permissions.includes(permission);
-    return (
-        <div className="space-y-6">
-            {/* System Overview Stats */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Across all clinics
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Clinics</CardTitle>
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Active clinics
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
-                        <UserCheck className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalPatients}</div>
-                        <p className="text-xs text-muted-foreground">
-                            System-wide
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">System Health</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">98%</div>
-                        <p className="text-xs text-muted-foreground">
-                            Uptime
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Quick Actions */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>System Management</CardTitle>
-                    <CardDescription>Manage system-wide settings and configurations</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid gap-4 md:grid-cols-3">
-                        {hasPermission('manage_users') && (
-                            <Link href="/admin/users">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Users className="h-4 w-4 mr-2" />
-                                    Manage Users
-                                </Button>
-                            </Link>
-                        )}
-                        {hasPermission('manage_clinics') && (
-                            <Link href="/admin/clinics">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Building2 className="h-4 w-4 mr-2" />
-                                    Manage Clinics
-                                </Button>
-                            </Link>
-                        )}
-                        {hasPermission('manage_licenses') && (
-                            <Link href="/admin/licenses">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Shield className="h-4 w-4 mr-2" />
-                                    License Management
-                                </Button>
-                            </Link>
-                        )}
-                        {hasPermission('view_analytics') && (
-                            <Link href="/admin/analytics">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    System Analytics
-                                </Button>
-                            </Link>
-                        )}
-                        {hasPermission('manage_settings') && (
-                            <Link href="/admin/settings">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    System Settings
-                                </Button>
-                            </Link>
-                        )}
-                        {hasPermission('view_activity_logs') && (
-                            <Link href="/admin/activity-logs">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <ClipboardList className="h-4 w-4 mr-2" />
-                                    Activity Logs
-                                </Button>
-                            </Link>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Recent System Activity */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recent System Activity</CardTitle>
-                    <CardDescription>Latest activities across all clinics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {stats.recentActivity.slice(0, 5).map((activity) => (
-                            <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                    <div>
-                                        <p className="text-sm font-medium">{activity.description}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            by {activity.user_name} • {new Date(activity.created_at).toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
-                                <Badge variant="outline">{activity.type}</Badge>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
     );
 }
 
@@ -283,110 +152,148 @@ function AdminDashboard({ stats, permissions }: { stats: DashboardStats; permiss
     return (
         <div className="space-y-6">
             {/* Clinic Overview Stats */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Today's Appointments</CardTitle>
+                        <div className="p-2 bg-blue-500 rounded-lg">
+                            <Calendar className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.todayAppointments}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Scheduled for today
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.todayAppointments}</div>
+                        <div className="flex items-center mt-2">
+                            <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Scheduled for today
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Queue</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Active Queue</CardTitle>
+                        <div className="p-2 bg-orange-500 rounded-lg">
+                            <Clock className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeQueue}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Patients waiting
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.activeQueue}</div>
+                        <div className="flex items-center mt-2">
+                            <Activity className="h-3 w-3 text-orange-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Patients waiting
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
-                        <UserCheck className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Patients</CardTitle>
+                        <div className="p-2 bg-green-500 rounded-lg">
+                            <UserCheck className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalPatients}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Registered patients
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.totalPatients}</div>
+                        <div className="flex items-center mt-2">
+                            <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Registered patients
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Completed Today</CardTitle>
+                        <div className="p-2 bg-emerald-500 rounded-lg">
+                            <CheckCircle className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.completedEncounters}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Encounters completed
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.completedEncounters}</div>
+                        <div className="flex items-center mt-2">
+                            <CheckCircle className="h-3 w-3 text-emerald-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Encounters completed
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
                 <CardHeader>
-                    <CardTitle>Clinic Management</CardTitle>
-                    <CardDescription>Manage your clinic operations</CardDescription>
+                    <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">Clinic Management</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-300">Manage your clinic operations</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-3">
                         {hasPermission('manage_staff') && (
                             <Link href="/admin/staff">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Users className="h-4 w-4 mr-2" />
-                                    Manage Staff
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded-md mr-3 group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">
+                                        <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <span className="font-medium">Manage Staff</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-blue-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('manage_doctors') && (
                             <Link href="/admin/doctors">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Stethoscope className="h-4 w-4 mr-2" />
-                                    Manage Doctors
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-green-100 dark:bg-green-900 rounded-md mr-3 group-hover:bg-green-200 dark:group-hover:bg-green-800 transition-colors">
+                                        <Stethoscope className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <span className="font-medium">Manage Doctors</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-green-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('view_appointments') && (
                             <Link href="/admin/appointments">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Calendar className="h-4 w-4 mr-2" />
-                                    View Appointments
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-purple-100 dark:bg-purple-900 rounded-md mr-3 group-hover:bg-purple-200 dark:group-hover:bg-purple-800 transition-colors">
+                                        <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <span className="font-medium">View Appointments</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-purple-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('view_patients') && (
                             <Link href="/admin/patients">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <UserCheck className="h-4 w-4 mr-2" />
-                                    View Patients
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-emerald-100 dark:bg-emerald-900 rounded-md mr-3 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800 transition-colors">
+                                        <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <span className="font-medium">View Patients</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-emerald-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('view_reports') && (
                             <Link href="/admin/reports">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    View Reports
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-orange-100 dark:bg-orange-900 rounded-md mr-3 group-hover:bg-orange-200 dark:group-hover:bg-orange-800 transition-colors">
+                                        <BarChart3 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    <span className="font-medium">View Reports</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-orange-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('manage_settings') && (
                             <Link href="/admin/settings">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Clinic Settings
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-md mr-3 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
+                                        <Settings className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                                    </div>
+                                    <span className="font-medium">Clinic Settings</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-slate-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
@@ -403,110 +310,148 @@ function DoctorDashboard({ stats, permissions }: { stats: DashboardStats; permis
     return (
         <div className="space-y-6">
             {/* Doctor Stats */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Today's Appointments</CardTitle>
+                        <div className="p-2 bg-blue-500 rounded-lg">
+                            <Calendar className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.todayAppointments}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Your appointments
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.todayAppointments}</div>
+                        <div className="flex items-center mt-2">
+                            <TrendingUp className="h-3 w-3 text-blue-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Your appointments
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Queue</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Active Queue</CardTitle>
+                        <div className="p-2 bg-orange-500 rounded-lg">
+                            <Clock className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeQueue}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Patients waiting
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.activeQueue}</div>
+                        <div className="flex items-center mt-2">
+                            <Activity className="h-3 w-3 text-orange-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Patients waiting
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Completed Today</CardTitle>
+                        <div className="p-2 bg-green-500 rounded-lg">
+                            <CheckCircle className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.completedEncounters}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Encounters completed
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.completedEncounters}</div>
+                        <div className="flex items-center mt-2">
+                            <CheckCircle className="h-3 w-3 text-green-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Encounters completed
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending Prescriptions</CardTitle>
-                        <Pill className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Pending Prescriptions</CardTitle>
+                        <div className="p-2 bg-purple-500 rounded-lg">
+                            <Pill className="h-4 w-4 text-white" />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.pendingPrescriptions}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Awaiting verification
-                        </p>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.pendingPrescriptions}</div>
+                        <div className="flex items-center mt-2">
+                            <AlertCircle className="h-3 w-3 text-purple-500 mr-1" />
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                Awaiting verification
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
                 <CardHeader>
-                    <CardTitle>Doctor Tools</CardTitle>
-                    <CardDescription>Access your medical tools and patient management</CardDescription>
+                    <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">Doctor Tools</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-300">Access your medical tools and patient management</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-3">
                         {hasPermission('work_on_queue') && (
                             <Link href="/doctor/queue">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Clock className="h-4 w-4 mr-2" />
-                                    Patient Queue
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-orange-100 dark:bg-orange-900 rounded-md mr-3 group-hover:bg-orange-200 dark:group-hover:bg-orange-800 transition-colors">
+                                        <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    <span className="font-medium">Patient Queue</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-orange-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('view_appointments') && (
                             <Link href="/doctor/appointments">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Calendar className="h-4 w-4 mr-2" />
-                                    My Appointments
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded-md mr-3 group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">
+                                        <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <span className="font-medium">My Appointments</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-blue-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('manage_prescriptions') && (
                             <Link href="/doctor/prescriptions">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <Pill className="h-4 w-4 mr-2" />
-                                    Prescriptions
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-purple-100 dark:bg-purple-900 rounded-md mr-3 group-hover:bg-purple-200 dark:group-hover:bg-purple-800 transition-colors">
+                                        <Pill className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                    <span className="font-medium">Prescriptions</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-purple-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('view_medical_records') && (
                             <Link href="/doctor/medical-records">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    Medical Records
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-emerald-100 dark:bg-emerald-900 rounded-md mr-3 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-800 transition-colors">
+                                        <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                    <span className="font-medium">Medical Records</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-emerald-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('view_patients') && (
                             <Link href="/doctor/patients">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <UserCheck className="h-4 w-4 mr-2" />
-                                    My Patients
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-green-100 dark:bg-green-900 rounded-md mr-3 group-hover:bg-green-200 dark:group-hover:bg-green-800 transition-colors">
+                                        <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <span className="font-medium">My Patients</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-green-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
                         {hasPermission('view_analytics') && (
                             <Link href="/doctor/analytics">
-                                <Button variant="outline" className="w-full justify-start">
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    My Analytics
+                                <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 group">
+                                    <div className="p-1 bg-orange-100 dark:bg-orange-900 rounded-md mr-3 group-hover:bg-orange-200 dark:group-hover:bg-orange-800 transition-colors">
+                                        <BarChart3 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    <span className="font-medium">My Analytics</span>
+                                    <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-orange-500 transition-colors" />
                                 </Button>
                             </Link>
                         )}
