@@ -209,9 +209,6 @@ return new class extends Migration
             if (!Schema::hasIndex('medreps', 'medreps_user_id_index')) {
                 $table->index('user_id');
             }
-            if (!Schema::hasIndex('medreps', 'medreps_company_index')) {
-                $table->index('company');
-            }
         });
 
         // Add indexes to medrep_visits table
