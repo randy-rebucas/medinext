@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('doctor_id')->nullable();
             $table->timestamp('start_at')->nullable();
             $table->timestamp('end_at')->nullable();
-            $table->text('status')->default('booked'); // booked, arrived, in-room, completed, no-show, canceled
+            $table->string('status', 50)->default('booked'); // booked, arrived, in-room, completed, no-show, canceled
             $table->unsignedBigInteger('room_id')->nullable();
             $table->text('reason')->nullable();
             $table->text('source')->nullable(); // patient, receptionist, system

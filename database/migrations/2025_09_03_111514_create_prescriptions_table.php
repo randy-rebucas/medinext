@@ -18,7 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('doctor_id')->nullable();
             $table->unsignedBigInteger('encounter_id')->nullable();
             $table->timestamp('issued_at')->useCurrent();
-            $table->text('status')->default('active'); // active, revoked
+            $table->string('status', 50)->default('active'); // active, revoked
             $table->text('pdf_url')->nullable();
             $table->text('qr_hash')->unique()->nullable();
             $table->timestamps();

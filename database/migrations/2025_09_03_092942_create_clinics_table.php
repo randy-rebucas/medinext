@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->text('name');
             $table->text('slug')->unique()->nullable();
-            $table->text('timezone')->default('Asia/Manila');
+            $table->string('timezone')->default('Asia/Manila');
             $table->text('logo_url')->nullable();
             $table->json('address')->nullable();
             $table->json('settings')->nullable();

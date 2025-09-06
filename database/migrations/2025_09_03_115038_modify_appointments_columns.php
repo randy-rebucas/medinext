@@ -24,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('appointments', function (Blueprint $table) {
-            $table->text('status')->default('booked')->change();
+            $table->string('status', 50)->default('booked')->change();
             $table->text('reason')->nullable()->change();
             $table->text('source')->nullable()->change();
         });
