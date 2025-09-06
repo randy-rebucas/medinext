@@ -82,7 +82,7 @@ class Prescription extends Model
             if (empty($prescription->prescription_number)) {
                 $prescription->prescription_number = static::generatePrescriptionNumber($prescription->clinic_id);
             }
-            
+
             if (empty($prescription->qr_hash)) {
                 $prescription->qr_hash = static::generateQrHash();
             }
@@ -248,8 +248,8 @@ class Prescription extends Model
      */
     public function isActive(): bool
     {
-        return $this->status === 'active' && 
-               $this->expiry_date > now() && 
+        return $this->status === 'active' &&
+               $this->expiry_date > now() &&
                $this->refills_remaining > 0;
     }
 
@@ -351,10 +351,10 @@ class Prescription extends Model
         // Verification
         if ($this->verification_date) {
             $event = $this->verification_status ? 'Verified' : 'Rejected';
-            $description = $this->verification_status ? 
-                'Prescription verified and approved' : 
+            $description = $this->verification_status ?
+                'Prescription verified and approved' :
                 "Prescription rejected: {$this->verification_notes}";
-            
+
             $timeline[] = [
                 'date' => $this->verification_date->format('Y-m-d H:i'),
                 'event' => $event,
@@ -491,7 +491,7 @@ class Prescription extends Model
     {
         $clinic = Clinic::find($clinicId);
         $clinicCode = $clinic ? strtoupper(substr($clinic->name, 0, 3)) : 'CLN';
-        
+
         $date = now()->format('Ymd');
         $sequence = static::where('clinic_id', $clinicId)
             ->whereDate('created_at', today())
@@ -595,8 +595,8 @@ class Prescription extends Model
      */
     public function canBeRefilled(): bool
     {
-        return $this->isActive() && 
-               $this->refills_remaining > 0 && 
+        return $this->isActive() &&
+               $this->refills_remaining > 0 &&
                !$this->isExpired();
     }
 
@@ -616,6 +616,17 @@ class Prescription extends Model
             'patient_responsibility' => $copayAmount,
             'has_insurance' => $totalCost > $copayAmount,
         ];
+    }
+
+    /**
+     * Get the displayable singular label of the model.
+     * This method is required for Nova MorphTo relationships.
+     *
+     * @return string
+     */
+    public static function singularLabel(): string
+    {
+        return 'Prescription';
     }
 
     /**

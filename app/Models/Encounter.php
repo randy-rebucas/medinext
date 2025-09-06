@@ -538,6 +538,17 @@ class Encounter extends Model
     }
 
     /**
+     * Get the displayable singular label of the model.
+     * This method is required for Nova MorphTo relationships.
+     *
+     * @return string
+     */
+    public static function singularLabel(): string
+    {
+        return 'Encounter';
+    }
+
+    /**
      * Get the URI key for the model.
      * This method is required for Nova MorphTo relationships.
      *
