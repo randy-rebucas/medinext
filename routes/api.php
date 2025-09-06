@@ -60,7 +60,7 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::middleware(['license.usage:clinics'])->group(function () {
         Route::post('/clinics', [ClinicController::class, 'store']);
     });
-    
+
     Route::apiResource('clinics', ClinicController::class)->except(['store']);
     Route::get('/clinics/{clinic}/users', [ClinicController::class, 'users']);
     Route::get('/clinics/{clinic}/doctors', [ClinicController::class, 'doctors']);
@@ -72,7 +72,7 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::middleware(['license.usage:patients'])->group(function () {
         Route::post('/patients', [PatientController::class, 'store']);
     });
-    
+
     Route::apiResource('patients', PatientController::class)->except(['store']);
     Route::get('/patients/{patient}/appointments', [PatientController::class, 'appointments']);
     Route::get('/patients/{patient}/encounters', [PatientController::class, 'encounters']);
@@ -87,7 +87,7 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::middleware(['license.usage:users'])->group(function () {
         Route::post('/doctors', [DoctorController::class, 'store']);
     });
-    
+
     Route::apiResource('doctors', DoctorController::class)->except(['store']);
     Route::get('/doctors/{doctor}/appointments', [DoctorController::class, 'appointments']);
     Route::get('/doctors/{doctor}/encounters', [DoctorController::class, 'encounters']);
@@ -100,7 +100,7 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::middleware(['license.usage:appointments'])->group(function () {
         Route::post('/appointments', [AppointmentController::class, 'store']);
     });
-    
+
     Route::apiResource('appointments', AppointmentController::class)->except(['store']);
     Route::post('/appointments/{appointment}/check-in', [AppointmentController::class, 'checkIn']);
     Route::post('/appointments/{appointment}/check-out', [AppointmentController::class, 'checkOut']);
@@ -242,3 +242,6 @@ Route::get('/version', function () {
         'build' => config('app.version', '1.0.0')
     ]);
 });
+
+// Include license API routes
+require __DIR__.'/license.php';
