@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserClinicRole;
 use App\Models\Doctor;
+use Faker\Factory as Faker;
 
 class ClinicSeeder extends Seeder
 {
@@ -16,6 +17,8 @@ class ClinicSeeder extends Seeder
      */
     public function run(): void
     {
+        $faker = Faker::create();
+
         // Create roles
         $roles = [
             'superadmin',
@@ -149,11 +152,11 @@ class ClinicSeeder extends Seeder
         foreach ($clinics as $clinic) {
             // Create 3-5 doctors per clinic
             $numDoctors = rand(3, 5);
-            
+
             for ($i = 1; $i <= $numDoctors; $i++) {
                 $user = User::create([
-                    'name' => fake()->name(),
-                    'email' => fake()->unique()->safeEmail(),
+                    'name' => $faker->name(),
+                    'email' => $faker->unique()->safeEmail(),
                     'password' => bcrypt('password'),
                 ]);
 
