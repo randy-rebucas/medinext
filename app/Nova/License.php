@@ -17,7 +17,6 @@ use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\URL;
 use Laravel\Nova\Fields\Currency;
-use Laravel\Nova\Fields\Progress;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
@@ -197,20 +196,28 @@ class License extends Resource
 
             Heading::make('Usage Tracking'),
 
-            Progress::make('Users Usage', function () {
-                return $this->getUsagePercentage('users');
+            Number::make('Users Usage', function () {
+                $current = $this->current_users ?? 0;
+                $max = $this->max_users ?? 1;
+                return round(($current / $max) * 100, 1) . '%';
             })->onlyOnDetail(),
 
-            Progress::make('Clinics Usage', function () {
-                return $this->getUsagePercentage('clinics');
+            Number::make('Clinics Usage', function () {
+                $current = $this->current_clinics ?? 0;
+                $max = $this->max_clinics ?? 1;
+                return round(($current / $max) * 100, 1) . '%';
             })->onlyOnDetail(),
 
-            Progress::make('Patients Usage', function () {
-                return $this->getUsagePercentage('patients');
+            Number::make('Patients Usage', function () {
+                $current = $this->current_patients ?? 0;
+                $max = $this->max_patients ?? 1;
+                return round(($current / $max) * 100, 1) . '%';
             })->onlyOnDetail(),
 
-            Progress::make('Appointments Usage', function () {
-                return $this->getUsagePercentage('appointments');
+            Number::make('Appointments Usage', function () {
+                $current = $this->appointments_this_month ?? 0;
+                $max = $this->max_appointments_per_month ?? 1;
+                return round(($current / $max) * 100, 1) . '%';
             })->onlyOnDetail(),
 
             Number::make('Current Users')

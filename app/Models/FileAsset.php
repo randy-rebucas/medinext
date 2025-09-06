@@ -47,7 +47,7 @@ class FileAsset extends Model
      */
     public function getExtensionAttribute(): string
     {
-        return pathinfo($this->file_name, PATHINFO_EXTENSION);
+        return $this->file_name ? pathinfo($this->file_name, PATHINFO_EXTENSION) : '';
     }
 
     /**
@@ -55,6 +55,10 @@ class FileAsset extends Model
      */
     public function getHumanSizeAttribute(): string
     {
+        if (!$this->size) {
+            return '0 B';
+        }
+
         $units = ['B', 'KB', 'MB', 'GB'];
         $size = $this->size;
         $unit = 0;
@@ -72,7 +76,7 @@ class FileAsset extends Model
      */
     public function isImage(): bool
     {
-        return str_starts_with($this->mime, 'image/');
+        return $this->mime && str_starts_with($this->mime, 'image/');
     }
 
     /**
@@ -88,7 +92,7 @@ class FileAsset extends Model
      */
     public function isDocument(): bool
     {
-        return in_array($this->mime, [
+        return $this->mime && in_array($this->mime, [
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'application/vnd.ms-excel',

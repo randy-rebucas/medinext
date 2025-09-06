@@ -68,7 +68,7 @@ class FileAsset extends Resource
     /**
      * Get the fields displayed by the resource.
      *
-     * @return array<int, \Laravel\Nova\Fields\Field>
+     * @return array<int, \Laravel\Nova\Fields\Field>-+
      */
     public function fields(NovaRequest $request): array
     {
