@@ -64,9 +64,6 @@ return new class extends Migration
             if (!Schema::hasIndex('rooms', 'rooms_clinic_id_index')) {
                 $table->index('clinic_id');
             }
-            if (!Schema::hasIndex('rooms', 'rooms_type_index')) {
-                $table->index('type');
-            }
         });
 
         // Add indexes to encounters table
