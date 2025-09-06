@@ -80,9 +80,6 @@ return new class extends Migration
             if (!Schema::hasIndex('encounters', 'encounters_date_index')) {
                 $table->index('date');
             }
-            if (!Schema::hasIndex('encounters', 'encounters_status_index')) {
-                $table->index('status');
-            }
             if (!Schema::hasIndex('encounters', 'encounters_clinic_id_patient_id_index')) {
                 $table->index(['clinic_id', 'patient_id']);
             }
