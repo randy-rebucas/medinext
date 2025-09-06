@@ -11,16 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('clinics', function (Blueprint $table) {
-            $table->id();
-            $table->text('name');
-            $table->string('slug')->unique()->nullable();
-            $table->string('timezone')->default('Asia/Manila');
-            $table->text('logo_url')->nullable();
-            $table->json('address')->nullable();
-            $table->json('settings')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('clinics')) {
+            Schema::create('clinics', function (Blueprint $table) {
+                $table->id();
+                $table->text('name');
+                $table->string('slug')->unique()->nullable();
+                $table->string('timezone')->default('Asia/Manila');
+                $table->text('logo_url')->nullable();
+                $table->json('address')->nullable();
+                $table->json('settings')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**
