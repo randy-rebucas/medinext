@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\FileAssetController;
 use App\Http\Controllers\Api\MedrepController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\LicenseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,16 +56,24 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/notifications', [DashboardController::class, 'notifications']);
 
-    // Clinic management
-    Route::apiResource('clinics', ClinicController::class);
+    // Clinic management (with usage validation)
+    Route::middleware(['license.usage:clinics'])->group(function () {
+        Route::post('/clinics', [ClinicController::class, 'store']);
+    });
+    
+    Route::apiResource('clinics', ClinicController::class)->except(['store']);
     Route::get('/clinics/{clinic}/users', [ClinicController::class, 'users']);
     Route::get('/clinics/{clinic}/doctors', [ClinicController::class, 'doctors']);
     Route::get('/clinics/{clinic}/patients', [ClinicController::class, 'patients']);
     Route::get('/clinics/{clinic}/appointments', [ClinicController::class, 'appointments']);
     Route::get('/clinics/{clinic}/statistics', [ClinicController::class, 'statistics']);
 
-    // Patient management
-    Route::apiResource('patients', PatientController::class);
+    // Patient management (with usage validation)
+    Route::middleware(['license.usage:patients'])->group(function () {
+        Route::post('/patients', [PatientController::class, 'store']);
+    });
+    
+    Route::apiResource('patients', PatientController::class)->except(['store']);
     Route::get('/patients/{patient}/appointments', [PatientController::class, 'appointments']);
     Route::get('/patients/{patient}/encounters', [PatientController::class, 'encounters']);
     Route::get('/patients/{patient}/prescriptions', [PatientController::class, 'prescriptions']);
@@ -74,8 +83,12 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::post('/patients/{patient}/file-assets', [PatientController::class, 'uploadFile']);
     Route::get('/patients/search', [PatientController::class, 'search']);
 
-    // Doctor management
-    Route::apiResource('doctors', DoctorController::class);
+    // Doctor management (with usage validation)
+    Route::middleware(['license.usage:users'])->group(function () {
+        Route::post('/doctors', [DoctorController::class, 'store']);
+    });
+    
+    Route::apiResource('doctors', DoctorController::class)->except(['store']);
     Route::get('/doctors/{doctor}/appointments', [DoctorController::class, 'appointments']);
     Route::get('/doctors/{doctor}/encounters', [DoctorController::class, 'encounters']);
     Route::get('/doctors/{doctor}/patients', [DoctorController::class, 'patients']);
@@ -83,8 +96,12 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::get('/doctors/{doctor}/statistics', [DoctorController::class, 'statistics']);
     Route::post('/doctors/{doctor}/availability', [DoctorController::class, 'updateAvailability']);
 
-    // Appointment management
-    Route::apiResource('appointments', AppointmentController::class);
+    // Appointment management (with usage validation)
+    Route::middleware(['license.usage:appointments'])->group(function () {
+        Route::post('/appointments', [AppointmentController::class, 'store']);
+    });
+    
+    Route::apiResource('appointments', AppointmentController::class)->except(['store']);
     Route::post('/appointments/{appointment}/check-in', [AppointmentController::class, 'checkIn']);
     Route::post('/appointments/{appointment}/check-out', [AppointmentController::class, 'checkOut']);
     Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
@@ -119,13 +136,15 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::get('/prescriptions/expired', [PrescriptionController::class, 'expired']);
     Route::get('/prescriptions/needs-refill', [PrescriptionController::class, 'needsRefill']);
 
-    // Lab result management
-    Route::apiResource('lab-results', LabResultController::class);
-    Route::get('/lab-results/{labResult}/file-assets', [LabResultController::class, 'fileAssets']);
-    Route::post('/lab-results/{labResult}/file-assets', [LabResultController::class, 'uploadFile']);
-    Route::post('/lab-results/{labResult}/review', [LabResultController::class, 'review']);
-    Route::get('/lab-results/pending', [LabResultController::class, 'pending']);
-    Route::get('/lab-results/abnormal', [LabResultController::class, 'abnormal']);
+    // Lab result management (requires lab_results feature)
+    Route::middleware(['license.feature:lab_results'])->group(function () {
+        Route::apiResource('lab-results', LabResultController::class);
+        Route::get('/lab-results/{labResult}/file-assets', [LabResultController::class, 'fileAssets']);
+        Route::post('/lab-results/{labResult}/file-assets', [LabResultController::class, 'uploadFile']);
+        Route::post('/lab-results/{labResult}/review', [LabResultController::class, 'review']);
+        Route::get('/lab-results/pending', [LabResultController::class, 'pending']);
+        Route::get('/lab-results/abnormal', [LabResultController::class, 'abnormal']);
+    });
 
     // File asset management
     Route::apiResource('file-assets', FileAssetController::class);
@@ -134,14 +153,16 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::post('/file-assets/upload', [FileAssetController::class, 'upload']);
     Route::get('/file-assets/categories', [FileAssetController::class, 'categories']);
 
-    // Medrep management
-    Route::apiResource('medreps', MedrepController::class);
-    Route::get('/medreps/{medrep}/visits', [MedrepController::class, 'visits']);
-    Route::post('/medreps/{medrep}/visits', [MedrepController::class, 'scheduleVisit']);
-    Route::put('/medreps/{medrep}/visits/{visit}', [MedrepController::class, 'updateVisit']);
-    Route::delete('/medreps/{medrep}/visits/{visit}', [MedrepController::class, 'cancelVisit']);
-    Route::get('/medrep-visits', [MedrepController::class, 'allVisits']);
-    Route::get('/medrep-visits/upcoming', [MedrepController::class, 'upcomingVisits']);
+    // Medrep management (requires medrep_management feature)
+    Route::middleware(['license.feature:medrep_management'])->group(function () {
+        Route::apiResource('medreps', MedrepController::class);
+        Route::get('/medreps/{medrep}/visits', [MedrepController::class, 'visits']);
+        Route::post('/medreps/{medrep}/visits', [MedrepController::class, 'scheduleVisit']);
+        Route::put('/medreps/{medrep}/visits/{visit}', [MedrepController::class, 'updateVisit']);
+        Route::delete('/medreps/{medrep}/visits/{visit}', [MedrepController::class, 'cancelVisit']);
+        Route::get('/medrep-visits', [MedrepController::class, 'allVisits']);
+        Route::get('/medrep-visits/upcoming', [MedrepController::class, 'upcomingVisits']);
+    });
 
     // Settings and configuration
     Route::get('/settings', [SettingsController::class, 'index']);
@@ -151,18 +172,29 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::get('/settings/user', [SettingsController::class, 'userSettings']);
     Route::put('/settings/user', [SettingsController::class, 'updateUserSettings']);
 
+    // License management routes are now in routes/license.php
+
     // Search and filtering
     Route::get('/search/patients', [PatientController::class, 'search']);
     Route::get('/search/doctors', [DoctorController::class, 'search']);
     Route::get('/search/appointments', [AppointmentController::class, 'search']);
     Route::get('/search/prescriptions', [PrescriptionController::class, 'search']);
 
-    // Reports and analytics
-    Route::get('/reports/appointments', [AppointmentController::class, 'reports']);
-    Route::get('/reports/prescriptions', [PrescriptionController::class, 'reports']);
-    Route::get('/reports/patients', [PatientController::class, 'reports']);
-    Route::get('/reports/doctors', [DoctorController::class, 'reports']);
-    Route::get('/reports/lab-results', [LabResultController::class, 'reports']);
+    // Reports and analytics (with license validation)
+    Route::middleware(['license'])->group(function () {
+        Route::get('/reports/appointments', [AppointmentController::class, 'reports']);
+        Route::get('/reports/prescriptions', [PrescriptionController::class, 'reports']);
+        Route::get('/reports/patients', [PatientController::class, 'reports']);
+        Route::get('/reports/doctors', [DoctorController::class, 'reports']);
+        Route::get('/reports/lab-results', [LabResultController::class, 'reports']);
+    });
+
+    // Advanced reporting (requires advanced_reporting feature)
+    Route::middleware(['license.feature:advanced_reporting'])->group(function () {
+        Route::get('/reports/advanced', [AppointmentController::class, 'advancedReports']);
+        Route::get('/reports/analytics', [DashboardController::class, 'analytics']);
+        Route::get('/reports/export', [AppointmentController::class, 'exportReports']);
+    });
 
     // Mobile-specific routes
     Route::prefix('mobile')->group(function () {

@@ -1,9 +1,20 @@
 import { dashboard, login, register } from '@/routes';
-import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { PageProps as InertiaPageProps } from '@inertiajs/core';
+
+interface PageProps extends InertiaPageProps {
+    auth: {
+        user?: {
+            id: number;
+            name: string;
+            email: string;
+            role: string;
+        };
+    };
+}
 
 export default function Welcome() {
-    const { auth } = usePage<SharedData>().props;
+    const { auth } = usePage<PageProps>().props;
 
     return (
         <>

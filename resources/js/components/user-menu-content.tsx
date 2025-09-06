@@ -4,7 +4,7 @@ import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import { type User } from '@/types';
-import { Link, router } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
 
 interface UserMenuContentProps {
@@ -13,10 +13,11 @@ interface UserMenuContentProps {
 
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
+    const { post: logoutPost, processing } = useForm();
 
     const handleLogout = () => {
         cleanup();
-        router.flushAll();
+        logoutPost(logout().url);
     };
 
     return (
@@ -37,10 +38,14 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-                <Link className="block w-full" href={logout()} as="button" onClick={handleLogout}>
+                <button
+                    className="block w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:opacity-50 disabled:pointer-events-none"
+                    onClick={handleLogout}
+                    disabled={processing}
+                >
                     <LogOut className="mr-2" />
                     Log out
-                </Link>
+                </button>
             </DropdownMenuItem>
         </>
     );

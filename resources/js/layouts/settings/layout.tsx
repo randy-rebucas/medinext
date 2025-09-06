@@ -2,9 +2,7 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { appearance } from '@/routes';
-import { edit as editPassword } from '@/routes/password';
-import { edit } from '@/routes/profile';
+import { settings } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
@@ -12,17 +10,17 @@ import { type PropsWithChildren } from 'react';
 const sidebarNavItems: NavItem[] = [
     {
         title: 'Profile',
-        href: edit(),
+        href: settings.profile(),
         icon: null,
     },
     {
         title: 'Password',
-        href: editPassword(),
+        href: settings.password(),
         icon: null,
     },
     {
         title: 'Appearance',
-        href: appearance(),
+        href: settings.appearance(),
         icon: null,
     },
 ];
@@ -44,12 +42,12 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                     <nav className="flex flex-col space-y-1 space-x-0">
                         {sidebarNavItems.map((item, index) => (
                             <Button
-                                key={`${typeof item.href === 'string' ? item.href : item.href.url}-${index}`}
+                                key={`${item.href}-${index}`}
                                 size="sm"
                                 variant="ghost"
                                 asChild
                                 className={cn('w-full justify-start', {
-                                    'bg-muted': currentPath === (typeof item.href === 'string' ? item.href : item.href.url),
+                                    'bg-muted': currentPath === item.href,
                                 })}
                             >
                                 <Link href={item.href} prefetch>
