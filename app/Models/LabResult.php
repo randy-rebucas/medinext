@@ -123,4 +123,15 @@ class LabResult extends Model
             default => 'Other Tests',
         };
     }
+
+    /**
+     * Get the URI key for the model.
+     * This method is required for Nova MorphTo relationships.
+     *
+     * @return string
+     */
+    public static function uriKey(): string
+    {
+        return 'lab-results';
+    }
 }

@@ -536,4 +536,15 @@ class Encounter extends Model
 
         return $timeline;
     }
+
+    /**
+     * Get the URI key for the model.
+     * This method is required for Nova MorphTo relationships.
+     *
+     * @return string
+     */
+    public static function uriKey(): string
+    {
+        return 'encounters';
+    }
 }

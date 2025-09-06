@@ -617,4 +617,15 @@ class Prescription extends Model
             'has_insurance' => $totalCost > $copayAmount,
         ];
     }
+
+    /**
+     * Get the URI key for the model.
+     * This method is required for Nova MorphTo relationships.
+     *
+     * @return string
+     */
+    public static function uriKey(): string
+    {
+        return 'prescriptions';
+    }
 }
