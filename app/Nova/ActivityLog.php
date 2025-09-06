@@ -151,7 +151,21 @@ class ActivityLog extends Resource
 
             Badge::make('Category', function () {
                 return $this->category;
-            })->sortable(),
+            })->map([
+                'User Management' => 'info',
+                'Patient Care' => 'success',
+                'Medical Staff' => 'warning',
+                'Scheduling' => 'info',
+                'Medications' => 'success',
+                'Laboratory' => 'warning',
+                'Clinic Management' => 'info',
+                'System Settings' => 'danger',
+                'Access Control' => 'warning',
+                'Security' => 'danger',
+                'Financial' => 'success',
+                'Analytics' => 'info',
+                'Other' => 'info',
+            ])->sortable(),
 
             Badge::make('Severity', function () {
                 return $this->severity;
