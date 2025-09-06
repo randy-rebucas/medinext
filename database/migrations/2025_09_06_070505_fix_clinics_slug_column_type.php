@@ -24,7 +24,7 @@ return new class extends Migration
     {
         Schema::table('clinics', function (Blueprint $table) {
             // Revert slug column back to TEXT
-            $table->text('slug')->nullable()->change();
+            $table->string('slug', 45)->nullable()->change();
         });
     }
 };
