@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('clinics', function (Blueprint $table) {
             $table->id();
             $table->text('name');
-            $table->text('slug')->unique()->nullable();
+            $table->string('slug')->unique()->nullable();
             $table->string('timezone')->default('Asia/Manila');
             $table->text('logo_url')->nullable();
             $table->json('address')->nullable();

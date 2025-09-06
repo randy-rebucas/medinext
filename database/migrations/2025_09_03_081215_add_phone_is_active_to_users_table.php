@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (!Schema::hasColumn('users', 'phone')) {
-                $table->text('phone')->nullable()->unique()->after('email');
+                $table->string('phone')->nullable()->unique()->after('email');
             }
             if (!Schema::hasColumn('users', 'is_active')) {
                 $table->boolean('is_active')->default(true)->after('phone');

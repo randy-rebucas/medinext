@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamp('issued_at')->useCurrent();
             $table->string('status', 50)->default('active'); // active, revoked
             $table->text('pdf_url')->nullable();
-            $table->text('qr_hash')->unique()->nullable();
+            $table->string('qr_hash')->unique()->nullable();
             $table->timestamps();
 
             $table->foreign('clinic_id')->references('id')->on('clinics')->onDelete('cascade');
