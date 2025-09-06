@@ -31,13 +31,6 @@ return new class extends Migration
             }
         });
 
-        // Add indexes to clinics table
-        Schema::table('clinics', function (Blueprint $table) {
-            if (!Schema::hasIndex('clinics', 'clinics_slug_index')) {
-                $table->index('slug');
-            }
-        });
-
         // Add indexes to doctors table
         Schema::table('doctors', function (Blueprint $table) {
             if (!Schema::hasIndex('doctors', 'doctors_user_id_index')) {
