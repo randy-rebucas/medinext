@@ -36,8 +36,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
 
     // Public clinic information
-    Route::get('/clinics', [ClinicController::class, 'publicIndex']);
-    Route::get('/clinics/{clinic}', [ClinicController::class, 'publicShow']);
+    Route::get('/public/clinics', [ClinicController::class, 'publicIndex']);
+    Route::get('/public/clinics/{clinic}', [ClinicController::class, 'publicShow']);
 });
 
 // Protected routes (authentication required)

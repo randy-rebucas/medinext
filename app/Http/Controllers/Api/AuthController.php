@@ -14,11 +14,63 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
+use OpenApi\Annotations as OA;
 
 class AuthController extends BaseController
 {
     /**
-     * User login
+     * @OA\Post(
+     *     path="/api/v1/auth/login",
+     *     summary="User login",
+     *     description="Authenticate user and return access token",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email","password"},
+     *             @OA\Property(property="email", type="string", format="email", example="doctor@clinic.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123"),
+     *             @OA\Property(property="clinic_id", type="integer", example=1, description="Optional clinic ID for multi-clinic access"),
+     *             @OA\Property(property="remember", type="boolean", example=false, description="Remember user session")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Login successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Login successful"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(property="token", type="string", example="1|abc123..."),
+     *                 @OA\Property(property="token_type", type="string", example="Bearer"),
+     *                 @OA\Property(property="expires_at", type="string", format="date-time"),
+     *                 @OA\Property(
+     *                     property="clinic_access",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="integer"),
+     *                         @OA\Property(property="name", type="string"),
+     *                         @OA\Property(property="slug", type="string"),
+     *                         @OA\Property(property="roles", type="array", @OA\Items(type="integer"))
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Invalid credentials",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function login(Request $request): JsonResponse
     {
@@ -82,7 +134,46 @@ class AuthController extends BaseController
     }
 
     /**
-     * User registration
+     * @OA\Post(
+     *     path="/api/v1/auth/register",
+     *     summary="User registration",
+     *     description="Register a new user account",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","email","password","password_confirmation","clinic_id"},
+     *             @OA\Property(property="name", type="string", example="Dr. John Smith"),
+     *             @OA\Property(property="email", type="string", format="email", example="doctor@clinic.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="password123"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123"),
+     *             @OA\Property(property="phone", type="string", example="+1234567890"),
+     *             @OA\Property(property="clinic_id", type="integer", example=1),
+     *             @OA\Property(property="role_id", type="integer", example=2, description="Optional role assignment")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Registration successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Registration successful"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(property="token", type="string", example="1|abc123..."),
+     *                 @OA\Property(property="token_type", type="string", example="Bearer"),
+     *                 @OA\Property(property="expires_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function register(Request $request): JsonResponse
     {
@@ -138,7 +229,27 @@ class AuthController extends BaseController
     }
 
     /**
-     * User logout
+     * @OA\Post(
+     *     path="/api/v1/auth/logout",
+     *     summary="User logout",
+     *     description="Logout user and revoke current access token",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Logout successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Logout successful"),
+     *             @OA\Property(property="data", type="object", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function logout(Request $request): JsonResponse
     {
@@ -153,7 +264,33 @@ class AuthController extends BaseController
     }
 
     /**
-     * Refresh token
+     * @OA\Post(
+     *     path="/api/v1/auth/refresh",
+     *     summary="Refresh access token",
+     *     description="Generate a new access token and revoke the current one",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Token refreshed successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Token refreshed successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="token", type="string", example="2|def456..."),
+     *                 @OA\Property(property="token_type", type="string", example="Bearer"),
+     *                 @OA\Property(property="expires_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function refresh(Request $request): JsonResponse
     {
@@ -178,7 +315,41 @@ class AuthController extends BaseController
     }
 
     /**
-     * Get authenticated user
+     * @OA\Get(
+     *     path="/api/v1/auth/me",
+     *     summary="Get authenticated user",
+     *     description="Get current authenticated user information with clinic access",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="User information retrieved",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="User information retrieved"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(
+     *                     property="clinic_access",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="integer"),
+     *                         @OA\Property(property="name", type="string"),
+     *                         @OA\Property(property="slug", type="string"),
+     *                         @OA\Property(property="roles", type="array", @OA\Items(type="integer"))
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function me(Request $request): JsonResponse
     {
@@ -204,7 +375,44 @@ class AuthController extends BaseController
     }
 
     /**
-     * Update user profile
+     * @OA\Put(
+     *     path="/api/v1/auth/profile",
+     *     summary="Update user profile",
+     *     description="Update authenticated user's profile information",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="Dr. John Smith"),
+     *             @OA\Property(property="email", type="string", format="email", example="doctor@clinic.com"),
+     *             @OA\Property(property="phone", type="string", example="+1234567890")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Profile updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Profile updated successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function updateProfile(Request $request): JsonResponse
     {
@@ -233,7 +441,41 @@ class AuthController extends BaseController
     }
 
     /**
-     * Update user password
+     * @OA\Put(
+     *     path="/api/v1/auth/password",
+     *     summary="Update user password",
+     *     description="Update authenticated user's password",
+     *     tags={"Authentication"},
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"current_password","password","password_confirmation"},
+     *             @OA\Property(property="current_password", type="string", format="password", example="oldpassword123"),
+     *             @OA\Property(property="password", type="string", format="password", example="newpassword123"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="newpassword123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Password updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Password updated successfully"),
+     *             @OA\Property(property="data", type="object", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error or incorrect current password",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function updatePassword(Request $request): JsonResponse
     {
@@ -265,7 +507,38 @@ class AuthController extends BaseController
     }
 
     /**
-     * Forgot password
+     * @OA\Post(
+     *     path="/api/v1/auth/forgot-password",
+     *     summary="Request password reset",
+     *     description="Send password reset link to user's email",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Password reset link sent",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Password reset link sent to your email"),
+     *             @OA\Property(property="data", type="object", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Unable to send reset link",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function forgotPassword(Request $request): JsonResponse
     {
@@ -292,7 +565,41 @@ class AuthController extends BaseController
     }
 
     /**
-     * Reset password
+     * @OA\Post(
+     *     path="/api/v1/auth/reset-password",
+     *     summary="Reset password",
+     *     description="Reset user password using reset token",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"token","email","password","password_confirmation"},
+     *             @OA\Property(property="token", type="string", example="abc123def456..."),
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="newpassword123"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="newpassword123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Password reset successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Password reset successfully"),
+     *             @OA\Property(property="data", type="object", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Unable to reset password",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function resetPassword(Request $request): JsonResponse
     {
@@ -331,7 +638,39 @@ class AuthController extends BaseController
     }
 
     /**
-     * Verify email
+     * @OA\Post(
+     *     path="/api/v1/auth/verify-email",
+     *     summary="Verify email address",
+     *     description="Verify user's email address using verification token",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"id","hash"},
+     *             @OA\Property(property="id", type="integer", example=1),
+     *             @OA\Property(property="hash", type="string", example="abc123def456...")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Email verified successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Email verified successfully"),
+     *             @OA\Property(property="data", type="object", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid verification link",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function verifyEmail(Request $request): JsonResponse
     {
