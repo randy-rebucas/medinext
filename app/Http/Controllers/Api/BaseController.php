@@ -5,166 +5,271 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use OpenApi\Annotations as OA;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
+/**
+ * @OA\Info(
+ *     title="MediNext EMR API",
+ *     version="1.0.0",
+ *     description="Comprehensive API for MediNext Electronic Medical Records system",
+ *     @OA\Contact(
+ *         name="MediNext Support",
+ *         email="support@medinext.com"
+ *     ),
+ *     @OA\License(
+ *         name="MIT",
+ *         url="https://opensource.org/licenses/MIT"
+ *     )
+ * )
+ *
+ * @OA\Server(
+ *     url=L5_SWAGGER_CONST_HOST,
+ *     description="MediNext API Server"
+ * )
+ *
+ * @OA\SecurityScheme(
+ *     securityScheme="sanctum",
+ *     type="apiKey",
+ *     in="header",
+ *     name="Authorization",
+ *     description="Enter token in format (Bearer <token>)"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Authentication",
+ *     description="User authentication and authorization"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Dashboard",
+ *     description="Dashboard and analytics endpoints"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Clinics",
+ *     description="Clinic management operations"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Patients",
+ *     description="Patient management operations"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Doctors",
+ *     description="Doctor management operations"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Appointments",
+ *     description="Appointment scheduling and management"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Encounters",
+ *     description="Medical encounter management"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Prescriptions",
+ *     description="Prescription management and tracking"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Lab Results",
+ *     description="Laboratory results management"
+ * )
+ *
+ * @OA\Tag(
+ *     name="File Assets",
+ *     description="File upload and management"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Medreps",
+ *     description="Medical representative management"
+ * )
+ *
+ * @OA\Tag(
+ *     name="Settings",
+ *     description="System and user settings"
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Error",
+ *     type="object",
+ *     @OA\Property(property="message", type="string", description="Error message"),
+ *     @OA\Property(property="errors", type="object", description="Validation errors")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Success",
+ *     type="object",
+ *     @OA\Property(property="message", type="string", description="Success message"),
+ *     @OA\Property(property="data", type="object", description="Response data")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="User",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="Dr. John Smith"),
+ *     @OA\Property(property="email", type="string", format="email", example="doctor@clinic.com"),
+ *     @OA\Property(property="phone", type="string", example="+1234567890"),
+ *     @OA\Property(property="is_active", type="boolean", example=true),
+ *     @OA\Property(property="email_verified_at", type="string", format="date-time", nullable=true),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Patient",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="code", type="string", example="PTCLN20241201001"),
+ *     @OA\Property(property="first_name", type="string", example="Jane"),
+ *     @OA\Property(property="last_name", type="string", example="Doe"),
+ *     @OA\Property(property="dob", type="string", format="date", example="1990-01-15"),
+ *     @OA\Property(property="sex", type="string", enum={"male","female","other"}, example="female"),
+ *     @OA\Property(property="contact", type="object", nullable=true),
+ *     @OA\Property(property="allergies", type="array", @OA\Items(type="string"), nullable=true),
+ *     @OA\Property(property="consents", type="array", @OA\Items(type="string"), nullable=true),
+ *     @OA\Property(property="clinic_id", type="integer", example=1),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Doctor",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="user_id", type="integer", example=1),
+ *     @OA\Property(property="specialization", type="string", example="Cardiology"),
+ *     @OA\Property(property="license_number", type="string", example="MD123456"),
+ *     @OA\Property(property="clinic_id", type="integer", example=1),
+ *     @OA\Property(property="is_active", type="boolean", example=true),
+ *     @OA\Property(property="user", ref="#/components/schemas/User"),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Appointment",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="patient_id", type="integer", example=1),
+ *     @OA\Property(property="doctor_id", type="integer", example=1),
+ *     @OA\Property(property="clinic_id", type="integer", example=1),
+ *     @OA\Property(property="room_id", type="integer", nullable=true),
+ *     @OA\Property(property="start_at", type="string", format="date-time"),
+ *     @OA\Property(property="end_at", type="string", format="date-time"),
+ *     @OA\Property(property="duration", type="integer", example=30, description="Duration in minutes"),
+ *     @OA\Property(property="appointment_type", type="string", enum={"consultation","follow_up","emergency","routine_checkup","specialist_consultation","procedure","surgery","lab_test","imaging","physical_therapy"}),
+ *     @OA\Property(property="status", type="string", enum={"scheduled","confirmed","in_progress","completed","cancelled","no_show","rescheduled","waiting","checked_in","checked_out"}),
+ *     @OA\Property(property="reason", type="string", nullable=true),
+ *     @OA\Property(property="notes", type="string", nullable=true),
+ *     @OA\Property(property="priority", type="string", enum={"low","normal","high","urgent","emergency"}),
+ *     @OA\Property(property="patient", ref="#/components/schemas/Patient"),
+ *     @OA\Property(property="doctor", ref="#/components/schemas/Doctor"),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Clinic",
+ *     type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="City Medical Center"),
+ *     @OA\Property(property="slug", type="string", example="city-medical-center"),
+ *     @OA\Property(property="address", type="string", example="123 Main St, City, State 12345"),
+ *     @OA\Property(property="phone", type="string", example="+1234567890"),
+ *     @OA\Property(property="email", type="string", format="email", example="info@clinic.com"),
+ *     @OA\Property(property="website", type="string", format="url", nullable=true),
+ *     @OA\Property(property="is_active", type="boolean", example=true),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
+ *     schema="Pagination",
+ *     type="object",
+ *     @OA\Property(property="current_page", type="integer", example=1),
+ *     @OA\Property(property="data", type="array", @OA\Items(type="object")),
+ *     @OA\Property(property="first_page_url", type="string"),
+ *     @OA\Property(property="from", type="integer", example=1),
+ *     @OA\Property(property="last_page", type="integer", example=10),
+ *     @OA\Property(property="last_page_url", type="string"),
+ *     @OA\Property(property="links", type="array", @OA\Items(type="object")),
+ *     @OA\Property(property="next_page_url", type="string", nullable=true),
+ *     @OA\Property(property="path", type="string"),
+ *     @OA\Property(property="per_page", type="integer", example=15),
+ *     @OA\Property(property="prev_page_url", type="string", nullable=true),
+ *     @OA\Property(property="to", type="integer", example=15),
+ *     @OA\Property(property="total", type="integer", example=150)
+ * )
+ */
 class BaseController extends Controller
 {
     /**
-     * Success response format
+     * Return a success response
      */
     protected function successResponse($data = null, string $message = 'Success', int $statusCode = 200): JsonResponse
     {
-        $response = [
+        return response()->json([
             'success' => true,
             'message' => $message,
-            'data' => $data,
-            'timestamp' => now()->toISOString(),
-        ];
-
-        return response()->json($response, $statusCode);
+            'data' => $data
+        ], $statusCode);
     }
 
     /**
-     * Error response format
+     * Return an error response
      */
     protected function errorResponse(string $message = 'Error', $errors = null, int $statusCode = 400): JsonResponse
     {
-        $response = [
+        return response()->json([
             'success' => false,
             'message' => $message,
-            'errors' => $errors,
-            'timestamp' => now()->toISOString(),
-        ];
-
-        return response()->json($response, $statusCode);
+            'errors' => $errors
+        ], $statusCode);
     }
 
     /**
-     * Validation error response
+     * Return a validation error response
      */
-    protected function validationErrorResponse($errors): JsonResponse
+    protected function validationErrorResponse($errors, string $message = 'Validation failed'): JsonResponse
     {
-        return $this->errorResponse('Validation failed', $errors, 422);
-    }
-
-    /**
-     * Not found response
-     */
-    protected function notFoundResponse(string $message = 'Resource not found'): JsonResponse
-    {
-        return $this->errorResponse($message, null, 404);
-    }
-
-    /**
-     * Unauthorized response
-     */
-    protected function unauthorizedResponse(string $message = 'Unauthorized'): JsonResponse
-    {
-        return $this->errorResponse($message, null, 401);
-    }
-
-    /**
-     * Forbidden response
-     */
-    protected function forbiddenResponse(string $message = 'Forbidden'): JsonResponse
-    {
-        return $this->errorResponse($message, null, 403);
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'errors' => $errors
+        ], 422);
     }
 
     /**
      * Get the authenticated user
      */
-    protected function getAuthenticatedUser()
+    protected function getAuthenticatedUser(): ?\Illuminate\Contracts\Auth\Authenticatable
     {
-        return Auth::user();
+        return Auth::guard('sanctum')->user();
     }
 
     /**
-     * Get the user's current clinic
+     * Get the current clinic for the authenticated user
      */
-    protected function getCurrentClinic()
+    protected function getCurrentClinic(): ?\App\Models\Clinic
     {
         $user = $this->getAuthenticatedUser();
-        return $user->clinics()->first();
-    }
-
-    /**
-     * Check if user has access to clinic
-     */
-    protected function hasClinicAccess($clinicId): bool
-    {
-        $user = $this->getAuthenticatedUser();
-        return $user->clinics()->where('clinic_id', $clinicId)->exists();
-    }
-
-    /**
-     * Check if user has permission
-     */
-    protected function hasPermission(string $permission): bool
-    {
-        $user = $this->getAuthenticatedUser();
-        return $user->hasPermission($permission);
-    }
-
-    /**
-     * Validate request data
-     */
-    protected function validateRequest(Request $request, array $rules, array $messages = []): array
-    {
-        $validator = Validator::make($request->all(), $rules, $messages);
-
-        if ($validator->fails()) {
-            throw new \Illuminate\Validation\ValidationException($validator);
+        if (!$user) {
+            return null;
         }
 
-        return $validator->validated();
-    }
-
-    /**
-     * Paginate response
-     */
-    protected function paginatedResponse($data, string $message = 'Success'): JsonResponse
-    {
-        return $this->successResponse([
-            'items' => $data->items(),
-            'pagination' => [
-                'current_page' => $data->currentPage(),
-                'per_page' => $data->perPage(),
-                'total' => $data->total(),
-                'last_page' => $data->lastPage(),
-                'from' => $data->firstItem(),
-                'to' => $data->lastItem(),
-                'has_more_pages' => $data->hasMorePages(),
-            ]
-        ], $message);
-    }
-
-    /**
-     * Handle exceptions
-     */
-    protected function handleException(\Exception $e): JsonResponse
-    {
-        if ($e instanceof \Illuminate\Validation\ValidationException) {
-            return $this->validationErrorResponse($e->errors());
-        }
-
-        if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-            return $this->notFoundResponse('Resource not found');
-        }
-
-        if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
-            return $this->forbiddenResponse($e->getMessage());
-        }
-
-        // Log the exception for debugging
-        \Log::error('API Exception: ' . $e->getMessage(), [
-            'exception' => $e,
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return $this->errorResponse('Internal server error', null, 500);
+        // Get the first clinic the user has access to
+        /** @var \App\Models\User $user */
+        $userClinicRole = $user->userClinicRoles()->with('clinic')->first();
+        return $userClinicRole ? $userClinicRole->clinic : null;
     }
 
     /**
@@ -172,100 +277,130 @@ class BaseController extends Controller
      */
     protected function getPaginationParams(Request $request): array
     {
-        return [
-            'per_page' => min($request->get('per_page', 15), 100), // Max 100 items per page
-            'page' => max($request->get('page', 1), 1),
-        ];
+        $perPage = (int) $request->get('per_page', 15);
+        $page = (int) $request->get('page', 1);
+
+        // Limit per_page to prevent excessive queries
+        $perPage = min($perPage, 100);
+
+        return [$perPage, $page];
     }
 
     /**
      * Get sorting parameters from request
      */
-    protected function getSortingParams(Request $request, array $allowedSorts = [], string $defaultSort = 'created_at'): array
+    protected function getSortingParams(Request $request, array $allowedFields = []): array
     {
-        $sort = $request->get('sort', $defaultSort);
-        $direction = $request->get('direction', 'desc');
+        $sort = $request->get('sort', 'id');
+        $direction = $request->get('direction', 'asc');
 
         // Validate sort field
-        if (!empty($allowedSorts) && !in_array($sort, $allowedSorts)) {
-            $sort = $defaultSort;
+        if (!empty($allowedFields) && !in_array($sort, $allowedFields)) {
+            $sort = 'id';
         }
 
         // Validate direction
-        if (!in_array($direction, ['asc', 'desc'])) {
-            $direction = 'desc';
+        if (!in_array(strtolower($direction), ['asc', 'desc'])) {
+            $direction = 'asc';
         }
 
         return [$sort, $direction];
     }
 
     /**
-     * Get filter parameters from request
+     * Return a paginated response
      */
-    protected function getFilterParams(Request $request, array $allowedFilters = []): array
+    protected function paginatedResponse($paginatedData, string $message = 'Data retrieved successfully'): JsonResponse
     {
-        $filters = [];
-
-        foreach ($allowedFilters as $filter) {
-            if ($request->has($filter)) {
-                $filters[$filter] = $request->get($filter);
-            }
-        }
-
-        return $filters;
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'data' => $paginatedData->items(),
+            'pagination' => [
+                'current_page' => $paginatedData->currentPage(),
+                'per_page' => $paginatedData->perPage(),
+                'total' => $paginatedData->total(),
+                'last_page' => $paginatedData->lastPage(),
+                'from' => $paginatedData->firstItem(),
+                'to' => $paginatedData->lastItem(),
+                'has_more_pages' => $paginatedData->hasMorePages(),
+            ]
+        ]);
     }
 
     /**
-     * Transform data using a transformer
+     * Check if user has access to a specific clinic
      */
-    protected function transform($data, $transformer = null)
+    protected function hasClinicAccess(int $clinicId): bool
     {
-        if (!$transformer) {
-            return $data;
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return false;
         }
 
-        if (is_array($data) || $data instanceof \Illuminate\Support\Collection) {
-            return $data->map(function ($item) use ($transformer) {
-                return new $transformer($item);
-            });
-        }
-
-        return new $transformer($data);
+        /** @var \App\Models\User $user */
+        return $user->userClinicRoles()->where('clinic_id', $clinicId)->exists();
     }
 
     /**
-     * Get API version from request
+     * Return a forbidden response
      */
-    protected function getApiVersion(Request $request): string
+    protected function forbiddenResponse(string $message = 'Access forbidden'): JsonResponse
     {
-        return $request->header('API-Version', 'v1');
+        return $this->errorResponse($message, null, 403);
     }
 
     /**
-     * Check if request is from mobile app
+     * Handle exceptions and return appropriate error response
+     */
+    protected function handleException(\Exception $e): JsonResponse
+    {
+        // Log the exception
+    Log::error('API Exception: ' . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        // Return appropriate error response based on exception type
+        if ($e instanceof \Illuminate\Validation\ValidationException) {
+            return $this->validationErrorResponse($e->errors());
+        }
+
+        if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+            return $this->errorResponse('Unauthenticated', null, 401);
+        }
+
+        if ($e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+            return $this->forbiddenResponse('Access denied');
+        }
+
+        // For other exceptions, return a generic error
+        return $this->errorResponse('An error occurred while processing your request', null, 500);
+    }
+
+    /**
+     * Check if the request is from a mobile device
      */
     protected function isMobileRequest(Request $request): bool
     {
         $userAgent = $request->header('User-Agent', '');
-        $platform = $request->header('X-Platform', '');
+        $mobileKeywords = ['Mobile', 'Android', 'iPhone', 'iPad', 'iPod', 'BlackBerry', 'Windows Phone'];
 
-        return str_contains($userAgent, 'Mobile') || 
-               str_contains($userAgent, 'Android') || 
-               str_contains($userAgent, 'iPhone') ||
-               $platform === 'mobile';
+        foreach ($mobileKeywords as $keyword) {
+            if (stripos($userAgent, $keyword) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
-     * Get client information
+     * Return a not found response
      */
-    protected function getClientInfo(Request $request): array
+    protected function notFoundResponse(string $message = 'Resource not found'): JsonResponse
     {
-        return [
-            'ip' => $request->ip(),
-            'user_agent' => $request->header('User-Agent'),
-            'platform' => $request->header('X-Platform'),
-            'version' => $request->header('X-App-Version'),
-            'device_id' => $request->header('X-Device-ID'),
-        ];
+        return $this->errorResponse($message, null, 404);
     }
 }

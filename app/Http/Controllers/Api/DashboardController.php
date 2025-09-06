@@ -12,11 +12,78 @@ use App\Models\LabResult;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
+use OpenApi\Annotations as OA;
 
 class DashboardController extends BaseController
 {
     /**
-     * Get dashboard data
+     * @OA\Get(
+     *     path="/api/v1/dashboard",
+     *     summary="Get dashboard data",
+     *     description="Retrieve comprehensive dashboard data including statistics, appointments, and notifications",
+     *     tags={"Dashboard"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Dashboard data retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Dashboard data retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="clinic", ref="#/components/schemas/Clinic"),
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(
+     *                     property="statistics",
+     *                     type="object",
+     *                     @OA\Property(property="total_patients", type="integer", example=150),
+     *                     @OA\Property(property="total_doctors", type="integer", example=12),
+     *                     @OA\Property(property="total_appointments", type="integer", example=45),
+     *                     @OA\Property(property="today_appointments", type="integer", example=8),
+     *                     @OA\Property(property="pending_prescriptions", type="integer", example=3),
+     *                     @OA\Property(property="pending_lab_results", type="integer", example=5)
+     *                 ),
+     *                 @OA\Property(
+     *                     property="today_appointments",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/Appointment")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="upcoming_appointments",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/Appointment")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="recent_patients",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/Patient")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="pending_tasks",
+     *                     type="array",
+     *                     @OA\Items(type="object")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="notifications",
+     *                     type="array",
+     *                     @OA\Items(type="object")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="quick_actions",
+     *                     type="array",
+     *                     @OA\Items(type="object"),
+     *                     description="Available only on mobile devices"
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="No clinic access",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function index(Request $request): JsonResponse
     {
@@ -53,7 +120,71 @@ class DashboardController extends BaseController
     }
 
     /**
-     * Get dashboard statistics
+     * @OA\Get(
+     *     path="/api/v1/dashboard/stats",
+     *     summary="Get dashboard statistics",
+     *     description="Retrieve comprehensive statistics for the dashboard",
+     *     tags={"Dashboard"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="period",
+     *         in="query",
+     *         description="Time period for statistics",
+     *         @OA\Schema(type="string", enum={"today","week","month","quarter","year"}, example="month")
+     *     ),
+     *     @OA\Parameter(
+     *         name="clinic_id",
+     *         in="query",
+     *         description="Specific clinic ID (optional)",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Dashboard statistics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Dashboard statistics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="period", type="string", example="month"),
+     *                 @OA\Property(property="overview", type="object",
+     *                     @OA\Property(property="total_patients", type="integer", example=1250),
+     *                     @OA\Property(property="total_appointments", type="integer", example=320),
+     *                     @OA\Property(property="total_doctors", type="integer", example=15),
+     *                     @OA\Property(property="total_revenue", type="number", format="float", example=125000.50)
+     *                 ),
+     *                 @OA\Property(property="appointments", type="object",
+     *                     @OA\Property(property="scheduled", type="integer", example=45),
+     *                     @OA\Property(property="completed", type="integer", example=280),
+     *                     @OA\Property(property="cancelled", type="integer", example=25),
+     *                     @OA\Property(property="no_show", type="integer", example=15)
+     *                 ),
+     *                 @OA\Property(property="patients", type="object",
+     *                     @OA\Property(property="new_patients", type="integer", example=85),
+     *                     @OA\Property(property="returning_patients", type="integer", example=195),
+     *                     @OA\Property(property="active_patients", type="integer", example=1100)
+     *                 ),
+     *                 @OA\Property(property="revenue", type="object",
+     *                     @OA\Property(property="total", type="number", format="float", example=125000.50),
+     *                     @OA\Property(property="consultation_fees", type="number", format="float", example=85000.00),
+     *                     @OA\Property(property="procedure_fees", type="number", format="float", example=40000.50),
+     *                     @OA\Property(property="growth_percentage", type="number", format="float", example=12.5)
+     *                 ),
+     *                 @OA\Property(property="trends", type="object",
+     *                     @OA\Property(property="appointment_trend", type="array", @OA\Items(type="object")),
+     *                     @OA\Property(property="revenue_trend", type="array", @OA\Items(type="object")),
+     *                     @OA\Property(property="patient_trend", type="array", @OA\Items(type="object"))
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="No clinic access",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function stats(Request $request): JsonResponse
     {
@@ -76,7 +207,74 @@ class DashboardController extends BaseController
     }
 
     /**
-     * Get notifications
+     * @OA\Get(
+     *     path="/api/v1/dashboard/notifications",
+     *     summary="Get notifications",
+     *     description="Retrieve user notifications and alerts",
+     *     tags={"Dashboard"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Items per page",
+     *         @OA\Schema(type="integer", example=15)
+     *     ),
+     *     @OA\Parameter(
+     *         name="type",
+     *         in="query",
+     *         description="Filter by notification type",
+     *         @OA\Schema(type="string", enum={"appointment","prescription","lab_result","system","reminder","alert"}, example="appointment")
+     *     ),
+     *     @OA\Parameter(
+     *         name="unread_only",
+     *         in="query",
+     *         description="Show only unread notifications",
+     *         @OA\Schema(type="boolean", example=true)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Notifications retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Notifications retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 allOf={
+     *                     @OA\Schema(ref="#/components/schemas/Pagination"),
+     *                     @OA\Schema(
+     *                         @OA\Property(
+     *                             property="data",
+     *                             type="array",
+     *                             @OA\Items(
+     *                                 @OA\Property(property="id", type="integer", example=1),
+     *                                 @OA\Property(property="type", type="string", example="appointment"),
+     *                                 @OA\Property(property="title", type="string", example="New Appointment Scheduled"),
+     *                                 @OA\Property(property="message", type="string", example="Dr. Smith has a new appointment with John Doe at 2:00 PM"),
+     *                                 @OA\Property(property="is_read", type="boolean", example=false),
+     *                                 @OA\Property(property="priority", type="string", enum={"low","normal","high","urgent"}, example="normal"),
+     *                                 @OA\Property(property="action_url", type="string", example="/appointments/123"),
+     *                                 @OA\Property(property="created_at", type="string", format="date-time", example="2024-01-15T10:00:00Z"),
+     *                                 @OA\Property(property="read_at", type="string", format="date-time", nullable=true)
+     *                             )
+     *                         )
+     *                     )
+     *                 }
+     *             ),
+     *             @OA\Property(property="unread_count", type="integer", example=5)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function notifications(Request $request): JsonResponse
     {
@@ -180,7 +378,66 @@ class DashboardController extends BaseController
     }
 
     /**
-     * Get analytics data
+     * @OA\Get(
+     *     path="/api/v1/dashboard/analytics",
+     *     summary="Get analytics data",
+     *     description="Retrieve detailed analytics and reporting data",
+     *     tags={"Dashboard"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="period",
+     *         in="query",
+     *         description="Time period for analytics",
+     *         @OA\Schema(type="string", enum={"today","week","month","quarter","year"}, example="month")
+     *     ),
+     *     @OA\Parameter(
+     *         name="metric",
+     *         in="query",
+     *         description="Specific metric to analyze",
+     *         @OA\Schema(type="string", enum={"appointments","patients","revenue","doctors","prescriptions","lab_results"}, example="appointments")
+     *     ),
+     *     @OA\Parameter(
+     *         name="group_by",
+     *         in="query",
+     *         description="Group data by",
+     *         @OA\Schema(type="string", enum={"day","week","month","doctor","clinic","department"}, example="day")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Analytics data retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Analytics data retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="period", type="string", example="month"),
+     *                 @OA\Property(property="metric", type="string", example="appointments"),
+     *                 @OA\Property(property="group_by", type="string", example="day"),
+     *                 @OA\Property(property="summary", type="object",
+     *                     @OA\Property(property="total", type="integer", example=320),
+     *                     @OA\Property(property="average", type="number", format="float", example=10.3),
+     *                     @OA\Property(property="growth", type="number", format="float", example=15.2),
+     *                     @OA\Property(property="peak_day", type="string", example="Monday"),
+     *                     @OA\Property(property="peak_hour", type="string", example="10:00 AM")
+     *                 ),
+     *                 @OA\Property(property="chart_data", type="array", @OA\Items(type="object")),
+     *                 @OA\Property(property="comparison", type="object",
+     *                     @OA\Property(property="previous_period", type="integer", example=278),
+     *                     @OA\Property(property="change_percentage", type="number", format="float", example=15.1),
+     *                     @OA\Property(property="trend", type="string", enum={"up","down","stable"}, example="up")
+     *                 ),
+     *                 @OA\Property(property="breakdown", type="array", @OA\Items(type="object")),
+     *                 @OA\Property(property="insights", type="array", @OA\Items(type="string"), example={"Peak appointment time is 10:00 AM","Monday has highest volume","15% growth from last month"})
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="No clinic access",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
      */
     public function analytics(Request $request): JsonResponse
     {
@@ -245,19 +502,19 @@ class DashboardController extends BaseController
             'total_encounters' => Encounter::where('clinic_id', $clinicId)->count(),
             'total_prescriptions' => Prescription::where('clinic_id', $clinicId)->count(),
             'total_lab_results' => LabResult::where('clinic_id', $clinicId)->count(),
-            
+
             'today_appointments' => Appointment::where('clinic_id', $clinicId)
                 ->whereDate('start_at', $today)->count(),
             'this_week_appointments' => Appointment::where('clinic_id', $clinicId)
                 ->where('start_at', '>=', $thisWeek)->count(),
             'this_month_appointments' => Appointment::where('clinic_id', $clinicId)
                 ->where('start_at', '>=', $thisMonth)->count(),
-            
+
             'new_patients_today' => Patient::where('clinic_id', $clinicId)
                 ->whereDate('created_at', $today)->count(),
             'new_patients_this_month' => Patient::where('clinic_id', $clinicId)
                 ->where('created_at', '>=', $thisMonth)->count(),
-            
+
             'pending_lab_results' => LabResult::where('clinic_id', $clinicId)
                 ->where('status', 'pending')->count(),
             'active_prescriptions' => Prescription::where('clinic_id', $clinicId)
@@ -690,7 +947,7 @@ class DashboardController extends BaseController
                 ->get(),
             'patients_by_age_group' => Patient::where('clinic_id', $clinicId)
                 ->selectRaw('
-                    CASE 
+                    CASE
                         WHEN TIMESTAMPDIFF(YEAR, dob, CURDATE()) < 18 THEN "Under 18"
                         WHEN TIMESTAMPDIFF(YEAR, dob, CURDATE()) BETWEEN 18 AND 65 THEN "18-65"
                         ELSE "Over 65"
@@ -746,5 +1003,280 @@ class DashboardController extends BaseController
                 ];
             })
             ->toArray();
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/dashboard/quick-actions",
+     *     summary="Get quick actions",
+     *     description="Retrieve available quick actions for the dashboard",
+     *     tags={"Dashboard"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Quick actions retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Quick actions retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="actions",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="string", example="new_appointment"),
+     *                         @OA\Property(property="title", type="string", example="New Appointment"),
+     *                         @OA\Property(property="description", type="string", example="Schedule a new appointment"),
+     *                         @OA\Property(property="icon", type="string", example="calendar-plus"),
+     *                         @OA\Property(property="url", type="string", example="/appointments/create"),
+     *                         @OA\Property(property="color", type="string", example="blue"),
+     *                         @OA\Property(property="permission", type="string", example="appointments.create"),
+     *                         @OA\Property(property="category", type="string", example="appointments")
+     *                     )
+     *                 ),
+     *                 @OA\Property(
+     *                     property="categories",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="string", example="appointments"),
+     *                         @OA\Property(property="name", type="string", example="Appointments"),
+     *                         @OA\Property(property="icon", type="string", example="calendar"),
+     *                         @OA\Property(property="count", type="integer", example=5)
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
+    public function quickActions(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->getAuthenticatedUser();
+            $currentClinic = $this->getCurrentClinic();
+
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            // Mock quick actions data
+            $quickActions = [
+                'actions' => [
+                    [
+                        'id' => 'new_appointment',
+                        'title' => 'New Appointment',
+                        'description' => 'Schedule a new appointment',
+                        'icon' => 'calendar-plus',
+                        'url' => '/appointments/create',
+                        'color' => 'blue',
+                        'permission' => 'appointments.create',
+                        'category' => 'appointments'
+                    ],
+                    [
+                        'id' => 'new_patient',
+                        'title' => 'New Patient',
+                        'description' => 'Register a new patient',
+                        'icon' => 'user-plus',
+                        'url' => '/patients/create',
+                        'color' => 'green',
+                        'permission' => 'patients.create',
+                        'category' => 'patients'
+                    ],
+                    [
+                        'id' => 'new_prescription',
+                        'title' => 'New Prescription',
+                        'description' => 'Create a new prescription',
+                        'icon' => 'prescription',
+                        'url' => '/prescriptions/create',
+                        'color' => 'purple',
+                        'permission' => 'prescriptions.create',
+                        'category' => 'prescriptions'
+                    ],
+                    [
+                        'id' => 'lab_results',
+                        'title' => 'Lab Results',
+                        'description' => 'View pending lab results',
+                        'icon' => 'flask',
+                        'url' => '/lab-results',
+                        'color' => 'orange',
+                        'permission' => 'lab_results.view',
+                        'category' => 'lab'
+                    ]
+                ],
+                'categories' => [
+                    [
+                        'id' => 'appointments',
+                        'name' => 'Appointments',
+                        'icon' => 'calendar',
+                        'count' => 2
+                    ],
+                    [
+                        'id' => 'patients',
+                        'name' => 'Patients',
+                        'icon' => 'users',
+                        'count' => 1
+                    ],
+                    [
+                        'id' => 'prescriptions',
+                        'name' => 'Prescriptions',
+                        'icon' => 'prescription',
+                        'count' => 1
+                    ],
+                    [
+                        'id' => 'lab',
+                        'name' => 'Laboratory',
+                        'icon' => 'flask',
+                        'count' => 1
+                    ]
+                ]
+            ];
+
+            return $this->successResponse($quickActions, 'Quick actions retrieved successfully');
+
+        } catch (\Exception $e) {
+            return $this->handleException($e);
+        }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/dashboard/reports",
+     *     summary="Get dashboard reports",
+     *     description="Retrieve available reports and their summaries",
+     *     tags={"Dashboard"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="type",
+     *         in="query",
+     *         description="Filter by report type",
+     *         @OA\Schema(type="string", enum={"appointments","patients","revenue","doctors","prescriptions","lab_results","system"}, example="appointments")
+     *     ),
+     *     @OA\Parameter(
+     *         name="period",
+     *         in="query",
+     *         description="Time period for reports",
+     *         @OA\Schema(type="string", enum={"today","week","month","quarter","year"}, example="month")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Dashboard reports retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Dashboard reports retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="reports",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="string", example="appointment_summary"),
+     *                         @OA\Property(property="title", type="string", example="Appointment Summary"),
+     *                         @OA\Property(property="description", type="string", example="Summary of all appointments for the period"),
+     *                         @OA\Property(property="type", type="string", example="appointments"),
+     *                         @OA\Property(property="period", type="string", example="month"),
+     *                         @OA\Property(property="last_generated", type="string", format="date-time", example="2024-01-15T10:00:00Z"),
+     *                         @OA\Property(property="download_url", type="string", example="/api/v1/reports/appointment-summary/download"),
+     *                         @OA\Property(property="file_size", type="string", example="2.5 MB"),
+     *                         @OA\Property(property="format", type="string", example="pdf"),
+     *                         @OA\Property(property="status", type="string", enum={"ready","generating","error"}, example="ready")
+     *                     )
+     *                 ),
+     *                 @OA\Property(
+     *                     property="summary",
+     *                     type="object",
+     *                     @OA\Property(property="total_reports", type="integer", example=12),
+     *                     @OA\Property(property="ready_reports", type="integer", example=10),
+     *                     @OA\Property(property="generating_reports", type="integer", example=2),
+     *                     @OA\Property(property="last_updated", type="string", format="date-time", example="2024-01-15T10:00:00Z")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="No clinic access",
+     *         @OA\JsonContent(ref="#/components/schemas/Error")
+     *     )
+     * )
+     */
+    public function reports(Request $request): JsonResponse
+    {
+        try {
+            $currentClinic = $this->getCurrentClinic();
+
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            $type = $request->get('type');
+            $period = $request->get('period', 'month');
+
+            // Mock reports data
+            $reports = [
+                'reports' => [
+                    [
+                        'id' => 'appointment_summary',
+                        'title' => 'Appointment Summary',
+                        'description' => 'Summary of all appointments for the period',
+                        'type' => 'appointments',
+                        'period' => $period,
+                        'last_generated' => now()->subHours(2)->toISOString(),
+                        'download_url' => '/api/v1/reports/appointment-summary/download',
+                        'file_size' => '2.5 MB',
+                        'format' => 'pdf',
+                        'status' => 'ready'
+                    ],
+                    [
+                        'id' => 'patient_demographics',
+                        'title' => 'Patient Demographics',
+                        'description' => 'Patient demographics and statistics report',
+                        'type' => 'patients',
+                        'period' => $period,
+                        'last_generated' => now()->subDay()->toISOString(),
+                        'download_url' => '/api/v1/reports/patient-demographics/download',
+                        'file_size' => '1.8 MB',
+                        'format' => 'excel',
+                        'status' => 'ready'
+                    ],
+                    [
+                        'id' => 'revenue_report',
+                        'title' => 'Revenue Report',
+                        'description' => 'Financial revenue and billing report',
+                        'type' => 'revenue',
+                        'period' => $period,
+                        'last_generated' => now()->subHours(6)->toISOString(),
+                        'download_url' => '/api/v1/reports/revenue/download',
+                        'file_size' => '3.2 MB',
+                        'format' => 'pdf',
+                        'status' => 'ready'
+                    ]
+                ],
+                'summary' => [
+                    'total_reports' => 12,
+                    'ready_reports' => 10,
+                    'generating_reports' => 2,
+                    'last_updated' => now()->toISOString()
+                ]
+            ];
+
+            // Filter by type if specified
+            if ($type) {
+                $reports['reports'] = array_filter($reports['reports'], function($report) use ($type) {
+                    return $report['type'] === $type;
+                });
+            }
+
+            return $this->successResponse($reports, 'Dashboard reports retrieved successfully');
+
+        } catch (\Exception $e) {
+            return $this->handleException($e);
+        }
     }
 }
