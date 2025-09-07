@@ -1,13 +1,15 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { adminStaff } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type StaffManagementData, type StaffMember, type StaffFormData } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Table,
     TableBody,
@@ -21,96 +23,46 @@ import {
     Search,
     Edit,
     Eye,
-    MoreHorizontal,
     UserPlus,
     Mail,
     Phone,
     Calendar,
     Building2,
     Shield,
-    Clock
+    Clock,
+    Save,
+    X
 } from 'lucide-react';
-import { BreadcrumbItem } from '@/types';
 
-export default function StaffManagement() {
+interface StaffManagementProps {
+    staff: StaffManagementData['staff'];
+    roles: StaffManagementData['roles'];
+    departments: StaffManagementData['departments'];
+    permissions: StaffManagementData['permissions'];
+}
+
+export default function StaffManagement({ staff, roles, departments }: StaffManagementProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
-
-    const staff = [
-        {
-            id: 1,
-            name: 'Dr. Sarah Johnson',
-            email: 'sarah.johnson@clinic.com',
-            phone: '+1 (555) 123-4567',
-            role: 'Doctor',
-            department: 'Cardiology',
-            status: 'Active',
-            joinDate: '2023-01-15',
-            lastActive: '2 hours ago',
-            avatar: null
-        },
-        {
-            id: 2,
-            name: 'Emily Chen',
-            email: 'emily.chen@clinic.com',
-            phone: '+1 (555) 234-5678',
-            role: 'Receptionist',
-            department: 'Front Desk',
-            status: 'Active',
-            joinDate: '2023-03-20',
-            lastActive: '1 hour ago',
-            avatar: null
-        },
-        {
-            id: 3,
-            name: 'Dr. Michael Brown',
-            email: 'michael.brown@clinic.com',
-            phone: '+1 (555) 345-6789',
-            role: 'Doctor',
-            department: 'Pediatrics',
-            status: 'Active',
-            joinDate: '2022-11-10',
-            lastActive: '30 minutes ago',
-            avatar: null
-        },
-        {
-            id: 4,
-            name: 'Lisa Rodriguez',
-            email: 'lisa.rodriguez@clinic.com',
-            phone: '+1 (555) 456-7890',
-            role: 'Nurse',
-            department: 'Emergency',
-            status: 'On Leave',
-            joinDate: '2023-02-05',
-            lastActive: '2 days ago',
-            avatar: null
-        },
-        {
-            id: 5,
-            name: 'Dr. Jennifer Lee',
-            email: 'jennifer.lee@clinic.com',
-            phone: '+1 (555) 567-8901',
-            role: 'Doctor',
-            department: 'Dermatology',
-            status: 'Active',
-            joinDate: '2023-04-12',
-            lastActive: '1 hour ago',
-            avatar: null
-        },
-        {
-            id: 6,
-            name: 'Robert Wilson',
-            email: 'robert.wilson@clinic.com',
-            phone: '+1 (555) 678-9012',
-            role: 'Administrator',
-            department: 'Administration',
-            status: 'Active',
-            joinDate: '2022-08-15',
-            lastActive: '15 minutes ago',
-            avatar: null
-        }
-    ];
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+    const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState<StaffFormData>({
+        name: '',
+        email: '',
+        phone: '',
+        role: '',
+        department: '',
+        status: 'Active',
+        address: '',
+        emergency_contact: '',
+        emergency_phone: '',
+        notes: ''
+    });
 
     const filteredStaff = staff.filter(member => {
         const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -139,6 +91,135 @@ export default function StaffManagement() {
             case 'Administrator': return <Shield className="h-4 w-4" />;
             default: return <UserPlus className="h-4 w-4" />;
         }
+    };
+
+    const handleAddStaff = () => {
+        setIsAddModalOpen(true);
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            role: '',
+            department: '',
+            status: 'Active',
+            address: '',
+            emergency_contact: '',
+            emergency_phone: '',
+            notes: ''
+        });
+    };
+
+    const handleViewStaff = (staffMember: StaffMember) => {
+        setViewingStaff(staffMember);
+        setIsViewModalOpen(true);
+    };
+
+    const handleEditStaff = (staffMember: StaffMember) => {
+        setEditingStaff(staffMember);
+        setFormData({
+            name: staffMember.name,
+            email: staffMember.email,
+            phone: staffMember.phone,
+            role: staffMember.role,
+            department: staffMember.department,
+            status: staffMember.status,
+            address: staffMember.address || '',
+            emergency_contact: staffMember.emergency_contact || '',
+            emergency_phone: staffMember.emergency_phone || '',
+            notes: staffMember.notes || ''
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveStaff = async () => {
+        setIsLoading(true);
+        try {
+            const url = editingStaff ? `/api/staff/${editingStaff.id}` : '/api/staff';
+            const method = editingStaff ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Show success message
+                const action = editingStaff ? 'updated' : 'added';
+                alert(`Staff member ${action} successfully!`);
+
+                // Refresh the page to get updated data
+                router.reload();
+                setIsAddModalOpen(false);
+                setIsEditModalOpen(false);
+                setEditingStaff(null);
+            } else {
+                console.error('Error saving staff:', result.message);
+                alert(`Failed to save staff member: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Error saving staff:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDeleteStaff = async (staffId: number, staffName: string) => {
+        if (!confirm(`Are you sure you want to deactivate ${staffName}? This action can be reversed by editing the staff member.`)) {
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/api/staff/${staffId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Show success message (you could add a toast notification here)
+                alert(`${staffName} has been deactivated successfully.`);
+                router.reload();
+            } else {
+                console.error('Error deleting staff:', result.message);
+                alert(`Failed to deactivate ${staffName}: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Error deleting staff:', error);
+            alert(`Failed to deactivate ${staffName}. Please try again.`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setIsAddModalOpen(false);
+        setIsEditModalOpen(false);
+        setIsViewModalOpen(false);
+        setEditingStaff(null);
+        setViewingStaff(null);
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            role: '',
+            department: '',
+            status: 'Active',
+            address: '',
+            emergency_contact: '',
+            emergency_phone: '',
+            notes: ''
+        });
     };
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -175,6 +256,7 @@ export default function StaffManagement() {
                                         Import Staff
                                     </Button>
                                     <Button
+                                        onClick={handleAddStaff}
                                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
                                     >
                                         <Plus className="mr-2 h-4 w-4" />
@@ -200,10 +282,11 @@ export default function StaffManagement() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Roles</SelectItem>
-                                        <SelectItem value="Doctor">Doctor</SelectItem>
-                                        <SelectItem value="Nurse">Nurse</SelectItem>
-                                        <SelectItem value="Receptionist">Receptionist</SelectItem>
-                                        <SelectItem value="Administrator">Administrator</SelectItem>
+                                        {roles.map((role) => (
+                                            <SelectItem key={role.id} value={role.name}>
+                                                {role.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -288,13 +371,13 @@ export default function StaffManagement() {
                                                 <TableCell>
                                                     <div className="flex items-center text-sm">
                                                         <Calendar className="mr-2 h-4 w-4 text-slate-400" />
-                                                        <span className="text-slate-700 dark:text-slate-300">{member.joinDate}</span>
+                                                        <span className="text-slate-700 dark:text-slate-300">{member.join_date}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center text-sm">
                                                         <Clock className="mr-2 h-4 w-4 text-slate-400" />
-                                                        <span className="text-slate-500 dark:text-slate-400">{member.lastActive}</span>
+                                                        <span className="text-slate-500 dark:text-slate-400">{member.last_active}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -303,6 +386,7 @@ export default function StaffManagement() {
                                                             variant="ghost"
                                                             size="sm"
                                                             title="View Details"
+                                                            onClick={() => handleViewStaff(member)}
                                                             className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400"
                                                         >
                                                             <Eye className="h-4 w-4" />
@@ -311,6 +395,7 @@ export default function StaffManagement() {
                                                             variant="ghost"
                                                             size="sm"
                                                             title="Edit Staff"
+                                                            onClick={() => handleEditStaff(member)}
                                                             className="h-8 w-8 p-0 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400"
                                                         >
                                                             <Edit className="h-4 w-4" />
@@ -318,10 +403,12 @@ export default function StaffManagement() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            title="More Options"
-                                                            className="h-8 w-8 p-0 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+                                                            title="Deactivate Staff"
+                                                            onClick={() => handleDeleteStaff(member.id, member.name)}
+                                                            disabled={isLoading}
+                                                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
                                                         >
-                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <X className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 </TableCell>
@@ -350,6 +437,410 @@ export default function StaffManagement() {
                     </Card>
                 </div>
             </div>
+
+            {/* Add Staff Modal */}
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add New Staff Member</DialogTitle>
+                        <DialogDescription>
+                            Enter the details for the new staff member.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Full Name *</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Enter full name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email *</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    placeholder="Enter email address"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone Number *</Label>
+                                <Input
+                                    id="phone"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    placeholder="Enter phone number"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="role">Role *</Label>
+                                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {roles.map((role) => (
+                                            <SelectItem key={role.id} value={role.name}>
+                                                {role.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="department">Department *</Label>
+                                <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select department" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {departments.map((department) => (
+                                            <SelectItem key={department} value={department}>
+                                                {department}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="status">Status</Label>
+                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'Active' | 'On Leave' | 'Inactive'})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Active">Active</SelectItem>
+                                        <SelectItem value="On Leave">On Leave</SelectItem>
+                                        <SelectItem value="Inactive">Inactive</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="address">Address</Label>
+                            <Textarea
+                                id="address"
+                                value={formData.address}
+                                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                placeholder="Enter address"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="emergencyContact">Emergency Contact</Label>
+                                <Input
+                                    id="emergencyContact"
+                                    value={formData.emergency_contact}
+                                    onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
+                                    placeholder="Emergency contact name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="emergencyPhone">Emergency Phone</Label>
+                                <Input
+                                    id="emergencyPhone"
+                                    value={formData.emergency_phone}
+                                    onChange={(e) => setFormData({...formData, emergency_phone: e.target.value})}
+                                    placeholder="Emergency contact phone"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea
+                                id="notes"
+                                value={formData.notes}
+                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                placeholder="Additional notes"
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveStaff} disabled={isLoading}>
+                            <Save className="mr-2 h-4 w-4" />
+                            {isLoading ? 'Adding...' : 'Add Staff Member'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Staff Modal */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Staff Member</DialogTitle>
+                        <DialogDescription>
+                            Update the details for {editingStaff?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-name">Full Name *</Label>
+                                <Input
+                                    id="edit-name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Enter full name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-email">Email *</Label>
+                                <Input
+                                    id="edit-email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    placeholder="Enter email address"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-phone">Phone Number *</Label>
+                                <Input
+                                    id="edit-phone"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    placeholder="Enter phone number"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-role">Role *</Label>
+                                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {roles.map((role) => (
+                                            <SelectItem key={role.id} value={role.name}>
+                                                {role.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-department">Department *</Label>
+                                <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select department" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {departments.map((department) => (
+                                            <SelectItem key={department} value={department}>
+                                                {department}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-status">Status</Label>
+                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'Active' | 'On Leave' | 'Inactive'})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Active">Active</SelectItem>
+                                        <SelectItem value="On Leave">On Leave</SelectItem>
+                                        <SelectItem value="Inactive">Inactive</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-address">Address</Label>
+                            <Textarea
+                                id="edit-address"
+                                value={formData.address}
+                                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                placeholder="Enter address"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-emergencyContact">Emergency Contact</Label>
+                                <Input
+                                    id="edit-emergencyContact"
+                                    value={formData.emergency_contact}
+                                    onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
+                                    placeholder="Emergency contact name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-emergencyPhone">Emergency Phone</Label>
+                                <Input
+                                    id="edit-emergencyPhone"
+                                    value={formData.emergency_phone}
+                                    onChange={(e) => setFormData({...formData, emergency_phone: e.target.value})}
+                                    placeholder="Emergency contact phone"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-notes">Notes</Label>
+                            <Textarea
+                                id="edit-notes"
+                                value={formData.notes}
+                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                placeholder="Additional notes"
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveStaff} disabled={isLoading}>
+                            <Save className="mr-2 h-4 w-4" />
+                            {isLoading ? 'Updating...' : 'Update Staff Member'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* View Staff Modal */}
+            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Staff Member Details</DialogTitle>
+                        <DialogDescription>
+                            View details for {viewingStaff?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {viewingStaff && (
+                        <div className="grid gap-6 py-4">
+                            {/* Basic Information */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Basic Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Full Name</Label>
+                                        <p className="text-slate-900 dark:text-white">{viewingStaff.name}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Email</Label>
+                                        <p className="text-slate-900 dark:text-white">{viewingStaff.email}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Phone</Label>
+                                        <p className="text-slate-900 dark:text-white">{viewingStaff.phone || 'Not provided'}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Status</Label>
+                                        <Badge
+                                            variant={getStatusColor(viewingStaff.status)}
+                                            className={`font-medium ${
+                                                viewingStaff.status === 'Active'
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                                    : viewingStaff.status === 'On Leave'
+                                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                                                    : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                            }`}
+                                        >
+                                            {viewingStaff.status}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Role & Department */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Role & Department</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Role</Label>
+                                        <div className="flex items-center space-x-2 mt-1">
+                                            <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg">
+                                                {getRoleIcon(viewingStaff.role)}
+                                            </div>
+                                            <p className="text-slate-900 dark:text-white">{viewingStaff.role}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Department</Label>
+                                        <p className="text-slate-900 dark:text-white">{viewingStaff.department}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Contact Information */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Contact Information</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Address</Label>
+                                        <p className="text-slate-900 dark:text-white">{viewingStaff.address || 'Not provided'}</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Emergency Contact</Label>
+                                            <p className="text-slate-900 dark:text-white">{viewingStaff.emergency_contact || 'Not provided'}</p>
+                                        </div>
+                                        <div>
+                                            <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Emergency Phone</Label>
+                                            <p className="text-slate-900 dark:text-white">{viewingStaff.emergency_phone || 'Not provided'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Additional Information */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Additional Information</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Join Date</Label>
+                                        <p className="text-slate-900 dark:text-white">{viewingStaff.join_date || 'Not provided'}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Last Active</Label>
+                                        <p className="text-slate-900 dark:text-white">{viewingStaff.last_active}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Notes</Label>
+                                    <p className="text-slate-900 dark:text-white">{viewingStaff.notes || 'No notes available'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel}>
+                            <X className="mr-2 h-4 w-4" />
+                            Close
+                        </Button>
+                        <Button onClick={() => {
+                            setIsViewModalOpen(false);
+                            handleEditStaff(viewingStaff!);
+                        }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Staff Member
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

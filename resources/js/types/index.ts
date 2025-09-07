@@ -28,10 +28,21 @@ export interface User {
 export interface Clinic {
     id: number;
     name: string;
-    address: string;
-    phone: string;
-    email: string;
-    license_number: string;
+    slug?: string;
+    timezone?: string;
+    logo_url?: string;
+    address: {
+        street?: string;
+        city?: string;
+        state?: string;
+        postal_code?: string;
+        country?: string;
+    } | null;
+    phone?: string;
+    email?: string;
+    website?: string;
+    description?: string;
+    settings?: Record<string, any>;
     created_at: string;
     updated_at: string;
 }
@@ -427,6 +438,8 @@ export interface ActivityLog {
     user_id: number;
     user_name: string;
     action: string;
+    type: string;
+    description: string;
     model_type: string;
     model_id: number;
     changes?: Record<string, any>;
@@ -526,6 +539,100 @@ export interface DashboardStats {
         user_name: string;
         created_at: string;
     }>;
+}
+
+// Admin Dashboard specific types
+export interface AdminDashboardData {
+    user: User;
+    stats: AdminDashboardStats;
+    permissions: string[];
+}
+
+export interface AdminDashboardStats {
+    totalUsers: number;
+    totalPatients: number;
+    totalAppointments: number;
+    totalEncounters: number;
+    totalPrescriptions: number;
+    totalProducts: number;
+    totalMeetings: number;
+    totalInteractions: number;
+    todayAppointments: number;
+    activeQueue: number;
+    completedEncounters: number;
+    pendingPrescriptions: number;
+    upcomingMeetings: number;
+    recentActivity: ActivityLog[];
+    changes: {
+        totalUsers: string;
+        totalPatients: string;
+        todayAppointments: string;
+        activeQueue: string;
+        totalAppointments: string;
+        totalEncounters: string;
+        pendingPrescriptions: string;
+        completedEncounters: string;
+    };
+}
+
+export interface StatCard {
+    title: string;
+    value: string | number;
+    change: string;
+    icon: React.ComponentType<any>;
+    color: string;
+}
+
+export interface RecentActivity {
+    id: number;
+    type: 'appointment' | 'staff' | 'patient' | 'system';
+    message: string;
+    time: string;
+    status: 'success' | 'info' | 'warning' | 'error';
+}
+
+// Staff Management types
+export interface StaffMember {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    department: string;
+    status: 'Active' | 'On Leave' | 'Inactive';
+    join_date: string;
+    last_active: string;
+    address?: string;
+    emergency_contact?: string;
+    emergency_phone?: string;
+    notes?: string;
+    is_active: boolean;
+}
+
+export interface StaffRole {
+    id: number;
+    name: string;
+    description: string;
+}
+
+export interface StaffFormData {
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    department: string;
+    status: 'Active' | 'On Leave' | 'Inactive';
+    address: string;
+    emergency_contact: string;
+    emergency_phone: string;
+    notes: string;
+}
+
+export interface StaffManagementData {
+    staff: StaffMember[];
+    roles: StaffRole[];
+    departments: string[];
+    permissions: string[];
 }
 
 // Role-based permissions

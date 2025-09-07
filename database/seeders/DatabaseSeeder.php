@@ -16,19 +16,20 @@ class DatabaseSeeder extends Seeder
             ClinicSeeder::class,
             PermissionSeeder::class,
             UserRoleSeeder::class,
+            NovaUserSeeder::class,
             SettingsSeeder::class,
-            
+
             // User and role seeders
             DoctorSeeder::class,
             MedrepSeeder::class,
-            
+
             // Patient and encounter seeders
             PatientSeeder::class,
             EncounterSeeder::class,
-            
+
             // Infrastructure seeders
             RoomSeeder::class,
-            
+
             // Business logic seeders
             AppointmentSeeder::class,
             PrescriptionSeeder::class,
@@ -36,10 +37,10 @@ class DatabaseSeeder extends Seeder
             LabResultSeeder::class,
             FileAssetSeeder::class,
             MedrepVisitSeeder::class,
-            
+
             // EMR data seeding (comprehensive data)
             EMRSeeder::class,
-            
+
             // Activity logging (depends on all other entities)
             ActivityLogSeeder::class,
         ]);

@@ -13,17 +13,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Admin routes
     Route::prefix('admin')->group(function () {
-        Route::get('dashboard', function () {
-            return Inertia::render('admin/dashboard');
-        })->name('admin.dashboard');
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
         Route::get('doctors', function () {
             return Inertia::render('admin/doctors');
         })->name('admin.doctors');
 
-        Route::get('staff', function () {
-            return Inertia::render('admin/staff');
-        })->name('admin.staff');
+        Route::get('staff', [App\Http\Controllers\StaffController::class, 'index'])->name('admin.staff');
 
         Route::get('patients', function () {
             return Inertia::render('admin/patients');

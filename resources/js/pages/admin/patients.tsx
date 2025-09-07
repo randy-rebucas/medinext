@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Table,
     TableBody,
@@ -28,7 +31,12 @@ import {
     MoreHorizontal,
     Heart,
     Clock,
-    Activity
+    Activity,
+    Save,
+    X,
+    MapPin,
+    CreditCard,
+    FileText
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -46,6 +54,41 @@ export default function PatientManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [genderFilter, setGenderFilter] = useState('all');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingPatient, setEditingPatient] = useState<{
+        id: number;
+        name: string;
+        email: string;
+        phone: string;
+        age: number;
+        gender: string;
+        lastVisit: string;
+        status: string;
+        totalVisits: number;
+        nextAppointment: string | null;
+        insurance: string;
+    } | null>(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        age: '',
+        gender: '',
+        dateOfBirth: '',
+        address: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        emergencyContact: '',
+        emergencyPhone: '',
+        insurance: '',
+        insuranceNumber: '',
+        medicalHistory: '',
+        allergies: '',
+        medications: '',
+        notes: ''
+    });
 
     const patients = [
         {
@@ -133,6 +176,101 @@ export default function PatientManagement() {
         }
     };
 
+    const handleAddPatient = () => {
+        setIsAddModalOpen(true);
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            age: '',
+            gender: '',
+            dateOfBirth: '',
+            address: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            emergencyContact: '',
+            emergencyPhone: '',
+            insurance: '',
+            insuranceNumber: '',
+            medicalHistory: '',
+            allergies: '',
+            medications: '',
+            notes: ''
+        });
+    };
+
+    const handleEditPatient = (patient: {
+        id: number;
+        name: string;
+        email: string;
+        phone: string;
+        age: number;
+        gender: string;
+        lastVisit: string;
+        status: string;
+        totalVisits: number;
+        nextAppointment: string | null;
+        insurance: string;
+    }) => {
+        setEditingPatient(patient);
+        setFormData({
+            name: patient.name,
+            email: patient.email,
+            phone: patient.phone,
+            age: patient.age.toString(),
+            gender: patient.gender,
+            dateOfBirth: '',
+            address: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            emergencyContact: '',
+            emergencyPhone: '',
+            insurance: patient.insurance,
+            insuranceNumber: '',
+            medicalHistory: '',
+            allergies: '',
+            medications: '',
+            notes: ''
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleSavePatient = () => {
+        // Here you would typically make an API call to save the patient
+        console.log('Saving patient:', formData);
+        setIsAddModalOpen(false);
+        setIsEditModalOpen(false);
+        setEditingPatient(null);
+    };
+
+    const handleCancel = () => {
+        setIsAddModalOpen(false);
+        setIsEditModalOpen(false);
+        setEditingPatient(null);
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            age: '',
+            gender: '',
+            dateOfBirth: '',
+            address: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            emergencyContact: '',
+            emergencyPhone: '',
+            insurance: '',
+            insuranceNumber: '',
+            medicalHistory: '',
+            allergies: '',
+            medications: '',
+            notes: ''
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Patient Management - Medinext">
@@ -161,6 +299,7 @@ export default function PatientManagement() {
                                         Health Records
                                     </Button>
                                     <Button
+                                        onClick={handleAddPatient}
                                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
                                     >
                                         <Plus className="mr-2 h-4 w-4" />
@@ -287,6 +426,7 @@ export default function PatientManagement() {
                                                             variant="ghost"
                                                             size="sm"
                                                             title="Edit Patient"
+                                                            onClick={() => handleEditPatient(patient)}
                                                             className="h-8 w-8 p-0 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400"
                                                         >
                                                             <Edit className="h-4 w-4" />
@@ -326,6 +466,438 @@ export default function PatientManagement() {
                     </Card>
                 </div>
             </div>
+
+            {/* Add Patient Modal */}
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add New Patient</DialogTitle>
+                        <DialogDescription>
+                            Register a new patient in the system.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Full Name *</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Enter patient name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email *</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    placeholder="patient@email.com"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone Number *</Label>
+                                <Input
+                                    id="phone"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    placeholder="+1 (555) 123-4567"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                                <Input
+                                    id="dateOfBirth"
+                                    type="date"
+                                    value={formData.dateOfBirth}
+                                    onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="age">Age</Label>
+                                <Input
+                                    id="age"
+                                    type="number"
+                                    value={formData.age}
+                                    onChange={(e) => setFormData({...formData, age: e.target.value})}
+                                    placeholder="35"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gender">Gender *</Label>
+                                <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Male">Male</SelectItem>
+                                        <SelectItem value="Female">Female</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="address">Address</Label>
+                            <Input
+                                id="address"
+                                value={formData.address}
+                                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                placeholder="Street address"
+                            />
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="city">City</Label>
+                                <Input
+                                    id="city"
+                                    value={formData.city}
+                                    onChange={(e) => setFormData({...formData, city: e.target.value})}
+                                    placeholder="City"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="state">State</Label>
+                                <Input
+                                    id="state"
+                                    value={formData.state}
+                                    onChange={(e) => setFormData({...formData, state: e.target.value})}
+                                    placeholder="State"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="zipCode">ZIP Code</Label>
+                                <Input
+                                    id="zipCode"
+                                    value={formData.zipCode}
+                                    onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                                    placeholder="12345"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="emergencyContact">Emergency Contact</Label>
+                                <Input
+                                    id="emergencyContact"
+                                    value={formData.emergencyContact}
+                                    onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                                    placeholder="Emergency contact name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="emergencyPhone">Emergency Phone</Label>
+                                <Input
+                                    id="emergencyPhone"
+                                    value={formData.emergencyPhone}
+                                    onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
+                                    placeholder="Emergency contact phone"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="insurance">Insurance Provider</Label>
+                                <Select value={formData.insurance} onValueChange={(value) => setFormData({...formData, insurance: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select insurance" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Blue Cross">Blue Cross</SelectItem>
+                                        <SelectItem value="Aetna">Aetna</SelectItem>
+                                        <SelectItem value="Cigna">Cigna</SelectItem>
+                                        <SelectItem value="United Health">United Health</SelectItem>
+                                        <SelectItem value="Medicare">Medicare</SelectItem>
+                                        <SelectItem value="Medicaid">Medicaid</SelectItem>
+                                        <SelectItem value="Self Pay">Self Pay</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="insuranceNumber">Insurance Number</Label>
+                                <Input
+                                    id="insuranceNumber"
+                                    value={formData.insuranceNumber}
+                                    onChange={(e) => setFormData({...formData, insuranceNumber: e.target.value})}
+                                    placeholder="Insurance policy number"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="medicalHistory">Medical History</Label>
+                            <Textarea
+                                id="medicalHistory"
+                                value={formData.medicalHistory}
+                                onChange={(e) => setFormData({...formData, medicalHistory: e.target.value})}
+                                placeholder="Previous medical conditions, surgeries, etc."
+                                rows={3}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="allergies">Allergies</Label>
+                            <Textarea
+                                id="allergies"
+                                value={formData.allergies}
+                                onChange={(e) => setFormData({...formData, allergies: e.target.value})}
+                                placeholder="Known allergies and reactions"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="medications">Current Medications</Label>
+                            <Textarea
+                                id="medications"
+                                value={formData.medications}
+                                onChange={(e) => setFormData({...formData, medications: e.target.value})}
+                                placeholder="Current medications and dosages"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea
+                                id="notes"
+                                value={formData.notes}
+                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                placeholder="Additional notes about the patient"
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSavePatient}>
+                            <Save className="mr-2 h-4 w-4" />
+                            Add Patient
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Patient Modal */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Patient</DialogTitle>
+                        <DialogDescription>
+                            Update the patient information for {editingPatient?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-name">Full Name *</Label>
+                                <Input
+                                    id="edit-name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Enter patient name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-email">Email *</Label>
+                                <Input
+                                    id="edit-email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    placeholder="patient@email.com"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-phone">Phone Number *</Label>
+                                <Input
+                                    id="edit-phone"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    placeholder="+1 (555) 123-4567"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-dateOfBirth">Date of Birth *</Label>
+                                <Input
+                                    id="edit-dateOfBirth"
+                                    type="date"
+                                    value={formData.dateOfBirth}
+                                    onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-age">Age</Label>
+                                <Input
+                                    id="edit-age"
+                                    type="number"
+                                    value={formData.age}
+                                    onChange={(e) => setFormData({...formData, age: e.target.value})}
+                                    placeholder="35"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-gender">Gender *</Label>
+                                <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Male">Male</SelectItem>
+                                        <SelectItem value="Female">Female</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-address">Address</Label>
+                            <Input
+                                id="edit-address"
+                                value={formData.address}
+                                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                placeholder="Street address"
+                            />
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-city">City</Label>
+                                <Input
+                                    id="edit-city"
+                                    value={formData.city}
+                                    onChange={(e) => setFormData({...formData, city: e.target.value})}
+                                    placeholder="City"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-state">State</Label>
+                                <Input
+                                    id="edit-state"
+                                    value={formData.state}
+                                    onChange={(e) => setFormData({...formData, state: e.target.value})}
+                                    placeholder="State"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-zipCode">ZIP Code</Label>
+                                <Input
+                                    id="edit-zipCode"
+                                    value={formData.zipCode}
+                                    onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                                    placeholder="12345"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-emergencyContact">Emergency Contact</Label>
+                                <Input
+                                    id="edit-emergencyContact"
+                                    value={formData.emergencyContact}
+                                    onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                                    placeholder="Emergency contact name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-emergencyPhone">Emergency Phone</Label>
+                                <Input
+                                    id="edit-emergencyPhone"
+                                    value={formData.emergencyPhone}
+                                    onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
+                                    placeholder="Emergency contact phone"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-insurance">Insurance Provider</Label>
+                                <Select value={formData.insurance} onValueChange={(value) => setFormData({...formData, insurance: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select insurance" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Blue Cross">Blue Cross</SelectItem>
+                                        <SelectItem value="Aetna">Aetna</SelectItem>
+                                        <SelectItem value="Cigna">Cigna</SelectItem>
+                                        <SelectItem value="United Health">United Health</SelectItem>
+                                        <SelectItem value="Medicare">Medicare</SelectItem>
+                                        <SelectItem value="Medicaid">Medicaid</SelectItem>
+                                        <SelectItem value="Self Pay">Self Pay</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-insuranceNumber">Insurance Number</Label>
+                                <Input
+                                    id="edit-insuranceNumber"
+                                    value={formData.insuranceNumber}
+                                    onChange={(e) => setFormData({...formData, insuranceNumber: e.target.value})}
+                                    placeholder="Insurance policy number"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-medicalHistory">Medical History</Label>
+                            <Textarea
+                                id="edit-medicalHistory"
+                                value={formData.medicalHistory}
+                                onChange={(e) => setFormData({...formData, medicalHistory: e.target.value})}
+                                placeholder="Previous medical conditions, surgeries, etc."
+                                rows={3}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-allergies">Allergies</Label>
+                            <Textarea
+                                id="edit-allergies"
+                                value={formData.allergies}
+                                onChange={(e) => setFormData({...formData, allergies: e.target.value})}
+                                placeholder="Known allergies and reactions"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-medications">Current Medications</Label>
+                            <Textarea
+                                id="edit-medications"
+                                value={formData.medications}
+                                onChange={(e) => setFormData({...formData, medications: e.target.value})}
+                                placeholder="Current medications and dosages"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-notes">Notes</Label>
+                            <Textarea
+                                id="edit-notes"
+                                value={formData.notes}
+                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                placeholder="Additional notes about the patient"
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSavePatient}>
+                            <Save className="mr-2 h-4 w-4" />
+                            Update Patient
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

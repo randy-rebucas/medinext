@@ -11,6 +11,13 @@ class UserClinicRole extends Model
         'user_id',
         'clinic_id',
         'role_id',
+        'department',
+        'status',
+        'address',
+        'emergency_contact',
+        'emergency_phone',
+        'notes',
+        'join_date',
     ];
 
     public function user(): BelongsTo

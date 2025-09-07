@@ -3,6 +3,10 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminRooms } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -39,13 +43,42 @@ import {
     MoreHorizontal,
     Activity,
     Wrench,
-    Users
+    Users,
+    Save,
+    X,
+    MapPin,
+    Monitor,
+    Thermometer,
+    Syringe
 } from 'lucide-react';
 
 export default function RoomManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingRoom, setEditingRoom] = useState<{
+        id: number;
+        name: string;
+        type: string;
+        capacity: number;
+        status: string;
+        equipment: string[];
+        nextAppointment: string;
+        doctor: string;
+    } | null>(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        type: '',
+        capacity: '1',
+        status: 'Available',
+        location: '',
+        description: '',
+        equipment: [] as string[],
+        maintenanceNotes: '',
+        specialRequirements: ''
+    });
 
     const rooms = [
         {
@@ -108,6 +141,85 @@ export default function RoomManagement() {
         return matchesSearch && matchesStatus && matchesType;
     });
 
+    const handleAddRoom = () => {
+        setIsAddModalOpen(true);
+        setFormData({
+            name: '',
+            type: '',
+            capacity: '1',
+            status: 'Available',
+            location: '',
+            description: '',
+            equipment: [],
+            maintenanceNotes: '',
+            specialRequirements: ''
+        });
+    };
+
+    const handleEditRoom = (room: {
+        id: number;
+        name: string;
+        type: string;
+        capacity: number;
+        status: string;
+        equipment: string[];
+        nextAppointment: string;
+        doctor: string;
+    }) => {
+        setEditingRoom(room);
+        setFormData({
+            name: room.name,
+            type: room.type,
+            capacity: room.capacity.toString(),
+            status: room.status,
+            location: '',
+            description: '',
+            equipment: room.equipment,
+            maintenanceNotes: '',
+            specialRequirements: ''
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveRoom = () => {
+        // Here you would typically make an API call to save the room
+        console.log('Saving room:', formData);
+        setIsAddModalOpen(false);
+        setIsEditModalOpen(false);
+        setEditingRoom(null);
+    };
+
+    const handleCancel = () => {
+        setIsAddModalOpen(false);
+        setIsEditModalOpen(false);
+        setEditingRoom(null);
+        setFormData({
+            name: '',
+            type: '',
+            capacity: '1',
+            status: 'Available',
+            location: '',
+            description: '',
+            equipment: [],
+            maintenanceNotes: '',
+            specialRequirements: ''
+        });
+    };
+
+    const handleEquipmentChange = (equipment: string, checked: boolean) => {
+        if (checked) {
+            setFormData(prev => ({
+                ...prev,
+                equipment: [...prev.equipment, equipment]
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                equipment: prev.equipment.filter(item => item !== equipment)
+            }));
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Room Management - Medinext">
@@ -136,6 +248,7 @@ export default function RoomManagement() {
                                         Room Status
                                     </Button>
                                     <Button
+                                        onClick={handleAddRoom}
                                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
                                     >
                                         <Plus className="mr-2 h-4 w-4" />
@@ -262,6 +375,7 @@ export default function RoomManagement() {
                                                             variant="ghost"
                                                             size="sm"
                                                             title="Edit Room"
+                                                            onClick={() => handleEditRoom(room)}
                                                             className="h-8 w-8 p-0 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400"
                                                         >
                                                             <Edit className="h-4 w-4" />
@@ -301,6 +415,314 @@ export default function RoomManagement() {
                     </Card>
                 </div>
             </div>
+
+            {/* Add Room Modal */}
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add New Room</DialogTitle>
+                        <DialogDescription>
+                            Create a new room in your clinic.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Room Name *</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Room 101"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="type">Room Type *</Label>
+                                <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select room type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Consultation">Consultation</SelectItem>
+                                        <SelectItem value="Examination">Examination</SelectItem>
+                                        <SelectItem value="Procedure">Procedure</SelectItem>
+                                        <SelectItem value="Surgery">Surgery</SelectItem>
+                                        <SelectItem value="Recovery">Recovery</SelectItem>
+                                        <SelectItem value="Emergency">Emergency</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="capacity">Capacity *</Label>
+                                <Select value={formData.capacity} onValueChange={(value) => setFormData({...formData, capacity: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select capacity" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">1 person</SelectItem>
+                                        <SelectItem value="2">2 people</SelectItem>
+                                        <SelectItem value="3">3 people</SelectItem>
+                                        <SelectItem value="4">4 people</SelectItem>
+                                        <SelectItem value="5">5+ people</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="status">Status</Label>
+                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Available">Available</SelectItem>
+                                        <SelectItem value="Occupied">Occupied</SelectItem>
+                                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                        <SelectItem value="Out of Service">Out of Service</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="location">Location</Label>
+                            <Input
+                                id="location"
+                                value={formData.location}
+                                onChange={(e) => setFormData({...formData, location: e.target.value})}
+                                placeholder="Floor 1, Wing A"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Textarea
+                                id="description"
+                                value={formData.description}
+                                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                placeholder="Room description and features"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Equipment</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    'Examination Table',
+                                    'Computer',
+                                    'Printer',
+                                    'Medical Equipment',
+                                    'Surgical Table',
+                                    'Anesthesia Machine',
+                                    'Monitor',
+                                    'Defibrillator',
+                                    'X-Ray Machine',
+                                    'Ultrasound Machine',
+                                    'Blood Pressure Monitor',
+                                    'Thermometer',
+                                    'Stethoscope',
+                                    'Syringe',
+                                    'IV Stand'
+                                ].map((equipment) => (
+                                    <div key={equipment} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={equipment}
+                                            checked={formData.equipment.includes(equipment)}
+                                            onCheckedChange={(checked) => handleEquipmentChange(equipment, checked as boolean)}
+                                        />
+                                        <Label htmlFor={equipment} className="text-sm">
+                                            {equipment}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="maintenanceNotes">Maintenance Notes</Label>
+                            <Textarea
+                                id="maintenanceNotes"
+                                value={formData.maintenanceNotes}
+                                onChange={(e) => setFormData({...formData, maintenanceNotes: e.target.value})}
+                                placeholder="Maintenance schedule and notes"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="specialRequirements">Special Requirements</Label>
+                            <Textarea
+                                id="specialRequirements"
+                                value={formData.specialRequirements}
+                                onChange={(e) => setFormData({...formData, specialRequirements: e.target.value})}
+                                placeholder="Special requirements or restrictions"
+                                rows={2}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveRoom}>
+                            <Save className="mr-2 h-4 w-4" />
+                            Add Room
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Room Modal */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Room</DialogTitle>
+                        <DialogDescription>
+                            Update the room information for {editingRoom?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-name">Room Name *</Label>
+                                <Input
+                                    id="edit-name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    placeholder="Room 101"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-type">Room Type *</Label>
+                                <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select room type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Consultation">Consultation</SelectItem>
+                                        <SelectItem value="Examination">Examination</SelectItem>
+                                        <SelectItem value="Procedure">Procedure</SelectItem>
+                                        <SelectItem value="Surgery">Surgery</SelectItem>
+                                        <SelectItem value="Recovery">Recovery</SelectItem>
+                                        <SelectItem value="Emergency">Emergency</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-capacity">Capacity *</Label>
+                                <Select value={formData.capacity} onValueChange={(value) => setFormData({...formData, capacity: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select capacity" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">1 person</SelectItem>
+                                        <SelectItem value="2">2 people</SelectItem>
+                                        <SelectItem value="3">3 people</SelectItem>
+                                        <SelectItem value="4">4 people</SelectItem>
+                                        <SelectItem value="5">5+ people</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-status">Status</Label>
+                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Available">Available</SelectItem>
+                                        <SelectItem value="Occupied">Occupied</SelectItem>
+                                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                        <SelectItem value="Out of Service">Out of Service</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-location">Location</Label>
+                            <Input
+                                id="edit-location"
+                                value={formData.location}
+                                onChange={(e) => setFormData({...formData, location: e.target.value})}
+                                placeholder="Floor 1, Wing A"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-description">Description</Label>
+                            <Textarea
+                                id="edit-description"
+                                value={formData.description}
+                                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                placeholder="Room description and features"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Equipment</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    'Examination Table',
+                                    'Computer',
+                                    'Printer',
+                                    'Medical Equipment',
+                                    'Surgical Table',
+                                    'Anesthesia Machine',
+                                    'Monitor',
+                                    'Defibrillator',
+                                    'X-Ray Machine',
+                                    'Ultrasound Machine',
+                                    'Blood Pressure Monitor',
+                                    'Thermometer',
+                                    'Stethoscope',
+                                    'Syringe',
+                                    'IV Stand'
+                                ].map((equipment) => (
+                                    <div key={equipment} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`edit-${equipment}`}
+                                            checked={formData.equipment.includes(equipment)}
+                                            onCheckedChange={(checked) => handleEquipmentChange(equipment, checked as boolean)}
+                                        />
+                                        <Label htmlFor={`edit-${equipment}`} className="text-sm">
+                                            {equipment}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-maintenanceNotes">Maintenance Notes</Label>
+                            <Textarea
+                                id="edit-maintenanceNotes"
+                                value={formData.maintenanceNotes}
+                                onChange={(e) => setFormData({...formData, maintenanceNotes: e.target.value})}
+                                placeholder="Maintenance schedule and notes"
+                                rows={2}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-specialRequirements">Special Requirements</Label>
+                            <Textarea
+                                id="edit-specialRequirements"
+                                value={formData.specialRequirements}
+                                onChange={(e) => setFormData({...formData, specialRequirements: e.target.value})}
+                                placeholder="Special requirements or restrictions"
+                                rows={2}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveRoom}>
+                            <Save className="mr-2 h-4 w-4" />
+                            Update Room
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

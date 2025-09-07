@@ -56,6 +56,12 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/notifications', [DashboardController::class, 'notifications']);
 
+    // Staff Management Routes
+    Route::get('/staff', [App\Http\Controllers\StaffController::class, 'index']);
+    Route::post('/staff', [App\Http\Controllers\StaffController::class, 'store']);
+    Route::put('/staff/{id}', [App\Http\Controllers\StaffController::class, 'update']);
+    Route::delete('/staff/{id}', [App\Http\Controllers\StaffController::class, 'destroy']);
+
     // Clinic management (with usage validation)
     Route::middleware(['license.usage:clinics'])->group(function () {
         Route::post('/clinics', [ClinicController::class, 'store']);

@@ -49,6 +49,17 @@ class DashboardController extends Controller
         $user->role = $role;
         $user->clinic = $clinic;
 
+        // Determine which dashboard to render based on the route
+        $routeName = $request->route()->getName();
+
+        if ($routeName === 'admin.dashboard') {
+            return Inertia::render('admin/dashboard', [
+                'user' => $user,
+                'stats' => $stats,
+                'permissions' => $permissions,
+            ]);
+        }
+
         return Inertia::render('dashboard', [
             'user' => $user,
             'stats' => $stats,
@@ -62,6 +73,10 @@ class DashboardController extends Controller
     private function getDashboardStats($clinicId, $role)
     {
         $today = Carbon::today();
+        $yesterday = Carbon::yesterday();
+        $thisMonth = Carbon::now()->startOfMonth();
+        $lastMonth = Carbon::now()->subMonth()->startOfMonth();
+        $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
 
         try {
             // Base statistics that apply to all roles
@@ -90,6 +105,9 @@ class DashboardController extends Controller
                 'upcomingMeetings' => 0,
                 'recentActivity' => $this->getRecentActivity($clinicId),
             ];
+
+            // Calculate historical changes
+            $stats['changes'] = $this->calculateHistoricalChanges($clinicId, $today, $yesterday, $thisMonth, $lastMonth, $lastMonthEnd);
         } catch (\Exception $e) {
             // Fallback to default stats if database queries fail
             $stats = [
@@ -107,6 +125,7 @@ class DashboardController extends Controller
                 'pendingPrescriptions' => 0,
                 'upcomingMeetings' => 0,
                 'recentActivity' => [],
+                'changes' => $this->getDefaultChanges(),
             ];
         }
 
@@ -234,6 +253,108 @@ class DashboardController extends Controller
             'pendingPrescriptions' => 0,
             'upcomingMeetings' => 0,
             'recentActivity' => [],
+            'changes' => $this->getDefaultChanges(),
+        ];
+    }
+
+    /**
+     * Calculate historical changes for dashboard stats
+     */
+    private function calculateHistoricalChanges($clinicId, $today, $yesterday, $thisMonth, $lastMonth, $lastMonthEnd)
+    {
+        try {
+            // Calculate changes for each metric
+            $changes = [];
+
+            // Total Users change (this month vs last month)
+            $thisMonthUsers = \App\Models\User::whereHas('userClinicRoles', function ($query) use ($clinicId) {
+                $query->where('clinic_id', $clinicId);
+            })->where('created_at', '>=', $thisMonth)->count();
+
+            $lastMonthUsers = \App\Models\User::whereHas('userClinicRoles', function ($query) use ($clinicId) {
+                $query->where('clinic_id', $clinicId);
+            })->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->count();
+
+            $changes['totalUsers'] = $this->formatChange($thisMonthUsers, $lastMonthUsers, 'this month');
+
+            // Total Patients change (this month vs last month)
+            $thisMonthPatients = Patient::where('clinic_id', $clinicId)
+                ->where('created_at', '>=', $thisMonth)->count();
+            $lastMonthPatients = Patient::where('clinic_id', $clinicId)
+                ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->count();
+            $changes['totalPatients'] = $this->formatChange($thisMonthPatients, $lastMonthPatients, 'this month');
+
+            // Today's Appointments change (today vs yesterday)
+            $todayAppointments = Appointment::where('clinic_id', $clinicId)
+                ->whereDate('start_at', $today)->count();
+            $yesterdayAppointments = Appointment::where('clinic_id', $clinicId)
+                ->whereDate('start_at', $yesterday)->count();
+            $changes['todayAppointments'] = $this->formatChange($todayAppointments, $yesterdayAppointments, 'from yesterday');
+
+            // Active Queue (real-time, no historical comparison)
+            $changes['activeQueue'] = 'Real-time';
+
+            // Total Appointments change (this month vs last month)
+            $thisMonthAppointments = Appointment::where('clinic_id', $clinicId)
+                ->where('created_at', '>=', $thisMonth)->count();
+            $lastMonthAppointments = Appointment::where('clinic_id', $clinicId)
+                ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->count();
+            $changes['totalAppointments'] = $this->formatChange($thisMonthAppointments, $lastMonthAppointments, 'this month');
+
+            // Total Encounters change (this month vs last month)
+            $thisMonthEncounters = Encounter::where('clinic_id', $clinicId)
+                ->where('created_at', '>=', $thisMonth)->count();
+            $lastMonthEncounters = Encounter::where('clinic_id', $clinicId)
+                ->whereBetween('created_at', [$lastMonth, $lastMonthEnd])->count();
+            $changes['totalEncounters'] = $this->formatChange($thisMonthEncounters, $lastMonthEncounters, 'this month');
+
+            // Pending Prescriptions (status-based, no historical comparison)
+            $changes['pendingPrescriptions'] = 'Needs attention';
+
+            // Completed Today (today's completions, no historical comparison)
+            $changes['completedEncounters'] = 'Today\'s completions';
+
+            return $changes;
+        } catch (\Exception $e) {
+            return $this->getDefaultChanges();
+        }
+    }
+
+    /**
+     * Format change value with percentage or absolute difference
+     */
+    private function formatChange($current, $previous, $period)
+    {
+        if ($previous == 0) {
+            return $current > 0 ? "+{$current} {$period}" : "No change {$period}";
+        }
+
+        $difference = $current - $previous;
+        $percentage = round(($difference / $previous) * 100, 1);
+
+        if ($difference > 0) {
+            return "+{$percentage}% {$period}";
+        } elseif ($difference < 0) {
+            return "{$percentage}% {$period}";
+        } else {
+            return "No change {$period}";
+        }
+    }
+
+    /**
+     * Get default changes when calculation fails
+     */
+    private function getDefaultChanges()
+    {
+        return [
+            'totalUsers' => 'No change this month',
+            'totalPatients' => 'No change this month',
+            'todayAppointments' => 'No change from yesterday',
+            'activeQueue' => 'Real-time',
+            'totalAppointments' => 'No change this month',
+            'totalEncounters' => 'No change this month',
+            'pendingPrescriptions' => 'Needs attention',
+            'completedEncounters' => 'Today\'s completions',
         ];
     }
 }
