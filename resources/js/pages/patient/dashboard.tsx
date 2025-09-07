@@ -12,13 +12,13 @@ import {
     FileText,
     Download,
     Eye,
-    Clock,
     User,
     Stethoscope,
     Pill,
     Activity,
-    AlertCircle,
-    CheckCircle
+    CheckCircle,
+    TrendingUp,
+    Shield
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -130,203 +130,267 @@ export default function PatientDashboard({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Patient Portal" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Welcome, {patient.name}</h1>
-                        <p className="text-muted-foreground">
-                            Patient ID: {patient.patient_id} | Manage your healthcare
-                        </p>
+            <Head title="Patient Portal - Medinext">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
+            </Head>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    {/* Modern Header */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 p-8 text-white shadow-xl">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Welcome, {patient.name}</h1>
+                                <p className="mt-2 text-rose-100">
+                                    Patient ID: {patient.patient_id} • Manage your healthcare
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <Shield className="h-3 w-3" />
+                                    Patient
+                                </Badge>
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <User className="h-3 w-3" />
+                                    {patient.sex}
+                                </Badge>
+                            </div>
+                        </div>
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                     </div>
-                </div>
 
-                {/* Main Content Tabs */}
-                <Tabs defaultValue="overview" className="space-y-4">
-                    <TabsList>
-                        <TabsTrigger value="overview">Overview</TabsTrigger>
-                        <TabsTrigger value="appointments">Appointments</TabsTrigger>
-                        <TabsTrigger value="records">Medical Records</TabsTrigger>
-                        <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
-                        <TabsTrigger value="lab-results">Lab Results</TabsTrigger>
-                    </TabsList>
+                    {/* Main Content Tabs */}
+                    <Tabs defaultValue="overview" className="space-y-4">
+                        <TabsList className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700">
+                            <TabsTrigger value="overview">Overview</TabsTrigger>
+                            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+                            <TabsTrigger value="records">Medical Records</TabsTrigger>
+                            <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
+                            <TabsTrigger value="lab-results">Lab Results</TabsTrigger>
+                        </TabsList>
 
-                    {/* Overview Tab */}
-                    <TabsContent value="overview" className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Upcoming Appointments</CardTitle>
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{upcomingAppointments.length}</div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Recent Encounters</CardTitle>
-                                    <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{recentEncounters.length}</div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Active Prescriptions</CardTitle>
-                                    <Pill className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{recentPrescriptions.length}</div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Lab Results</CardTitle>
-                                    <Activity className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{recentLabResults.length}</div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Upcoming Appointments</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {upcomingAppointments.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {upcomingAppointments.slice(0, 3).map((appointment) => (
-                                                <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                                    <div>
-                                                        <p className="font-medium">{appointment.doctor_name}</p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {new Date(appointment.start_at).toLocaleDateString()} at {new Date(appointment.start_at).toLocaleTimeString()}
-                                                        </p>
-                                                    </div>
-                                                    <Badge className={getStatusColor(appointment.status)}>
-                                                        {appointment.status}
-                                                    </Badge>
-                                                </div>
-                                            ))}
+                        {/* Overview Tab */}
+                        <TabsContent value="overview" className="space-y-4">
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Upcoming Appointments</CardTitle>
+                                        <div className="p-2 bg-blue-500 rounded-lg">
+                                            <Calendar className="h-4 w-4 text-white" />
                                         </div>
-                                    ) : (
-                                        <p className="text-muted-foreground">No upcoming appointments</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Recent Encounters</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {recentEncounters.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {recentEncounters.slice(0, 3).map((encounter) => (
-                                                <div key={encounter.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                                    <div>
-                                                        <p className="font-medium">Encounter #{encounter.encounter_number}</p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            Dr. {encounter.doctor_name} - {new Date(encounter.created_at).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                    <Badge className={getStatusColor(encounter.status)}>
-                                                        {encounter.status}
-                                                    </Badge>
-                                                </div>
-                                            ))}
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{upcomingAppointments.length}</div>
+                                        <div className="flex items-center mt-2">
+                                            <TrendingUp className="h-3 w-3 text-blue-500 mr-1" />
+                                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                                Scheduled visits
+                                            </p>
                                         </div>
-                                    ) : (
-                                        <p className="text-muted-foreground">No recent encounters</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </TabsContent>
+                                    </CardContent>
+                                </Card>
+                                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Recent Encounters</CardTitle>
+                                        <div className="p-2 bg-green-500 rounded-lg">
+                                            <Stethoscope className="h-4 w-4 text-white" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{recentEncounters.length}</div>
+                                        <div className="flex items-center mt-2">
+                                            <Activity className="h-3 w-3 text-green-500 mr-1" />
+                                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                                Medical visits
+                                            </p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Active Prescriptions</CardTitle>
+                                        <div className="p-2 bg-purple-500 rounded-lg">
+                                            <Pill className="h-4 w-4 text-white" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{recentPrescriptions.length}</div>
+                                        <div className="flex items-center mt-2">
+                                            <CheckCircle className="h-3 w-3 text-purple-500 mr-1" />
+                                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                                Current medications
+                                            </p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Lab Results</CardTitle>
+                                        <div className="p-2 bg-orange-500 rounded-lg">
+                                            <Activity className="h-4 w-4 text-white" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-3xl font-bold text-slate-900 dark:text-white">{recentLabResults.length}</div>
+                                        <div className="flex items-center mt-2">
+                                            <FileText className="h-3 w-3 text-orange-500 mr-1" />
+                                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                                Test results
+                                            </p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
 
-                    {/* Appointments Tab */}
-                    <TabsContent value="appointments" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Appointments</CardTitle>
-                                        <CardDescription>Manage your appointments</CardDescription>
-                                    </div>
-                                    <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button>
-                                                <Calendar className="h-4 w-4 mr-2" />
-                                                Book Appointment
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                            <DialogHeader>
-                                                <DialogTitle>Book New Appointment</DialogTitle>
-                                                <DialogDescription>
-                                                    Select a doctor and available time slot
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <AppointmentBookingForm
-                                                doctors={doctors}
-                                                availableSlots={availableSlots}
-                                                onSuccess={() => setIsBookingDialogOpen(false)}
-                                            />
-                                        </DialogContent>
-                                    </Dialog>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {upcomingAppointments.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {upcomingAppointments.map((appointment) => (
-                                            <Card key={appointment.id} className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-1">
-                                                        <h4 className="font-semibold">{appointment.doctor_name}</h4>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {new Date(appointment.start_at).toLocaleDateString()} at {new Date(appointment.start_at).toLocaleTimeString()}
-                                                        </p>
-                                                        <p className="text-sm">{appointment.reason}</p>
-                                                        {appointment.room_name && (
-                                                            <p className="text-sm text-muted-foreground">Room: {appointment.room_name}</p>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2">
+                            <div className="grid gap-6 md:grid-cols-2">
+                                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">Upcoming Appointments</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {upcomingAppointments.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {upcomingAppointments.slice(0, 3).map((appointment) => (
+                                                    <div key={appointment.id} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg hover:shadow-md transition-all duration-200 bg-slate-50 dark:bg-slate-700/50">
+                                                        <div>
+                                                            <p className="font-medium text-slate-900 dark:text-white">{appointment.doctor_name}</p>
+                                                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                                {new Date(appointment.start_at).toLocaleDateString()} at {new Date(appointment.start_at).toLocaleTimeString()}
+                                                            </p>
+                                                        </div>
                                                         <Badge className={getStatusColor(appointment.status)}>
                                                             {appointment.status}
                                                         </Badge>
-                                                        <Button size="sm" variant="outline">
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            View
-                                                        </Button>
                                                     </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full w-fit mx-auto mb-4">
+                                                    <Calendar className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                                                 </div>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold mb-2">No appointments scheduled</h3>
-                                        <p className="text-muted-foreground mb-4">
-                                            Book an appointment to get started
-                                        </p>
-                                        <Button onClick={() => setIsBookingDialogOpen(true)}>
-                                            <Calendar className="h-4 w-4 mr-2" />
-                                            Book Appointment
-                                        </Button>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                                <p className="text-slate-600 dark:text-slate-400">No upcoming appointments</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                                    <CardHeader>
+                                        <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">Recent Encounters</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {recentEncounters.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {recentEncounters.slice(0, 3).map((encounter) => (
+                                                    <div key={encounter.id} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg hover:shadow-md transition-all duration-200 bg-slate-50 dark:bg-slate-700/50">
+                                                        <div>
+                                                            <p className="font-medium text-slate-900 dark:text-white">Encounter #{encounter.encounter_number}</p>
+                                                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                                Dr. {encounter.doctor_name} - {new Date(encounter.created_at).toLocaleDateString()}
+                                                            </p>
+                                                        </div>
+                                                        <Badge className={getStatusColor(encounter.status)}>
+                                                            {encounter.status}
+                                                        </Badge>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full w-fit mx-auto mb-4">
+                                                    <Stethoscope className="h-8 w-8 text-green-600 dark:text-green-400" />
+                                                </div>
+                                                <p className="text-slate-600 dark:text-slate-400">No recent encounters</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
                     </TabsContent>
+
+                        {/* Appointments Tab */}
+                        <TabsContent value="appointments" className="space-y-4">
+                            <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">Appointments</CardTitle>
+                                            <CardDescription className="text-slate-600 dark:text-slate-300">Manage your appointments</CardDescription>
+                                        </div>
+                                        <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button className="hover:bg-rose-600 hover:border-rose-600 transition-all duration-200">
+                                                    <Calendar className="h-4 w-4 mr-2" />
+                                                    Book Appointment
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-w-2xl">
+                                                <DialogHeader>
+                                                    <DialogTitle>Book New Appointment</DialogTitle>
+                                                    <DialogDescription>
+                                                        Select a doctor and available time slot
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <AppointmentBookingForm
+                                                    doctors={doctors}
+                                                    availableSlots={availableSlots}
+                                                    onSuccess={() => setIsBookingDialogOpen(false)}
+                                                />
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    {upcomingAppointments.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {upcomingAppointments.map((appointment) => (
+                                                <Card key={appointment.id} className="p-4 border-slate-200 dark:border-slate-700 hover:shadow-md transition-all duration-200 bg-slate-50 dark:bg-slate-700/50">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="space-y-1">
+                                                            <h4 className="font-semibold text-slate-900 dark:text-white">{appointment.doctor_name}</h4>
+                                                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                                {new Date(appointment.start_at).toLocaleDateString()} at {new Date(appointment.start_at).toLocaleTimeString()}
+                                                            </p>
+                                                            <p className="text-sm text-slate-900 dark:text-white">{appointment.reason}</p>
+                                                            {appointment.room_name && (
+                                                                <p className="text-sm text-slate-600 dark:text-slate-400">Room: {appointment.room_name}</p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <Badge className={getStatusColor(appointment.status)}>
+                                                                {appointment.status}
+                                                            </Badge>
+                                                            <Button size="sm" variant="outline" className="border-slate-200 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-300 dark:hover:border-rose-600 transition-all duration-200">
+                                                                <Eye className="h-4 w-4 mr-2" />
+                                                                View
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <div className="p-3 bg-rose-100 dark:bg-rose-900/20 rounded-full w-fit mx-auto mb-4">
+                                                <Calendar className="h-8 w-8 text-rose-600 dark:text-rose-400" />
+                                            </div>
+                                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No appointments scheduled</h3>
+                                            <p className="text-slate-600 dark:text-slate-400 mb-4">
+                                                Book an appointment to get started
+                                            </p>
+                                            <Button onClick={() => setIsBookingDialogOpen(true)} className="hover:bg-rose-600 hover:border-rose-600 transition-all duration-200">
+                                                <Calendar className="h-4 w-4 mr-2" />
+                                                Book Appointment
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
 
                     {/* Medical Records Tab */}
                     <TabsContent value="records" className="space-y-4">
@@ -518,7 +582,8 @@ export default function PatientDashboard({
                             </CardContent>
                         </Card>
                     </TabsContent>
-                </Tabs>
+                    </Tabs>
+                </div>
             </div>
         </AppLayout>
     );

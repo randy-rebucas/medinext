@@ -103,6 +103,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Patient routes
     Route::prefix('patient')->group(function () {
+        Route::get('dashboard', function () {
+            return Inertia::render('patient/dashboard', [
+                'patient' => [
+                    'id' => 1,
+                    'name' => 'John Doe',
+                    'patient_id' => 'P001',
+                    'dob' => '1990-01-01',
+                    'sex' => 'Male',
+                    'contact' => [
+                        'phone' => '+1234567890',
+                        'email' => 'john.doe@example.com'
+                    ],
+                    'address' => '123 Main St, City, State'
+                ],
+                'upcomingAppointments' => [],
+                'recentEncounters' => [],
+                'recentPrescriptions' => [],
+                'recentLabResults' => [],
+                'doctors' => [],
+                'availableSlots' => []
+            ]);
+        })->name('patient.dashboard');
+
         Route::get('appointments', function () {
             return Inertia::render('patient/appointments');
         })->name('patient.appointments');
