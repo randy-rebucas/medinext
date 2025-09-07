@@ -150,6 +150,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Receptionist routes
     Route::prefix('receptionist')->group(function () {
+        Route::get('dashboard', function () {
+            return Inertia::render('receptionist/dashboard', [
+                'stats' => [
+                    'totalPatients' => 0,
+                    'todayAppointments' => 0,
+                    'activeQueue' => 0,
+                    'completedEncounters' => 0
+                ],
+                'activeQueue' => [],
+                'recentEncounters' => []
+            ]);
+        })->name('receptionist.dashboard');
+
         Route::get('appointments', function () {
             return Inertia::render('receptionist/appointments');
         })->name('receptionist.appointments');

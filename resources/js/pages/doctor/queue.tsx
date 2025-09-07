@@ -19,7 +19,11 @@ import {
     CheckCircle,
     AlertCircle,
     Plus,
-    Eye
+    Eye,
+    Search,
+    Filter,
+    Building2,
+    Shield
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -90,13 +94,33 @@ interface QueueItem {
 }
 
 interface DoctorQueueProps {
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        clinic_id?: number;
+        clinic?: {
+            id: number;
+            name: string;
+        };
+    };
     queueItems?: QueueItem[];
     completedEncounters?: QueueItem[];
+    permissions?: string[];
 }
 
-export default function DoctorQueue({ queueItems = [], completedEncounters = [] }: DoctorQueueProps) {
+export default function DoctorQueue({ user, queueItems = [], completedEncounters = [], permissions = [] }: DoctorQueueProps) {
+    const hasPermission = (permission: string) => permissions.includes(permission);
     const [selectedPatient, setSelectedPatient] = useState<QueueItem | null>(null);
     const [isEncounterDialogOpen, setIsEncounterDialogOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [visitTypeFilter, setVisitTypeFilter] = useState('all');
+
+    // Ensure we have valid data
+    const safeQueueItems = Array.isArray(queueItems) ? queueItems : [];
+    const safeCompletedEncounters = Array.isArray(completedEncounters) ? completedEncounters : [];
 
     const handleSelectPatient = (patient: QueueItem) => {
         setSelectedPatient(patient);
@@ -156,72 +180,198 @@ export default function DoctorQueue({ queueItems = [], completedEncounters = [] 
         return 'bg-green-100 text-green-800';
     };
 
+    // Filter queue items based on search and filters
+    const filteredQueueItems = safeQueueItems.filter(item => {
+        if (!item) return false;
+        const matchesSearch = (item.patient_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.encounter_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.reason_for_visit || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = !statusFilter || statusFilter === 'all' || (item.status || '').toLowerCase() === statusFilter.toLowerCase();
+        const matchesVisitType = !visitTypeFilter || visitTypeFilter === 'all' || (item.visit_type || '').toLowerCase() === visitTypeFilter.toLowerCase();
+
+        return matchesSearch && matchesStatus && matchesVisitType;
+    });
+
+    const filteredCompletedEncounters = safeCompletedEncounters.filter(item => {
+        if (!item) return false;
+        const matchesSearch = (item.patient_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.encounter_number || '').toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesSearch;
+    });
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Patient Queue" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Patient Queue</h1>
-                        <p className="text-muted-foreground">
-                            Manage patient encounters and clinical documentation
-                        </p>
+            <Head title="Patient Queue - Medinext">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
+            </Head>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    {/* Modern Header */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-xl">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Patient Queue</h1>
+                                <p className="mt-2 text-blue-100">
+                                    {user?.clinic?.name || 'No Clinic'} • Manage patient encounters and clinical documentation
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <Shield className="h-3 w-3" />
+                                    Doctor
+                                </Badge>
+                                {user?.clinic && (
+                                    <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                        <Building2 className="h-3 w-3" />
+                                        {user.clinic.name}
+                                    </Badge>
+                                )}
+                            </div>
+                        </div>
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                     </div>
-                </div>
+
+                    {/* Filters */}
+                    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                                <div className="p-1 bg-blue-100 dark:bg-blue-900/20 rounded-md">
+                                    <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                Filters & Search
+                            </CardTitle>
+                            <CardDescription className="text-slate-600 dark:text-slate-300">
+                                Filter and search through your patient queue
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="search" className="text-sm font-medium text-slate-700 dark:text-slate-300">Search</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                                        <Input
+                                            id="search"
+                                            placeholder="Search patients, encounter numbers, or reason for visit..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-10 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="status" className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</Label>
+                                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                        <SelectTrigger className="border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400">
+                                            <SelectValue placeholder="All statuses" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All statuses</SelectItem>
+                                            <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="in-progress">In Progress</SelectItem>
+                                            <SelectItem value="completed">Completed</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="visitType" className="text-sm font-medium text-slate-700 dark:text-slate-300">Visit Type</Label>
+                                    <Select value={visitTypeFilter} onValueChange={setVisitTypeFilter}>
+                                        <SelectTrigger className="border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400">
+                                            <SelectValue placeholder="All types" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All types</SelectItem>
+                                            <SelectItem value="emergency">Emergency</SelectItem>
+                                            <SelectItem value="follow-up">Follow-up</SelectItem>
+                                            <SelectItem value="opd">OPD</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">&nbsp;</Label>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            setStatusFilter('all');
+                                            setVisitTypeFilter('all');
+                                        }}
+                                        className="w-full border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
+                                    >
+                                        Clear Filters
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
                 {/* Main Content Tabs */}
                 <Tabs defaultValue="active" className="space-y-4">
                     <TabsList>
-                        <TabsTrigger value="active">Active Queue ({queueItems.length})</TabsTrigger>
-                        <TabsTrigger value="completed">Completed ({completedEncounters.length})</TabsTrigger>
+                        <TabsTrigger value="active">Active Queue ({filteredQueueItems.length})</TabsTrigger>
+                        <TabsTrigger value="completed">Completed ({filteredCompletedEncounters.length})</TabsTrigger>
                     </TabsList>
 
                     {/* Active Queue Tab */}
                     <TabsContent value="active" className="space-y-4">
-                        <Card>
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
                             <CardHeader>
-                                <CardTitle>Active Patient Queue</CardTitle>
-                                <CardDescription>
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                                    <div className="p-1 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                                        <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                    </div>
+                                    Active Patient Queue ({filteredQueueItems.length})
+                                </CardTitle>
+                                <CardDescription className="text-slate-600 dark:text-slate-300">
                                     Patients waiting to be seen. Click on a patient to start their encounter.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {queueItems.length > 0 ? (
+                                {filteredQueueItems.length > 0 ? (
                                     <div className="space-y-4">
-                                        {queueItems.map((item) => (
-                                            <Card key={item.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-                                                  onClick={() => handleSelectPatient(item)}>
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <Badge className={getPriorityColor(item.queue_position)}>
+                                        {filteredQueueItems.map((item) => (
+                                            <div key={item.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 border-l-blue-500 hover:border-l-blue-600"
+                                                 onClick={() => handleSelectPatient(item)}>
+                                                <div className="flex items-start justify-between">
+                                                    <div className="space-y-3 flex-1">
+                                                        <div className="flex items-center gap-3 flex-wrap">
+                                                            <Badge className={`${getPriorityColor(item.queue_position)} font-semibold border-0`}>
                                                                 #{item.queue_position}
                                                             </Badge>
-                                                            <h4 className="font-semibold text-lg">{item.patient_name}</h4>
-                                                            <Badge className={getVisitTypeColor(item.visit_type)}>
+                                                            <h4 className="font-semibold text-xl text-slate-900 dark:text-white">{item.patient_name}</h4>
+                                                            <Badge className={`${getVisitTypeColor(item.visit_type)} font-medium border-0`}>
                                                                 {item.visit_type.toUpperCase()}
                                                             </Badge>
+                                                            <Badge className={`${getStatusColor(item.status)} border-0`}>
+                                                                {item.status.replace('-', ' ').toUpperCase()}
+                                                            </Badge>
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                                                            <div>
-                                                                <p><strong>Patient ID:</strong> {item.patient_id}</p>
-                                                                <p><strong>DOB:</strong> {item.patient_dob} ({item.patient_sex})</p>
-                                                                <p><strong>Encounter:</strong> {item.encounter_number}</p>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                            <div className="space-y-1">
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Patient ID:</strong> {item.patient_id}</p>
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>DOB:</strong> {item.patient_dob} ({item.patient_sex})</p>
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Encounter:</strong> {item.encounter_number}</p>
                                                             </div>
-                                                            <div>
-                                                                <p><strong>Wait Time:</strong> {item.estimated_wait_time}</p>
-                                                                <p><strong>Arrived:</strong> {new Date(item.created_at).toLocaleTimeString()}</p>
+                                                            <div className="space-y-1">
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Wait Time:</strong> {item.estimated_wait_time}</p>
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Arrived:</strong> {new Date(item.created_at).toLocaleTimeString()}</p>
                                                                 {item.patient.contact.phone && (
-                                                                    <p><strong>Phone:</strong> {item.patient.contact.phone}</p>
+                                                                    <p className="text-slate-600 dark:text-slate-400"><strong>Phone:</strong> {item.patient.contact.phone}</p>
                                                                 )}
                                                             </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Reason for Visit:</strong></p>
+                                                                <p className="text-sm bg-slate-50 dark:bg-slate-700/50 p-2 rounded-md text-slate-700 dark:text-slate-300">{item.reason_for_visit}</p>
+                                                            </div>
                                                         </div>
-                                                        <div className="mt-2">
-                                                            <p className="text-sm"><strong>Reason for Visit:</strong> {item.reason_for_visit}</p>
-                                                        </div>
+
                                                         {item.patient.allergies && item.patient.allergies.length > 0 && (
-                                                            <div className="mt-2">
+                                                            <div className="mt-3">
                                                                 <Badge variant="destructive" className="text-xs">
                                                                     <AlertCircle className="h-3 w-3 mr-1" />
                                                                     Allergies: {item.patient.allergies.join(', ')}
@@ -229,26 +379,49 @@ export default function DoctorQueue({ queueItems = [], completedEncounters = [] 
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="text-right">
-                                                        <Button size="sm">
-                                                            <Stethoscope className="h-4 w-4 mr-2" />
-                                                            Start Encounter
-                                                        </Button>
-                                                        <p className="text-xs text-muted-foreground mt-2">
+
+                                                    <div className="text-right ml-6">
+                                                        {hasPermission('work_on_queue') && (
+                                                            <Button size="sm" className="mb-2 bg-blue-600 hover:bg-blue-700 text-white border-0">
+                                                                <Stethoscope className="h-4 w-4 mr-2" />
+                                                                Start Encounter
+                                                            </Button>
+                                                        )}
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
                                                             Click to begin consultation
                                                         </p>
                                                     </div>
                                                 </div>
-                                            </Card>
+                                            </div>
                                         ))}
                                     </div>
                                 ) : (
                                     <div className="text-center py-12">
-                                        <Clock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                                        <h3 className="text-xl font-semibold mb-2">No patients in queue</h3>
-                                        <p className="text-muted-foreground">
-                                            The queue is currently empty. Patients will appear here when they check in.
+                                        <div className="p-4 bg-slate-100 dark:bg-slate-700/50 rounded-full w-fit mx-auto mb-4">
+                                            <Clock className="h-12 w-12 text-slate-400" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                                            {searchTerm || (statusFilter && statusFilter !== 'all') || (visitTypeFilter && visitTypeFilter !== 'all') ? 'No matching patients found' : 'No patients in queue'}
+                                        </h3>
+                                        <p className="text-slate-600 dark:text-slate-400 mb-4">
+                                            {searchTerm || (statusFilter && statusFilter !== 'all') || (visitTypeFilter && visitTypeFilter !== 'all')
+                                                ? 'Try adjusting your search criteria or filters to find patients.'
+                                                : 'The queue is currently empty. Patients will appear here when they check in.'
+                                            }
                                         </p>
+                                        {(searchTerm || (statusFilter && statusFilter !== 'all') || (visitTypeFilter && visitTypeFilter !== 'all')) && (
+                                            <Button
+                                                variant="outline"
+                                                className="border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
+                                                onClick={() => {
+                                                    setSearchTerm('');
+                                                    setStatusFilter('all');
+                                                    setVisitTypeFilter('all');
+                                                }}
+                                            >
+                                                Clear Filters
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </CardContent>
@@ -257,69 +430,99 @@ export default function DoctorQueue({ queueItems = [], completedEncounters = [] 
 
                     {/* Completed Encounters Tab */}
                     <TabsContent value="completed" className="space-y-4">
-                        <Card>
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
                             <CardHeader>
-                                <CardTitle>Completed Encounters</CardTitle>
-                                <CardDescription>
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                                    <div className="p-1 bg-green-100 dark:bg-green-900/20 rounded-md">
+                                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    Completed Encounters ({filteredCompletedEncounters.length})
+                                </CardTitle>
+                                <CardDescription className="text-slate-600 dark:text-slate-300">
                                     Recently completed patient encounters
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {completedEncounters.length > 0 ? (
+                                {filteredCompletedEncounters.length > 0 ? (
                                     <div className="space-y-4">
-                                        {completedEncounters.map((item) => (
-                                            <Card key={item.id} className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center gap-3">
+                                        {filteredCompletedEncounters.map((item) => (
+                                            <div key={item.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:shadow-md transition-all duration-200 border-l-4 border-l-green-500">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="space-y-3 flex-1">
+                                                        <div className="flex items-center gap-3 flex-wrap">
                                                             <CheckCircle className="h-5 w-5 text-green-600" />
-                                                            <h4 className="font-semibold">{item.patient_name}</h4>
-                                                            <Badge className={getVisitTypeColor(item.visit_type)}>
+                                                            <h4 className="font-semibold text-lg text-slate-900 dark:text-white">{item.patient_name}</h4>
+                                                            <Badge className={`${getVisitTypeColor(item.visit_type)} font-medium border-0`}>
                                                                 {item.visit_type.toUpperCase()}
                                                             </Badge>
-                                                            <Badge className={getStatusColor(item.status)}>
-                                                                {item.status}
+                                                            <Badge className={`${getStatusColor(item.status)} border-0`}>
+                                                                {item.status.replace('-', ' ').toUpperCase()}
                                                             </Badge>
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                                                            <div>
-                                                                <p><strong>Encounter:</strong> {item.encounter_number}</p>
-                                                                <p><strong>Completed:</strong> {new Date(item.created_at).toLocaleString()}</p>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                            <div className="space-y-1">
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Encounter:</strong> {item.encounter_number}</p>
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Completed:</strong> {new Date(item.created_at).toLocaleString()}</p>
                                                             </div>
-                                                            <div>
-                                                                <p><strong>Payment:</strong> {item.encounter.payment_status}</p>
+                                                            <div className="space-y-1">
+                                                                <p className="text-slate-600 dark:text-slate-400"><strong>Payment:</strong> {item.encounter.payment_status}</p>
                                                                 {item.encounter.follow_up_date && (
-                                                                    <p><strong>Follow-up:</strong> {item.encounter.follow_up_date}</p>
+                                                                    <p className="text-slate-600 dark:text-slate-400"><strong>Follow-up:</strong> {item.encounter.follow_up_date}</p>
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                {item.encounter.diagnosis && item.encounter.diagnosis.length > 0 && (
+                                                                    <div>
+                                                                        <p className="text-slate-600 dark:text-slate-400"><strong>Diagnosis:</strong></p>
+                                                                        <p className="text-sm bg-slate-50 dark:bg-slate-700/50 p-2 rounded-md text-slate-700 dark:text-slate-300">{item.encounter.diagnosis.join(', ')}</p>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        {item.encounter.diagnosis && item.encounter.diagnosis.length > 0 && (
-                                                            <div className="mt-2">
-                                                                <p className="text-sm"><strong>Diagnosis:</strong> {item.encounter.diagnosis.join(', ')}</p>
-                                                            </div>
+                                                    </div>
+
+                                                    <div className="flex gap-2 ml-6">
+                                                        {hasPermission('view_medical_records') && (
+                                                            <Button size="sm" variant="outline" className="border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600">
+                                                                <Eye className="h-4 w-4 mr-2" />
+                                                                View
+                                                            </Button>
+                                                        )}
+                                                        {hasPermission('export_medical_records') && (
+                                                            <Button size="sm" variant="outline" className="border-slate-200 dark:border-slate-700 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-600">
+                                                                <Download className="h-4 w-4 mr-2" />
+                                                                Print
+                                                            </Button>
                                                         )}
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <Button size="sm" variant="outline">
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            View
-                                                        </Button>
-                                                        <Button size="sm" variant="outline">
-                                                            <Download className="h-4 w-4 mr-2" />
-                                                            Print
-                                                        </Button>
-                                                    </div>
                                                 </div>
-                                            </Card>
+                                            </div>
                                         ))}
                                     </div>
                                 ) : (
                                     <div className="text-center py-12">
-                                        <CheckCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                                        <h3 className="text-xl font-semibold mb-2">No completed encounters</h3>
-                                        <p className="text-muted-foreground">
-                                            Completed encounters will appear here.
+                                        <div className="p-4 bg-slate-100 dark:bg-slate-700/50 rounded-full w-fit mx-auto mb-4">
+                                            <CheckCircle className="h-12 w-12 text-slate-400" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                                            {searchTerm ? 'No matching completed encounters found' : 'No completed encounters'}
+                                        </h3>
+                                        <p className="text-slate-600 dark:text-slate-400 mb-4">
+                                            {searchTerm
+                                                ? 'Try adjusting your search criteria to find completed encounters.'
+                                                : 'Completed encounters will appear here after patient consultations are finished.'
+                                            }
                                         </p>
+                                        {searchTerm && (
+                                            <Button
+                                                variant="outline"
+                                                className="border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
+                                                onClick={() => setSearchTerm('')}
+                                            >
+                                                Clear Search
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </CardContent>
@@ -348,6 +551,7 @@ export default function DoctorQueue({ queueItems = [], completedEncounters = [] 
                         )}
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
         </AppLayout>
     );

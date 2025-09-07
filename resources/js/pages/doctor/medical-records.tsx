@@ -23,7 +23,9 @@ import {
     Stethoscope,
     Pill,
     Activity,
-    AlertTriangle
+    AlertTriangle,
+    Building2,
+    Shield
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -92,6 +94,17 @@ interface Prescription {
 }
 
 interface DoctorMedicalRecordsProps {
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        clinic_id?: number;
+        clinic?: {
+            id: number;
+            name: string;
+        };
+    };
     patients?: Patient[];
     encounters?: Encounter[];
     labResults?: LabResult[];
@@ -101,9 +114,11 @@ interface DoctorMedicalRecordsProps {
         patient_id: string;
         date_range: string;
     };
+    permissions?: string[];
 }
 
 export default function DoctorMedicalRecords({
+    user,
     patients = [],
     encounters = [],
     labResults = [],
@@ -112,8 +127,10 @@ export default function DoctorMedicalRecords({
         search: '',
         patient_id: '',
         date_range: ''
-    }
+    },
+    permissions = []
 }: DoctorMedicalRecordsProps) {
+    const hasPermission = (permission: string) => permissions.includes(permission);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [selectedPatient, setSelectedPatient] = useState(filters.patient_id || '');
     const [dateRange, setDateRange] = useState(filters.date_range || '');
@@ -172,27 +189,53 @@ export default function DoctorMedicalRecords({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Medical Records" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Medical Records</h1>
-                        <p className="text-muted-foreground">
-                            Manage patient medical records and history
-                        </p>
+            <Head title="Medical Records - Medinext">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
+            </Head>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    {/* Modern Header */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-xl">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Medical Records</h1>
+                                <p className="mt-2 text-blue-100">
+                                    {user?.clinic?.name || 'No Clinic'} • Manage patient medical records and history
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <Shield className="h-3 w-3" />
+                                    Doctor
+                                </Badge>
+                                {user?.clinic && (
+                                    <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                        <Building2 className="h-3 w-3" />
+                                        {user.clinic.name}
+                                    </Badge>
+                                )}
+                                <div className="flex gap-2">
+                                    {hasPermission('export_records') && (
+                                        <Button variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/40">
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Export Records
+                                        </Button>
+                                    )}
+                                    {hasPermission('import_records') && (
+                                        <Button variant="outline" className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/40">
+                                            <Upload className="h-4 w-4 mr-2" />
+                                            Import Records
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                     </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline">
-                            <Download className="h-4 w-4 mr-2" />
-                            Export Records
-                        </Button>
-                        <Button variant="outline">
-                            <Upload className="h-4 w-4 mr-2" />
-                            Import Records
-                        </Button>
-                    </div>
-                </div>
 
                 {/* Filters */}
                 <Card>
@@ -607,6 +650,7 @@ export default function DoctorMedicalRecords({
                         )}
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
         </AppLayout>
     );

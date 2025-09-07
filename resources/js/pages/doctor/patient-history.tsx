@@ -15,7 +15,9 @@ import {
     FileText,
     TestTube,
     Pill,
-    Stethoscope
+    Stethoscope,
+    Building2,
+    Shield
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,7 +31,23 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function PatientHistory() {
+interface PatientHistoryProps {
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        clinic_id?: number;
+        clinic?: {
+            id: number;
+            name: string;
+        };
+    };
+    permissions?: string[];
+}
+
+export default function PatientHistory({ user, permissions = [] }: PatientHistoryProps) {
+    const hasPermission = (permission: string) => permissions.includes(permission);
     const patients = [
         {
             id: 1,
@@ -92,20 +110,45 @@ export default function PatientHistory() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Patient History" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Patient History</h1>
-                        <p className="text-muted-foreground">
-                            View comprehensive patient medical history and records
-                        </p>
+            <Head title="Patient History - Medinext">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
+            </Head>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    {/* Modern Header */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-xl">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Patient History</h1>
+                                <p className="mt-2 text-blue-100">
+                                    {user?.clinic?.name || 'No Clinic'} • View comprehensive patient medical history and records
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <Shield className="h-3 w-3" />
+                                    Doctor
+                                </Badge>
+                                {user?.clinic && (
+                                    <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                        <Building2 className="h-3 w-3" />
+                                        {user.clinic.name}
+                                    </Badge>
+                                )}
+                                {hasPermission('search_patients') && (
+                                    <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/40">
+                                        <Search className="mr-2 h-4 w-4" />
+                                        Search Patient
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                     </div>
-                    <Button>
-                        <Search className="mr-2 h-4 w-4" />
-                        Search Patient
-                    </Button>
-                </div>
 
                 <Tabs defaultValue="patients" className="space-y-4">
                     <TabsList>
@@ -268,6 +311,7 @@ export default function PatientHistory() {
                         </Card>
                     </TabsContent>
                 </Tabs>
+                </div>
             </div>
         </AppLayout>
     );

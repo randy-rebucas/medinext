@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Users, Search, Filter, Plus, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Users, Search, Filter, Plus, Edit, Trash2, Building2, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +39,17 @@ interface Appointment {
 }
 
 interface DoctorAppointmentsProps {
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        clinic_id?: number;
+        clinic?: {
+            id: number;
+            name: string;
+        };
+    };
     appointments?: Appointment[];
     patients?: Array<{ id: number; name: string }>;
     rooms?: Array<{ id: number; name: string }>;
@@ -47,9 +58,11 @@ interface DoctorAppointmentsProps {
         type: string;
         date: string;
     };
+    permissions?: string[];
 }
 
 export default function DoctorAppointments({
+    user,
     appointments = [],
     patients = [],
     rooms = [],
@@ -57,8 +70,10 @@ export default function DoctorAppointments({
         status: '',
         type: '',
         date: ''
-    }
+    },
+    permissions = []
 }: DoctorAppointmentsProps) {
+    const hasPermission = (permission: string) => permissions.includes(permission);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [typeFilter, setTypeFilter] = useState(filters.type || '');
@@ -126,155 +141,194 @@ export default function DoctorAppointments({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Manage Appointments" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Manage Appointments</h1>
-                        <p className="text-muted-foreground">
-                            View and manage your patient appointments
-                        </p>
-                    </div>
-                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button>
-                                <Plus className="h-4 w-4 mr-2" />
-                                New Appointment
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                                <DialogTitle>Create New Appointment</DialogTitle>
-                                <DialogDescription>
-                                    Schedule a new appointment for a patient
-                                </DialogDescription>
-                            </DialogHeader>
-                            <CreateAppointmentForm
-                                patients={patients}
-                                rooms={rooms}
-                                onSuccess={() => setIsCreateDialogOpen(false)}
-                            />
-                        </DialogContent>
-                    </Dialog>
-                </div>
-
-                {/* Filters */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Filter className="h-5 w-5" />
-                            Filters
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                            <div className="space-y-2">
-                                <Label htmlFor="search">Search</Label>
-                                <div className="relative">
-                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="search"
-                                        placeholder="Search patients or reason..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-8"
-                                    />
-                                </div>
+            <Head title="Manage Appointments - Medinext">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
+            </Head>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    {/* Modern Header */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-xl">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">Manage Appointments</h1>
+                                <p className="mt-2 text-blue-100">
+                                    {user?.clinic?.name || 'No Clinic'} • View and manage your patient appointments
+                                </p>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="status">Status</Label>
-                                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="All statuses" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All statuses</SelectItem>
-                                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                                        <SelectItem value="in_progress">In Progress</SelectItem>
-                                        <SelectItem value="completed">Completed</SelectItem>
-                                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                                        <SelectItem value="no_show">No Show</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="type">Type</Label>
-                                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="All types" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All types</SelectItem>
-                                        <SelectItem value="consultation">Consultation</SelectItem>
-                                        <SelectItem value="follow_up">Follow-up</SelectItem>
-                                        <SelectItem value="emergency">Emergency</SelectItem>
-                                        <SelectItem value="routine_checkup">Routine Checkup</SelectItem>
-                                        <SelectItem value="specialist_consultation">Specialist Consultation</SelectItem>
-                                        <SelectItem value="procedure">Procedure</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="date">Date</Label>
-                                <Input
-                                    id="date"
-                                    type="date"
-                                    value={dateFilter}
-                                    onChange={(e) => setDateFilter(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>&nbsp;</Label>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setSearchTerm('');
-                                        setStatusFilter('');
-                                        setTypeFilter('');
-                                        setDateFilter('');
-                                    }}
-                                    className="w-full"
-                                >
-                                    Clear Filters
-                                </Button>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <Shield className="h-3 w-3" />
+                                    Doctor
+                                </Badge>
+                                {user?.clinic && (
+                                    <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                        <Building2 className="h-3 w-3" />
+                                        {user.clinic.name}
+                                    </Badge>
+                                )}
+                                {hasPermission('create_appointments') && (
+                                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button className="bg-white/20 hover:bg-white/30 text-white border-white/30 hover:border-white/40">
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                New Appointment
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-2xl">
+                                            <DialogHeader>
+                                                <DialogTitle>Create New Appointment</DialogTitle>
+                                                <DialogDescription>
+                                                    Schedule a new appointment for a patient
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <CreateAppointmentForm
+                                                patients={patients}
+                                                rooms={rooms}
+                                                onSuccess={() => setIsCreateDialogOpen(false)}
+                                            />
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
+                    </div>
 
-                {/* Appointments List */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Appointments ({filteredAppointments.length})</CardTitle>
-                        <CardDescription>
-                            Your scheduled appointments
-                        </CardDescription>
-                    </CardHeader>
+                    {/* Filters */}
+                    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                                <div className="p-1 bg-blue-100 dark:bg-blue-900/20 rounded-md">
+                                    <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                Filters & Search
+                            </CardTitle>
+                            <CardDescription className="text-slate-600 dark:text-slate-300">
+                                Filter and search through your appointments
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                                <div className="space-y-2">
+                                    <Label htmlFor="search" className="text-sm font-medium text-slate-700 dark:text-slate-300">Search</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                                        <Input
+                                            id="search"
+                                            placeholder="Search patients or reason..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-10 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="status" className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</Label>
+                                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                        <SelectTrigger className="border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400">
+                                            <SelectValue placeholder="All statuses" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All statuses</SelectItem>
+                                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                                            <SelectItem value="in_progress">In Progress</SelectItem>
+                                            <SelectItem value="completed">Completed</SelectItem>
+                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                            <SelectItem value="no_show">No Show</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="type" className="text-sm font-medium text-slate-700 dark:text-slate-300">Type</Label>
+                                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                                        <SelectTrigger className="border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400">
+                                            <SelectValue placeholder="All types" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All types</SelectItem>
+                                            <SelectItem value="consultation">Consultation</SelectItem>
+                                            <SelectItem value="follow_up">Follow-up</SelectItem>
+                                            <SelectItem value="emergency">Emergency</SelectItem>
+                                            <SelectItem value="routine_checkup">Routine Checkup</SelectItem>
+                                            <SelectItem value="specialist_consultation">Specialist Consultation</SelectItem>
+                                            <SelectItem value="procedure">Procedure</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="date" className="text-sm font-medium text-slate-700 dark:text-slate-300">Date</Label>
+                                    <Input
+                                        id="date"
+                                        type="date"
+                                        value={dateFilter}
+                                        onChange={(e) => setDateFilter(e.target.value)}
+                                        className="border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">&nbsp;</Label>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            setStatusFilter('');
+                                            setTypeFilter('');
+                                            setDateFilter('');
+                                        }}
+                                        className="w-full border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
+                                    >
+                                        Clear Filters
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Appointments List */}
+                    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                                <div className="p-1 bg-green-100 dark:bg-green-900/20 rounded-md">
+                                    <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                </div>
+                                Appointments ({filteredAppointments.length})
+                            </CardTitle>
+                            <CardDescription className="text-slate-600 dark:text-slate-300">
+                                Your scheduled appointments
+                            </CardDescription>
+                        </CardHeader>
                     <CardContent>
                         {filteredAppointments.length > 0 ? (
                             <div className="space-y-4">
                                 {filteredAppointments.map((appointment) => (
-                                    <div key={appointment.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                                    <div key={appointment.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:shadow-md transition-all duration-200">
                                         <div className="flex items-center justify-between">
-                                            <div className="space-y-2">
+                                            <div className="space-y-3">
                                                 <div className="flex items-center gap-3">
-                                                    <h3 className="font-semibold">{appointment.patient_name}</h3>
-                                                    <Badge className={getStatusColor(appointment.status)}>
+                                                    <h3 className="font-semibold text-slate-900 dark:text-white">{appointment.patient_name}</h3>
+                                                    <Badge className={`${getStatusColor(appointment.status)} border-0`}>
                                                         {appointment.status.replace('_', ' ')}
                                                     </Badge>
-                                                    <Badge variant="outline" className={getPriorityColor(appointment.priority)}>
+                                                    <Badge variant="outline" className={`${getPriorityColor(appointment.priority)} border-0`}>
                                                         {appointment.priority}
                                                     </Badge>
                                                 </div>
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <div className="flex items-center gap-1">
-                                                        <Calendar className="h-4 w-4" />
+                                                <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-1 bg-blue-100 dark:bg-blue-900/20 rounded">
+                                                            <Calendar className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                                        </div>
                                                         {new Date(appointment.start_at).toLocaleDateString()}
                                                     </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Clock className="h-4 w-4" />
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="p-1 bg-orange-100 dark:bg-orange-900/20 rounded">
+                                                            <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                                                        </div>
                                                         {new Date(appointment.start_at).toLocaleTimeString([], {
                                                             hour: '2-digit',
                                                             minute: '2-digit'
@@ -284,56 +338,68 @@ export default function DoctorAppointments({
                                                         })}
                                                     </div>
                                                     {appointment.room_name && (
-                                                        <div className="flex items-center gap-1">
-                                                            <Users className="h-4 w-4" />
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="p-1 bg-purple-100 dark:bg-purple-900/20 rounded">
+                                                                <Users className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                                                            </div>
                                                             {appointment.room_name}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <p className="text-sm text-muted-foreground">
-                                                    <strong>Type:</strong> {appointment.type.replace('_', ' ')} |
-                                                    <strong> Reason:</strong> {appointment.reason}
-                                                </p>
-                                                {appointment.notes && (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        <strong>Notes:</strong> {appointment.notes}
+                                                <div className="space-y-1">
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                        <span className="font-medium text-slate-700 dark:text-slate-300">Type:</span> {appointment.type.replace('_', ' ')} |
+                                                        <span className="font-medium text-slate-700 dark:text-slate-300"> Reason:</span> {appointment.reason}
                                                     </p>
-                                                )}
+                                                    {appointment.notes && (
+                                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                            <span className="font-medium text-slate-700 dark:text-slate-300">Notes:</span> {appointment.notes}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Select
-                                                    value={appointment.status}
-                                                    onValueChange={(value) => handleStatusChange(appointment.id, value)}
-                                                >
-                                                    <SelectTrigger className="w-32">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                                                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                                                        <SelectItem value="in_progress">In Progress</SelectItem>
-                                                        <SelectItem value="completed">Completed</SelectItem>
-                                                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                                                        <SelectItem value="no_show">No Show</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setSelectedAppointment(appointment);
-                                                        setIsEditDialogOpen(true);
-                                                    }}
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(appointment.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                {hasPermission('update_appointments') && (
+                                                    <Select
+                                                        value={appointment.status}
+                                                        onValueChange={(value) => handleStatusChange(appointment.id, value)}
+                                                    >
+                                                        <SelectTrigger className="w-32 border-slate-200 dark:border-slate-700">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                                                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                                                            <SelectItem value="in_progress">In Progress</SelectItem>
+                                                            <SelectItem value="completed">Completed</SelectItem>
+                                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                                            <SelectItem value="no_show">No Show</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                                {hasPermission('edit_appointments') && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedAppointment(appointment);
+                                                            setIsEditDialogOpen(true);
+                                                        }}
+                                                        className="border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                {hasPermission('delete_appointments') && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(appointment.id)}
+                                                        className="border-slate-200 dark:border-slate-700 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -341,17 +407,24 @@ export default function DoctorAppointments({
                             </div>
                         ) : (
                             <div className="text-center py-12">
-                                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                <h3 className="text-lg font-semibold mb-2">No appointments found</h3>
-                                <p className="text-muted-foreground mb-4">
+                                <div className="p-4 bg-slate-100 dark:bg-slate-700/50 rounded-full w-fit mx-auto mb-4">
+                                    <Calendar className="h-12 w-12 text-slate-400" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No appointments found</h3>
+                                <p className="text-slate-600 dark:text-slate-400 mb-4">
                                     {searchTerm || statusFilter || typeFilter || dateFilter
                                         ? 'Try adjusting your filters to see more results.'
                                         : 'You don\'t have any appointments scheduled yet.'}
                                 </p>
-                                <Button onClick={() => setIsCreateDialogOpen(true)}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Schedule First Appointment
-                                </Button>
+                                {hasPermission('create_appointments') && (
+                                    <Button
+                                        onClick={() => setIsCreateDialogOpen(true)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Schedule First Appointment
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </CardContent>
@@ -378,6 +451,7 @@ export default function DoctorAppointments({
                         )}
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
         </AppLayout>
     );
