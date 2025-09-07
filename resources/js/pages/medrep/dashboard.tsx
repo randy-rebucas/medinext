@@ -7,27 +7,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-    Package, 
-    Calendar, 
-    Users, 
-    FileText, 
-    Plus,
-    Edit,
-    Eye,
-    Search,
-    Filter,
+import {
+    Package,
+    Calendar,
+    Users,
+    FileText,
     Clock,
     CheckCircle,
     AlertCircle,
-    DollarSign,
-    TrendingUp
+    TrendingUp,
+    Activity,
+    ArrowUpRight,
+    UserCheck,
+    Building2,
+    Shield
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Link } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -36,16 +35,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-interface Product {
-    id: number;
-    name: string;
-    dosage: string;
-    indications: string[];
-    pricing: number;
-    marketing_material: string;
-    status: string;
-    created_at: string;
-}
 
 interface Doctor {
     id: number;
@@ -85,30 +74,38 @@ interface Interaction {
 }
 
 interface MedrepDashboardProps {
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        company_id?: number;
+        company?: {
+            id: number;
+            name: string;
+        };
+    };
     stats: {
         totalProducts: number;
         totalDoctors: number;
         scheduledMeetings: number;
         completedInteractions: number;
     };
-    products: Product[];
     doctors: Doctor[];
     upcomingMeetings: Meeting[];
     recentInteractions: Interaction[];
 }
 
-export default function MedrepDashboard({ 
-    stats, 
-    products, 
-    doctors, 
-    upcomingMeetings, 
-    recentInteractions 
+export default function MedrepDashboard({
+    user,
+    stats,
+    doctors,
+    upcomingMeetings,
+    recentInteractions
 }: MedrepDashboardProps) {
     const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
     const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
     const [isInteractionDialogOpen, setIsInteractionDialogOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
@@ -129,456 +126,379 @@ export default function MedrepDashboard({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Medical Representative Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Medical Representative Dashboard</h1>
-                        <p className="text-muted-foreground">
-                            Manage products, schedule meetings, and track doctor interactions
-                        </p>
+            <Head title="Medical Representative Dashboard - Medinext">
+                <link rel="preconnect" href="https://fonts.bunny.net" />
+                <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
+            </Head>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
+                    {/* Modern Header */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 p-8 text-white shadow-xl">
+                        <div className="absolute inset-0 bg-black/10"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold tracking-tight">
+                                    Welcome back, {user?.name || 'Medical Representative'}
+                                </h1>
+                                <p className="mt-2 text-emerald-100">
+                                    {user?.company?.name || 'No Company'} • Medical Representative Dashboard
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                    <Shield className="h-3 w-3" />
+                                    Medical Rep
+                                </Badge>
+                                {user?.company && (
+                                    <Badge variant="secondary" className="flex items-center gap-1 bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                        <Building2 className="h-3 w-3" />
+                                        {user.company.name}
+                                    </Badge>
+                                )}
+                            </div>
+                        </div>
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"></div>
+                        <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                     </div>
-                </div>
 
-                {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalProducts}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Doctors</CardTitle>
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalDoctors}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Scheduled Meetings</CardTitle>
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.scheduledMeetings}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Completed Interactions</CardTitle>
-                            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.completedInteractions}</div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Main Content Tabs */}
-                <Tabs defaultValue="products" className="space-y-4">
-                    <TabsList>
-                        <TabsTrigger value="products">Product Catalog</TabsTrigger>
-                        <TabsTrigger value="meetings">Doctor Meetings</TabsTrigger>
-                        <TabsTrigger value="interactions">Interaction History</TabsTrigger>
-                        <TabsTrigger value="doctors">Doctor Directory</TabsTrigger>
-                    </TabsList>
-
-                    {/* Product Catalog Tab */}
-                    <TabsContent value="products" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Product Catalog</CardTitle>
-                                        <CardDescription>Manage your product portfolio</CardDescription>
-                                    </div>
-                                    <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button>
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Add Product
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                            <DialogHeader>
-                                                <DialogTitle>Add New Product</DialogTitle>
-                                                <DialogDescription>
-                                                    Add a new product to your catalog
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <ProductForm onSuccess={() => setIsProductDialogOpen(false)} />
-                                        </DialogContent>
-                                    </Dialog>
+                    {/* Medrep Stats */}
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Products</CardTitle>
+                                <div className="p-2 bg-blue-500 rounded-lg">
+                                    <Package className="h-4 w-4 text-white" />
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="flex gap-4 mb-4">
-                                    <div className="flex-1">
-                                        <Input
-                                            placeholder="Search products..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                        />
-                                    </div>
+                                <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.totalProducts}</div>
+                                <div className="flex items-center mt-2">
+                                    <TrendingUp className="h-3 w-3 text-blue-500 mr-1" />
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                                        In your portfolio
+                                    </p>
                                 </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Doctor Network</CardTitle>
+                                <div className="p-2 bg-green-500 rounded-lg">
+                                    <Users className="h-4 w-4 text-white" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.totalDoctors}</div>
+                                <div className="flex items-center mt-2">
+                                    <UserCheck className="h-3 w-3 text-green-500 mr-1" />
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                                        Active contacts
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Scheduled Meetings</CardTitle>
+                                <div className="p-2 bg-orange-500 rounded-lg">
+                                    <Calendar className="h-4 w-4 text-white" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.scheduledMeetings}</div>
+                                <div className="flex items-center mt-2">
+                                    <Clock className="h-3 w-3 text-orange-500 mr-1" />
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                                        Upcoming meetings
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Completed Interactions</CardTitle>
+                                <div className="p-2 bg-purple-500 rounded-lg">
+                                    <CheckCircle className="h-4 w-4 text-white" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.completedInteractions}</div>
+                                <div className="flex items-center mt-2">
+                                    <Activity className="h-3 w-3 text-purple-500 mr-1" />
+                                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                                        This month
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                                {products.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {products
-                                            .filter(product => 
-                                                product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                product.indications.some(ind => ind.toLowerCase().includes(searchQuery.toLowerCase()))
-                                            )
-                                            .map((product) => (
-                                            <Card key={product.id} className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <h4 className="font-semibold text-lg">{product.name}</h4>
-                                                            <Badge className={getStatusColor(product.status)}>
-                                                                {product.status}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                                                            <div>
-                                                                <p><strong>Dosage:</strong> {product.dosage}</p>
-                                                                <p><strong>Pricing:</strong> ${product.pricing}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p><strong>Indications:</strong></p>
-                                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                                    {product.indications.slice(0, 3).map((indication, index) => (
-                                                                        <Badge key={index} variant="outline" className="text-xs">
-                                                                            {indication}
-                                                                        </Badge>
-                                                                    ))}
-                                                                    {product.indications.length > 3 && (
-                                                                        <Badge variant="outline" className="text-xs">
-                                                                            +{product.indications.length - 3} more
-                                                                        </Badge>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {product.marketing_material && (
-                                                            <p className="text-sm text-muted-foreground">
-                                                                <strong>Marketing Material:</strong> {product.marketing_material}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <Button size="sm" variant="outline">
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            View
-                                                        </Button>
-                                                        <Button size="sm" variant="outline">
-                                                            <Edit className="h-4 w-4 mr-2" />
-                                                            Edit
-                                                        </Button>
-                                                    </div>
+                    {/* Quick Actions */}
+                    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">Medical Representative Tools</CardTitle>
+                            <CardDescription className="text-slate-600 dark:text-slate-300">Access your sales tools and doctor management</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 group">
+                                            <div className="p-1 bg-blue-100 dark:bg-blue-900 rounded-md mr-3 group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors">
+                                                <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <span className="font-medium">Product Catalog</span>
+                                            <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                        </Button>
+                                    </DialogTrigger>
+                                </Dialog>
+
+                                <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 group">
+                                            <div className="p-1 bg-orange-100 dark:bg-orange-900 rounded-md mr-3 group-hover:bg-orange-200 dark:group-hover:bg-orange-800 transition-colors">
+                                                <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                            </div>
+                                            <span className="font-medium">Schedule Meeting</span>
+                                            <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-orange-500 transition-colors" />
+                                        </Button>
+                                    </DialogTrigger>
+                                </Dialog>
+
+                                <Dialog open={isInteractionDialogOpen} onOpenChange={setIsInteractionDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200 group">
+                                            <div className="p-1 bg-purple-100 dark:bg-purple-900 rounded-md mr-3 group-hover:bg-purple-200 dark:group-hover:bg-purple-800 transition-colors">
+                                                <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                            </div>
+                                            <span className="font-medium">Log Interaction</span>
+                                            <ArrowUpRight className="h-4 w-4 ml-auto text-slate-400 group-hover:text-purple-500 transition-colors" />
+                                        </Button>
+                                    </DialogTrigger>
+                                </Dialog>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Recent Meetings */}
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <CardHeader>
+                                <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">Upcoming Meetings</CardTitle>
+                                <CardDescription className="text-slate-600 dark:text-slate-300">
+                                    Your scheduled doctor meetings
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {upcomingMeetings.length > 0 ? (
+                                        upcomingMeetings.slice(0, 3).map((meeting) => (
+                                            <div key={meeting.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-medium leading-none text-slate-900 dark:text-white">
+                                                        {meeting.doctor_name}
+                                                    </p>
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                        {new Date(meeting.date).toLocaleDateString()} at {meeting.time}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-500">
+                                                        {meeting.purpose}
+                                                    </p>
                                                 </div>
-                                            </Card>
-                                        ))}
+                                                <Badge className={`${getStatusColor(meeting.status)} border-0`}>
+                                                    {meeting.status}
+                                                </Badge>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-full w-fit mx-auto mb-3">
+                                                <Calendar className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+                                            </div>
+                                            <p className="text-sm text-slate-600 dark:text-slate-400">No upcoming meetings</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-4">
+                                    <Button asChild variant="outline" size="sm" className="w-full border-slate-200 dark:border-slate-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200">
+                                        <Link href="/medrep/meetings">
+                                            View All Meetings
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Recent Interactions */}
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <CardHeader>
+                                <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white">Recent Interactions</CardTitle>
+                                <CardDescription className="text-slate-600 dark:text-slate-300">
+                                    Your latest doctor interactions
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {recentInteractions.length > 0 ? (
+                                        recentInteractions.slice(0, 3).map((interaction) => (
+                                            <div key={interaction.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-medium leading-none text-slate-900 dark:text-white">
+                                                        {interaction.doctor_name}
+                                                    </p>
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                                                        {interaction.notes}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-500">
+                                                        {new Date(interaction.created_at).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    {interaction.samples_provided.length > 0 && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {interaction.samples_provided.length} samples
+                                                        </Badge>
+                                                    )}
+                                                    {interaction.commitments.length > 0 && (
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            {interaction.commitments.length} commitments
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full w-fit mx-auto mb-3">
+                                                <FileText className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                                            </div>
+                                            <p className="text-sm text-slate-600 dark:text-slate-400">No recent interactions</p>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="mt-4">
+                                    <Button asChild variant="outline" size="sm" className="w-full border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-200">
+                                        <Link href="/medrep/interactions">
+                                            View All Interactions
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Alerts and Notifications */}
+                    <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                                <div className="p-1 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                                    <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                Important Alerts
+                            </CardTitle>
+                            <CardDescription className="text-slate-600 dark:text-slate-300">
+                                Items requiring your attention
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {stats.scheduledMeetings > 0 && (
+                                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl hover:shadow-md transition-all duration-200">
+                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                                            <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
+                                                {stats.scheduledMeetings} meeting(s) scheduled
+                                            </p>
+                                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                Review your upcoming meetings and prepare accordingly
+                                            </p>
+                                        </div>
+                                        <Button asChild size="sm" variant="outline" className="border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/20 hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-200">
+                                            <Link href="/medrep/meetings">
+                                                View Schedule
+                                            </Link>
+                                        </Button>
                                     </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold mb-2">No products in catalog</h3>
-                                        <p className="text-muted-foreground mb-4">
-                                            Add your first product to get started
-                                        </p>
-                                        <Button onClick={() => setIsProductDialogOpen(true)}>
-                                            <Plus className="h-4 w-4 mr-2" />
+                                )}
+
+                                {stats.totalProducts === 0 && (
+                                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/10 dark:to-orange-900/10 border border-yellow-200 dark:border-yellow-800/30 rounded-xl hover:shadow-md transition-all duration-200">
+                                        <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                                            <Package className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                                                No products in your catalog
+                                            </p>
+                                            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                                                Add products to start building your portfolio
+                                            </p>
+                                        </div>
+                                        <Button size="sm" variant="outline" className="border-yellow-300 dark:border-yellow-700 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 hover:border-yellow-400 dark:hover:border-yellow-600 transition-all duration-200" onClick={() => setIsProductDialogOpen(true)}>
                                             Add Product
                                         </Button>
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
 
-                    {/* Doctor Meetings Tab */}
-                    <TabsContent value="meetings" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Doctor Meetings</CardTitle>
-                                        <CardDescription>Schedule and manage doctor meetings</CardDescription>
-                                    </div>
-                                    <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button>
-                                                <Calendar className="h-4 w-4 mr-2" />
-                                                Schedule Meeting
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                            <DialogHeader>
-                                                <DialogTitle>Schedule Doctor Meeting</DialogTitle>
-                                                <DialogDescription>
-                                                    Schedule a meeting with a doctor
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <MeetingForm 
-                                                doctors={doctors}
-                                                onSuccess={() => setIsMeetingDialogOpen(false)}
-                                            />
-                                        </DialogContent>
-                                    </Dialog>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {upcomingMeetings.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {upcomingMeetings.map((meeting) => (
-                                            <Card key={meeting.id} className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <h4 className="font-semibold text-lg">{meeting.doctor_name}</h4>
-                                                            <Badge className={getStatusColor(meeting.status)}>
-                                                                {meeting.status}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                                                            <div>
-                                                                <p><strong>Date:</strong> {new Date(meeting.date).toLocaleDateString()}</p>
-                                                                <p><strong>Time:</strong> {meeting.time}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p><strong>Purpose:</strong> {meeting.purpose}</p>
-                                                                <p><strong>Scheduled:</strong> {new Date(meeting.created_at).toLocaleDateString()}</p>
-                                                            </div>
-                                                        </div>
-                                                        {meeting.notes && (
-                                                            <p className="text-sm text-muted-foreground">
-                                                                <strong>Notes:</strong> {meeting.notes}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <Button size="sm" variant="outline">
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            View
-                                                        </Button>
-                                                        <Button size="sm" variant="outline">
-                                                            <Edit className="h-4 w-4 mr-2" />
-                                                            Edit
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                ) : (
+                                {stats.scheduledMeetings === 0 && stats.totalProducts > 0 && (
                                     <div className="text-center py-8">
-                                        <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold mb-2">No meetings scheduled</h3>
-                                        <p className="text-muted-foreground mb-4">
-                                            Schedule your first meeting with a doctor
-                                        </p>
-                                        <Button onClick={() => setIsMeetingDialogOpen(true)}>
-                                            <Calendar className="h-4 w-4 mr-2" />
-                                            Schedule Meeting
-                                        </Button>
+                                        <div className="p-4 bg-green-100 dark:bg-green-900/20 rounded-full w-fit mx-auto mb-4">
+                                            <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">All Caught Up!</h3>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">No urgent items requiring your attention at this time.</p>
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                    {/* Interaction History Tab */}
-                    <TabsContent value="interactions" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Interaction History</CardTitle>
-                                        <CardDescription>Track your interactions with doctors</CardDescription>
-                                    </div>
-                                    <Dialog open={isInteractionDialogOpen} onOpenChange={setIsInteractionDialogOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button>
-                                                <FileText className="h-4 w-4 mr-2" />
-                                                Log Interaction
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                            <DialogHeader>
-                                                <DialogTitle>Log Doctor Interaction</DialogTitle>
-                                                <DialogDescription>
-                                                    Record details of your interaction with a doctor
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <InteractionForm 
-                                                doctors={doctors}
-                                                onSuccess={() => setIsInteractionDialogOpen(false)}
-                                            />
-                                        </DialogContent>
-                                    </Dialog>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {recentInteractions.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {recentInteractions.map((interaction) => (
-                                            <Card key={interaction.id} className="p-4">
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <h4 className="font-semibold">{interaction.doctor_name}</h4>
-                                                        <span className="text-sm text-muted-foreground">
-                                                            {new Date(interaction.created_at).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm">{interaction.notes}</p>
-                                                    
-                                                    {interaction.samples_provided.length > 0 && (
-                                                        <div>
-                                                            <p className="text-sm font-medium">Samples Provided:</p>
-                                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                                {interaction.samples_provided.map((sample, index) => (
-                                                                    <Badge key={index} variant="outline" className="text-xs">
-                                                                        {sample}
-                                                                    </Badge>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                    {/* Dialog Forms */}
+                    <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Add New Product</DialogTitle>
+                                <DialogDescription>
+                                    Add a new product to your catalog
+                                </DialogDescription>
+                            </DialogHeader>
+                            <ProductForm onSuccess={() => setIsProductDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
 
-                                                    {interaction.commitments.length > 0 && (
-                                                        <div>
-                                                            <p className="text-sm font-medium">Commitments:</p>
-                                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                                {interaction.commitments.map((commitment, index) => (
-                                                                    <Badge key={index} variant="secondary" className="text-xs">
-                                                                        {commitment}
-                                                                    </Badge>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                    <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Schedule Doctor Meeting</DialogTitle>
+                                <DialogDescription>
+                                    Schedule a meeting with a doctor
+                                </DialogDescription>
+                            </DialogHeader>
+                            <MeetingForm
+                                doctors={doctors}
+                                onSuccess={() => setIsMeetingDialogOpen(false)}
+                            />
+                        </DialogContent>
+                    </Dialog>
 
-                                                    {interaction.follow_up_date && (
-                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                            <Clock className="h-4 w-4" />
-                                                            <span>Follow-up: {new Date(interaction.follow_up_date).toLocaleDateString()}</span>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex gap-2">
-                                                        <Button size="sm" variant="outline">
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            View Details
-                                                        </Button>
-                                                        <Button size="sm" variant="outline">
-                                                            <Edit className="h-4 w-4 mr-2" />
-                                                            Edit
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold mb-2">No interactions recorded</h3>
-                                        <p className="text-muted-foreground mb-4">
-                                            Start logging your doctor interactions
-                                        </p>
-                                        <Button onClick={() => setIsInteractionDialogOpen(true)}>
-                                            <FileText className="h-4 w-4 mr-2" />
-                                            Log Interaction
-                                        </Button>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Doctor Directory Tab */}
-                    <TabsContent value="doctors" className="space-y-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Doctor Directory</CardTitle>
-                                <CardDescription>Browse and manage your doctor contacts</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex gap-4 mb-4">
-                                    <div className="flex-1">
-                                        <Input
-                                            placeholder="Search doctors..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                {doctors.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {doctors
-                                            .filter(doctor => 
-                                                doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                doctor.specialization.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                doctor.clinic_name.toLowerCase().includes(searchQuery.toLowerCase())
-                                            )
-                                            .map((doctor) => (
-                                            <Card key={doctor.id} className="p-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <h4 className="font-semibold text-lg">{doctor.name}</h4>
-                                                            <Badge variant="outline">{doctor.specialization}</Badge>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                                                            <div>
-                                                                <p><strong>Clinic:</strong> {doctor.clinic_name}</p>
-                                                                {doctor.contact.phone && (
-                                                                    <p><strong>Phone:</strong> {doctor.contact.phone}</p>
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                {doctor.contact.email && (
-                                                                    <p><strong>Email:</strong> {doctor.contact.email}</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <Button size="sm" variant="outline">
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            View
-                                                        </Button>
-                                                        <Button size="sm" onClick={() => setSelectedDoctor(doctor)}>
-                                                            <Calendar className="h-4 w-4 mr-2" />
-                                                            Schedule Meeting
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold mb-2">No doctors in directory</h3>
-                                        <p className="text-muted-foreground">
-                                            Doctors will appear here as you add them to your network
-                                        </p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                    <Dialog open={isInteractionDialogOpen} onOpenChange={setIsInteractionDialogOpen}>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Log Doctor Interaction</DialogTitle>
+                                <DialogDescription>
+                                    Record details of your interaction with a doctor
+                                </DialogDescription>
+                            </DialogHeader>
+                            <InteractionForm
+                                doctors={doctors}
+                                onSuccess={() => setIsInteractionDialogOpen(false)}
+                            />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </AppLayout>
     );
@@ -707,10 +627,10 @@ function ProductForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 // Meeting Form Component
-function MeetingForm({ 
-    doctors, 
-    onSuccess 
-}: { 
+function MeetingForm({
+    doctors,
+    onSuccess
+}: {
     doctors: Doctor[];
     onSuccess: () => void;
 }) {
@@ -826,10 +746,10 @@ function MeetingForm({
 }
 
 // Interaction Form Component
-function InteractionForm({ 
-    doctors, 
-    onSuccess 
-}: { 
+function InteractionForm({
+    doctors,
+    onSuccess
+}: {
     doctors: Doctor[];
     onSuccess: () => void;
 }) {

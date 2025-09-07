@@ -56,6 +56,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Medrep routes
     Route::prefix('medrep')->group(function () {
+        Route::get('dashboard', function () {
+            return Inertia::render('medrep/dashboard', [
+                'stats' => [
+                    'totalProducts' => 0,
+                    'totalDoctors' => 0,
+                    'scheduledMeetings' => 0,
+                    'completedInteractions' => 0
+                ],
+                'products' => [],
+                'doctors' => [],
+                'upcomingMeetings' => [],
+                'recentInteractions' => []
+            ]);
+        })->name('medrep.dashboard');
+
         Route::get('analytics', function () {
             return Inertia::render('medrep/analytics');
         })->name('medrep.analytics');
