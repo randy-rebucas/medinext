@@ -41,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'license' => \App\Http\Middleware\LicenseValidation::class,
             'license.feature' => \App\Http\Middleware\LicenseFeatureValidation::class,
             'license.usage' => \App\Http\Middleware\LicenseUsageValidation::class,
+            'trial.check' => \App\Http\Middleware\CheckTrialStatus::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -94,6 +94,14 @@ class LicenseValidation
             return true;
         }
 
+        // Skip for authenticated users who have valid access (trial or license)
+        if (auth()->check()) {
+            $user = auth()->user();
+            if ($user->hasValidAccess()) {
+                return true;
+            }
+        }
+
         return false;
     }
 

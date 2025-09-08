@@ -13,6 +13,7 @@ use App\Models\Role;
 use App\Models\Clinic;
 use App\Models\UserClinicRole;
 use App\Models\Doctor;
+use App\Models\License;
 
 class User extends Authenticatable
 {
@@ -30,6 +31,11 @@ class User extends Authenticatable
         'password',
         'phone',
         'is_active',
+        'trial_started_at',
+        'trial_ends_at',
+        'license_key',
+        'is_trial_user',
+        'has_activated_license',
     ];
 
     /**
@@ -56,6 +62,10 @@ class User extends Authenticatable
             'password' => 'hashed',
             'phone' => 'string',
             'is_active' => 'boolean',
+            'trial_started_at' => 'datetime',
+            'trial_ends_at' => 'datetime',
+            'is_trial_user' => 'boolean',
+            'has_activated_license' => 'boolean',
         ];
     }
 
@@ -85,6 +95,14 @@ class User extends Authenticatable
         return $this->belongsToMany(Clinic::class, 'user_clinic_roles')
             ->withPivot('role_id')
             ->withTimestamps();
+    }
+
+    /**
+     * Check if user has a specific role
+     */
+    public function hasRole(string $roleName): bool
+    {
+        return $this->roles()->where('name', $roleName)->exists();
     }
 
     /**
@@ -159,5 +177,124 @@ class User extends Authenticatable
     public static function uriKey(): string
     {
         return 'users';
+    }
+
+    /**
+     * Start a 14-day free trial for the user
+     */
+    public function startTrial(): void
+    {
+        $this->update([
+            'trial_started_at' => now(),
+            'trial_ends_at' => now()->addDays(14),
+            'is_trial_user' => true,
+            'has_activated_license' => false,
+        ]);
+    }
+
+    /**
+     * Check if the user is currently on trial
+     */
+    public function isOnTrial(): bool
+    {
+        return $this->is_trial_user &&
+               $this->trial_ends_at &&
+               $this->trial_ends_at->isFuture() &&
+               !$this->has_activated_license;
+    }
+
+    /**
+     * Check if the user's trial has expired
+     */
+    public function isTrialExpired(): bool
+    {
+        return $this->is_trial_user &&
+               $this->trial_ends_at &&
+               $this->trial_ends_at->isPast() &&
+               !$this->has_activated_license;
+    }
+
+    /**
+     * Get the number of days remaining in the trial
+     */
+    public function getTrialDaysRemaining(): int
+    {
+        if (!$this->isOnTrial()) {
+            return 0;
+        }
+
+        return max(0, round(now()->diffInDays($this->trial_ends_at, false)));
+    }
+
+    /**
+     * Activate a license for the user
+     */
+    public function activateLicense(string $licenseKey): bool
+    {
+        $this->update([
+            'license_key' => $licenseKey,
+            'has_activated_license' => true,
+            'is_trial_user' => false,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Check if the user has a valid license (either trial or activated)
+     */
+    public function hasValidAccess(): bool
+    {
+        return $this->isOnTrial() || $this->has_activated_license;
+    }
+
+    /**
+     * Get the user's license relationship
+     */
+    public function license()
+    {
+        return $this->belongsTo(License::class, 'license_key', 'license_key');
+    }
+
+    /**
+     * Get the user's access status
+     */
+    public function getAccessStatus(): array
+    {
+        if ($this->has_activated_license) {
+            return [
+                'type' => 'licensed',
+                'status' => 'active',
+                'message' => 'Full access with license',
+                'expires_at' => $this->license?->expires_at,
+            ];
+        }
+
+        if ($this->isOnTrial()) {
+            return [
+                'type' => 'trial',
+                'status' => 'active',
+                'message' => 'Free trial active',
+                'expires_at' => $this->trial_ends_at,
+                'days_remaining' => $this->getTrialDaysRemaining(),
+            ];
+        }
+
+        if ($this->isTrialExpired()) {
+            $daysExpired = $this->trial_ends_at ? now()->diffInDays($this->trial_ends_at, false) : 0;
+            return [
+                'type' => 'trial',
+                'status' => 'expired',
+                'message' => 'Free trial expired',
+                'expires_at' => $this->trial_ends_at,
+                'days_expired' => abs(round($daysExpired)),
+            ];
+        }
+
+        return [
+            'type' => 'none',
+            'status' => 'inactive',
+            'message' => 'No access',
+        ];
     }
 }

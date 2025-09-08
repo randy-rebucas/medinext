@@ -42,6 +42,9 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Start 14-day free trial
+        $user->startTrial();
+
         event(new Registered($user));
 
         Auth::login($user);

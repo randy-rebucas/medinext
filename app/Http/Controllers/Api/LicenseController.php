@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class LicenseController extends Controller
 {
@@ -40,6 +41,41 @@ class LicenseController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to get license status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get user access status
+     */
+    public function userAccessStatus(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
+            $accessStatus = $user->getAccessStatus(); // @phpstan-ignore-line
+
+            return response()->json([
+                'success' => true,
+                'data' => $accessStatus
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get user access status', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get user access status',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -89,7 +125,8 @@ class LicenseController extends Controller
         }
 
         try {
-            $result = $this->licenseService->validateLicense($request->license_key);
+            $user = Auth::user();
+            $result = $this->licenseService->validateLicense($request->license_key, $user);
 
             return response()->json([
                 'success' => $result['valid'],
@@ -111,7 +148,7 @@ class LicenseController extends Controller
     }
 
     /**
-     * Activate license
+     * Activate license (with activation code)
      */
     public function activate(Request $request): JsonResponse
     {
@@ -140,6 +177,57 @@ class LicenseController extends Controller
             ], $result['success'] ? 200 : 403);
         } catch (\Exception $e) {
             Log::error('Failed to activate license', [
+                'license_key' => $request->license_key,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to activate license',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Activate license for user (without activation code)
+     */
+    public function activateForUser(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'license_key' => 'required|string|max:255'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
+            $result = $this->licenseService->activateLicenseForUser(
+                $user,
+                $request->license_key
+            );
+
+            return response()->json([
+                'success' => $result['success'],
+                'data' => $result
+            ], $result['success'] ? 200 : 403);
+        } catch (\Exception $e) {
+            Log::error('Failed to activate license for user', [
+                'user_id' => Auth::id(),
                 'license_key' => $request->license_key,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -405,7 +493,7 @@ class LicenseController extends Controller
     {
         try {
             // Check if user has admin permissions
-            if (!auth()->user() || !auth()->user()->hasRole('admin')) {
+            if (!Auth::user() || !Auth::user()->hasRole('admin')) { // @phpstan-ignore-line
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized'
@@ -439,7 +527,7 @@ class LicenseController extends Controller
     {
         try {
             // Check if user has admin permissions
-            if (!auth()->user() || !auth()->user()->hasRole('admin')) {
+            if (!Auth::user() || !Auth::user()->hasRole('admin')) { // @phpstan-ignore-line
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized'

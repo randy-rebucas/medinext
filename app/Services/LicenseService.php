@@ -6,6 +6,7 @@ use App\Models\License;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class LicenseService
 {
@@ -24,35 +25,66 @@ class LicenseService
     /**
      * Validate license by key
      */
-    public function validateLicense(string $licenseKey): array
+    public function validateLicense(string $licenseKey, $currentUser = null): array
     {
         $license = License::getCached($licenseKey);
-        
+
         if (!$license) {
             return [
                 'valid' => false,
-                'message' => 'License not found',
+                'message' => 'License key not found. Please check the key and try again.',
                 'error_code' => 'LICENSE_NOT_FOUND'
             ];
         }
 
         if (!$license->isValid()) {
-            $reason = $license->isExpired() ? 'License has expired' : 'License is not active';
+            if ($license->isExpired()) {
+                $expiryDate = $license->expires_at->format('F j, Y');
+                return [
+                    'valid' => false,
+                    'message' => "License has expired on {$expiryDate}. Please contact support for renewal.",
+                    'error_code' => 'LICENSE_EXPIRED',
+                    'expires_at' => $license->expires_at,
+                    'grace_period_end' => $license->expires_at->addDays($license->grace_period_days)
+                ];
+            } else {
+                return [
+                    'valid' => false,
+                    'message' => 'License is not active. Please contact support for assistance.',
+                    'error_code' => 'LICENSE_INACTIVE',
+                    'expires_at' => $license->expires_at,
+                    'grace_period_end' => $license->expires_at->addDays($license->grace_period_days)
+                ];
+            }
+        }
+
+        // Check if license is already assigned to another user
+        $existingUser = \App\Models\User::where('license_key', $licenseKey)
+            ->where('has_activated_license', true)
+            ->when($currentUser, function ($query, $user) {
+                return $query->where('id', '!=', $user->id);
+            })
+            ->first();
+
+        if ($existingUser) {
+            $assignedTo = $existingUser->name ?? $existingUser->email;
             return [
                 'valid' => false,
-                'message' => $reason,
-                'error_code' => $license->isExpired() ? 'LICENSE_EXPIRED' : 'LICENSE_INACTIVE',
-                'expires_at' => $license->expires_at,
-                'grace_period_end' => $license->expires_at->addDays($license->grace_period_days)
+                'message' => "This license key is already in use by another user ({$assignedTo}). Each license can only be used by one user at a time.",
+                'error_code' => 'LICENSE_ALREADY_IN_USE',
+                'assigned_to' => $assignedTo
             ];
         }
 
         // Update last validation
         $license->validate();
 
+        $expiryDate = $license->expires_at->format('F j, Y');
+        $daysRemaining = $license->days_until_expiration;
+        
         return [
             'valid' => true,
-            'message' => 'License is valid',
+            'message' => "License is valid and available! Expires on {$expiryDate} ({$daysRemaining} days remaining).",
             'license' => $license,
             'expires_at' => $license->expires_at,
             'days_until_expiration' => $license->days_until_expiration
@@ -65,7 +97,7 @@ class LicenseService
     public function activateLicense(string $licenseKey, string $activationCode): array
     {
         $license = License::where('license_key', $licenseKey)->first();
-        
+
         if (!$license) {
             return [
                 'success' => false,
@@ -98,7 +130,7 @@ class LicenseService
         if ($activated) {
             // Clear current license cache
             Cache::forget('current_license');
-            
+
             return [
                 'success' => true,
                 'message' => 'License activated successfully',
@@ -119,7 +151,7 @@ class LicenseService
     public function hasFeature(string $feature): bool
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return false;
         }
@@ -133,7 +165,7 @@ class LicenseService
     public function checkUsageLimit(string $type): array
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return [
                 'allowed' => false,
@@ -167,7 +199,7 @@ class LicenseService
     public function getCurrentUsage(string $type): int
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return 0;
         }
@@ -187,7 +219,7 @@ class LicenseService
     public function getUsageLimit(string $type): int
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return 0;
         }
@@ -207,16 +239,16 @@ class LicenseService
     public function incrementUsage(string $type, int $amount = 1): bool
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return false;
         }
 
         $license->incrementUsage($type, $amount);
-        
+
         // Clear cache
         Cache::forget('current_license');
-        
+
         return true;
     }
 
@@ -226,16 +258,16 @@ class LicenseService
     public function decrementUsage(string $type, int $amount = 1): bool
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return false;
         }
 
         $license->decrementUsage($type, $amount);
-        
+
         // Clear cache
         Cache::forget('current_license');
-        
+
         return true;
     }
 
@@ -245,7 +277,7 @@ class LicenseService
     public function getLicenseStatus(): array
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return [
                 'has_license' => false,
@@ -286,7 +318,7 @@ class LicenseService
     public function getLicenseInfo(): array
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return [
                 'has_license' => false,
@@ -336,16 +368,16 @@ class LicenseService
     public function resetMonthlyUsage(): bool
     {
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return false;
         }
 
         $license->resetMonthlyUsage();
-        
+
         // Clear cache
         Cache::forget('current_license');
-        
+
         return true;
     }
 
@@ -391,10 +423,10 @@ class LicenseService
     public function createLicense(array $data): License
     {
         $license = License::create($data);
-        
+
         // Clear cache
         Cache::forget('active_licenses');
-        
+
         return $license;
     }
 
@@ -404,11 +436,11 @@ class LicenseService
     public function updateLicense(License $license, array $data): License
     {
         $license->update($data);
-        
+
         // Clear cache
         Cache::forget('current_license');
         Cache::forget('active_licenses');
-        
+
         return $license;
     }
 
@@ -418,11 +450,11 @@ class LicenseService
     public function suspendLicense(License $license, string $reason = null): bool
     {
         $license->suspend($reason);
-        
+
         // Clear cache
         Cache::forget('current_license');
         Cache::forget('active_licenses');
-        
+
         return true;
     }
 
@@ -432,11 +464,11 @@ class LicenseService
     public function revokeLicense(License $license, string $reason = null): bool
     {
         $license->revoke($reason);
-        
+
         // Clear cache
         Cache::forget('current_license');
         Cache::forget('active_licenses');
-        
+
         return true;
     }
 
@@ -446,12 +478,38 @@ class LicenseService
     public function renewLicense(License $license, int $months = 12): bool
     {
         $license->renew($months);
-        
+
         // Clear cache
         Cache::forget('current_license');
         Cache::forget('active_licenses');
-        
+
         return true;
+    }
+
+    /**
+     * Activate license for a specific user
+     */
+    public function activateLicenseForUser($user, string $licenseKey): array
+    {
+        // First validate the license key (including usage check)
+        $validation = $this->validateLicense($licenseKey, $user);
+
+        if (!$validation['valid']) {
+            return [
+                'success' => false,
+                'message' => $validation['message'],
+                'error_code' => $validation['error_code'] ?? 'VALIDATION_FAILED'
+            ];
+        }
+
+        // Activate the license for the user
+        $user->activateLicense($licenseKey);
+
+        return [
+            'success' => true,
+            'message' => 'License activated successfully',
+            'license' => $validation['license']
+        ];
     }
 
     /**
@@ -459,8 +517,17 @@ class LicenseService
      */
     public function shouldRestrictApplication(): bool
     {
+        // Check if user is authenticated and has valid access (trial or license)
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user->hasValidAccess()) { // @phpstan-ignore-line
+                return false; // User has valid access
+            }
+        }
+
+        // Check for system-wide license
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return true; // No license means restricted
         }
@@ -477,8 +544,31 @@ class LicenseService
      */
     public function getRestrictionMessage(): string
     {
+        // Check if user is authenticated and has trial/license status
+        if (Auth::check()) {
+            $user = Auth::user();
+
+            if ($user->isTrialExpired()) { // @phpstan-ignore-line
+                return 'Your free trial has expired. Please activate a license to continue using the application.';
+            }
+
+            if ($user->has_activated_license) {
+                $license = $user->license;
+                if ($license && $license->isExpired()) {
+                    return 'Your license has expired. Please renew your license to continue using the application.';
+                }
+                if ($license && $license->status === 'suspended') {
+                    return 'Your license has been suspended. Please contact support for assistance.';
+                }
+                if ($license && $license->status === 'revoked') {
+                    return 'Your license has been revoked. Please contact support for assistance.';
+                }
+            }
+        }
+
+        // Check for system-wide license
         $license = $this->getCurrentLicense();
-        
+
         if (!$license) {
             return 'No valid license found. Please contact support.';
         }

@@ -22,12 +22,21 @@ Route::prefix('v1/license')->group(function () {
     Route::post('/validate', [LicenseController::class, 'validate'])
         ->name('license.validate');
 
+    // User license activation (requires authentication)
+    Route::middleware(['api.auth'])->group(function () {
+        Route::post('/activate-user', [LicenseController::class, 'activateForUser'])
+            ->name('api.license.activate-user');
+    });
+
     // Protected license routes (authentication required)
     Route::middleware(['api.auth'])->group(function () {
 
         // License status and information
         Route::get('/status', [LicenseController::class, 'status'])
             ->name('api.license.status');
+
+        Route::get('/user-access-status', [LicenseController::class, 'userAccessStatus'])
+            ->name('api.license.user-access-status');
 
         Route::get('/info', [LicenseController::class, 'info'])
             ->name('license.info');

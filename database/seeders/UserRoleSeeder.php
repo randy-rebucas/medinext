@@ -18,7 +18,7 @@ class UserRoleSeeder extends Seeder
     {
         // Get existing clinic or create a default one if none exists
         $clinic = Clinic::first();
-        
+
         if (!$clinic) {
             $clinic = Clinic::create([
                 'name' => 'Main Clinic',
@@ -62,32 +62,7 @@ class UserRoleSeeder extends Seeder
                 'name' => 'Super Admin',
                 'email' => 'superadmin@clinicflow.com',
                 'password' => Hash::make('password123'),
-            ],
-            'admin' => [
-                'name' => 'Clinic Admin',
-                'email' => 'admin@clinicflow.com',
-                'password' => Hash::make('password123'),
-            ],
-            'doctor' => [
-                'name' => 'Dr. John Smith',
-                'email' => 'doctor@clinicflow.com',
-                'password' => Hash::make('password123'),
-            ],
-            'receptionist' => [
-                'name' => 'Jane Receptionist',
-                'email' => 'receptionist@clinicflow.com',
-                'password' => Hash::make('password123'),
-            ],
-            'patient' => [
-                'name' => 'Patient User',
-                'email' => 'patient@clinicflow.com',
-                'password' => Hash::make('password123'),
-            ],
-            'medrep' => [
-                'name' => 'Medical Representative',
-                'email' => 'medrep@clinicflow.com',
-                'password' => Hash::make('password123'),
-            ],
+            ]
         ];
 
         // Create users and assign roles

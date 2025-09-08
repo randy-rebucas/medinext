@@ -199,6 +199,9 @@ class AuthController extends BaseController
                 'is_active' => true,
             ]);
 
+            // Start 14-day free trial
+            $user->startTrial();
+
             // Assign clinic and role
             if ($request->clinic_id) {
                 $user->clinics()->attach($request->clinic_id, [

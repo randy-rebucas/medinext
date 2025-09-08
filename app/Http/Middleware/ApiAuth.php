@@ -16,8 +16,16 @@ class ApiAuth
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Check if user is authenticated via Sanctum
-        if (!Auth::guard('sanctum')->check()) {
+        // Check if user is authenticated via Sanctum or session
+        $user = null;
+        
+        if (Auth::guard('sanctum')->check()) {
+            $user = Auth::guard('sanctum')->user();
+        } elseif (Auth::guard('web')->check()) {
+            $user = Auth::guard('web')->user();
+        }
+        
+        if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthenticated',
@@ -25,8 +33,6 @@ class ApiAuth
                 'timestamp' => now()->toISOString(),
             ], 401);
         }
-
-        $user = Auth::guard('sanctum')->user();
 
         // Check if user is active
         if (!$user->is_active) {
