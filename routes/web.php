@@ -15,31 +15,42 @@ Route::middleware(['auth', 'verified', 'trial.check'])->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
-        Route::get('doctors', function () {
-            return Inertia::render('admin/doctors');
-        })->name('admin.doctors');
+        Route::get('doctors', [App\Http\Controllers\DoctorController::class, 'index'])->name('admin.doctors');
+        Route::post('doctors', [App\Http\Controllers\DoctorController::class, 'store'])->name('admin.doctors.store');
+        Route::put('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'update'])->name('admin.doctors.update');
+        Route::delete('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'destroy'])->name('admin.doctors.destroy');
+        Route::get('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'show'])->name('admin.doctors.show');
 
         Route::get('staff', [App\Http\Controllers\StaffController::class, 'index'])->name('admin.staff');
+        Route::post('staff', [App\Http\Controllers\StaffController::class, 'store'])->name('admin.staff.store');
+        Route::put('staff/{id}', [App\Http\Controllers\StaffController::class, 'update'])->name('admin.staff.update');
+        Route::delete('staff/{id}', [App\Http\Controllers\StaffController::class, 'destroy'])->name('admin.staff.destroy');
 
-        Route::get('patients', function () {
-            return Inertia::render('admin/patients');
-        })->name('admin.patients');
+        Route::get('patients', [App\Http\Controllers\PatientController::class, 'index'])->name('admin.patients');
+        Route::post('patients', [App\Http\Controllers\PatientController::class, 'store'])->name('admin.patients.store');
+        Route::put('patients/{id}', [App\Http\Controllers\PatientController::class, 'update'])->name('admin.patients.update');
+        Route::delete('patients/{id}', [App\Http\Controllers\PatientController::class, 'destroy'])->name('admin.patients.destroy');
+        Route::get('patients/{id}', [App\Http\Controllers\PatientController::class, 'show'])->name('admin.patients.show');
+        Route::get('patients/{id}/health-records', [App\Http\Controllers\PatientController::class, 'healthRecords'])->name('admin.patients.health-records');
 
-        Route::get('appointments', function () {
-            return Inertia::render('admin/appointments');
-        })->name('admin.appointments');
+        Route::get('appointments', [App\Http\Controllers\AppointmentController::class, 'index'])->name('admin.appointments');
+        Route::post('appointments', [App\Http\Controllers\AppointmentController::class, 'store'])->name('admin.appointments.store');
+        Route::put('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'update'])->name('admin.appointments.update');
+        Route::delete('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'destroy'])->name('admin.appointments.destroy');
+        Route::get('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'show'])->name('admin.appointments.show');
+        Route::put('appointments/{id}/status', [App\Http\Controllers\AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
+        Route::get('appointments/calendar/data', [App\Http\Controllers\AppointmentController::class, 'calendar'])->name('admin.appointments.calendar');
 
-        Route::get('reports', function () {
-            return Inertia::render('admin/reports');
-        })->name('admin.reports');
+        Route::get('reports', [App\Http\Controllers\ReportsController::class, 'index'])->name('admin.reports');
+        Route::get('reports/analytics', [App\Http\Controllers\ReportsController::class, 'analytics'])->name('admin.reports.analytics');
+        Route::post('reports/generate', [App\Http\Controllers\ReportsController::class, 'generate'])->name('admin.reports.generate');
+        Route::get('reports/download/{id}', [App\Http\Controllers\ReportsController::class, 'download'])->name('reports.download');
 
         Route::get('analytics', function () {
             return Inertia::render('admin/analytics');
         })->name('admin.analytics');
 
-        Route::get('clinic-settings', function () {
-            return Inertia::render('admin/clinic-settings');
-        })->name('admin.clinic-settings');
+        Route::get('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'index'])->name('admin.clinic-settings');
 
         Route::get('rooms', function () {
             return Inertia::render('admin/rooms');

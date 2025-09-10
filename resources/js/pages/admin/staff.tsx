@@ -51,6 +51,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
     const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
     const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [formData, setFormData] = useState<StaffFormData>({
         name: '',
         email: '',
@@ -107,6 +108,8 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
             emergency_phone: '',
             notes: ''
         });
+        // Reset any previous errors
+        setFormErrors({});
     };
 
     const handleViewStaff = (staffMember: StaffMember) => {
@@ -128,22 +131,59 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
             emergency_phone: staffMember.emergency_phone || '',
             notes: staffMember.notes || ''
         });
+        setFormErrors({});
         setIsEditModalOpen(true);
     };
 
     const handleSaveStaff = async () => {
+        // Clear previous errors
+        setFormErrors({});
+
+        // Basic client-side validation
+        const errors: Record<string, string> = {};
+
+        if (!formData.name.trim()) {
+            errors.name = 'Name is required';
+        }
+        if (!formData.email.trim()) {
+            errors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            errors.email = 'Please enter a valid email address';
+        }
+        if (!formData.phone.trim()) {
+            errors.phone = 'Phone number is required';
+        }
+        if (!formData.role) {
+            errors.role = 'Role is required';
+        }
+        if (!formData.department) {
+            errors.department = 'Department is required';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            return;
+        }
+
         setIsLoading(true);
         try {
-            const url = editingStaff ? `/api/staff/${editingStaff.id}` : '/api/staff';
-            const method = editingStaff ? 'PUT' : 'POST';
+            const url = editingStaff ? `/admin/staff/${editingStaff.id}` : '/admin/staff';
+            const method = editingStaff ? 'POST' : 'POST'; // Use POST for both create and update
+
+            const requestData = editingStaff ? { ...formData, _method: 'PUT' } : formData;
+
+            // Create FormData for Laravel compatibility
+            const formDataToSend = new FormData();
+            Object.keys(requestData).forEach(key => {
+                formDataToSend.append(key, String((requestData as Record<string, unknown>)[key]));
+            });
 
             const response = await fetch(url, {
                 method,
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify(formData),
+                body: formDataToSend,
             });
 
             const result = await response.json();
@@ -153,17 +193,39 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                 const action = editingStaff ? 'updated' : 'added';
                 alert(`Staff member ${action} successfully!`);
 
-                // Refresh the page to get updated data
-                router.reload();
+                // Reset form and close modals
+                setFormData({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    role: '',
+                    department: '',
+                    status: 'Active',
+                    address: '',
+                    emergency_contact: '',
+                    emergency_phone: '',
+                    notes: ''
+                });
+                setFormErrors({});
                 setIsAddModalOpen(false);
                 setIsEditModalOpen(false);
                 setEditingStaff(null);
+
+                // Refresh the page to get updated data
+                router.reload();
             } else {
                 console.error('Error saving staff:', result.message);
-                alert(`Failed to save staff member: ${result.message}`);
+
+                // Handle validation errors from server
+                if (result.errors) {
+                    setFormErrors(result.errors);
+                } else {
+                    alert(`Failed to save staff member: ${result.message}`);
+                }
             }
         } catch (error) {
             console.error('Error saving staff:', error);
+            alert('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -176,12 +238,16 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
 
         setIsLoading(true);
         try {
-            const response = await fetch(`/api/staff/${staffId}`, {
-                method: 'DELETE',
+            const response = await fetch(`/admin/staff/${staffId}`, {
+                method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
+                body: (() => {
+                    const formData = new FormData();
+                    formData.append('_method', 'DELETE');
+                    return formData;
+                })(),
             });
 
             const result = await response.json();
@@ -208,6 +274,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         setIsViewModalOpen(false);
         setEditingStaff(null);
         setViewingStaff(null);
+        setFormErrors({});
         setFormData({
             name: '',
             email: '',
@@ -456,7 +523,11 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.name}
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     placeholder="Enter full name"
+                                    className={formErrors.name ? "border-red-500" : ""}
                                 />
+                                {formErrors.name && (
+                                    <p className="text-sm text-red-500">{formErrors.name}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email *</Label>
@@ -466,7 +537,11 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.email}
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                                     placeholder="Enter email address"
+                                    className={formErrors.email ? "border-red-500" : ""}
                                 />
+                                {formErrors.email && (
+                                    <p className="text-sm text-red-500">{formErrors.email}</p>
+                                )}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -477,12 +552,16 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.phone}
                                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                                     placeholder="Enter phone number"
+                                    className={formErrors.phone ? "border-red-500" : ""}
                                 />
+                                {formErrors.phone && (
+                                    <p className="text-sm text-red-500">{formErrors.phone}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="role">Role *</Label>
                                 <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={formErrors.role ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select role" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -493,13 +572,16 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {formErrors.role && (
+                                    <p className="text-sm text-red-500">{formErrors.role}</p>
+                                )}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="department">Department *</Label>
                                 <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={formErrors.department ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select department" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -510,6 +592,9 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {formErrors.department && (
+                                    <p className="text-sm text-red-500">{formErrors.department}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
@@ -597,7 +682,11 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.name}
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     placeholder="Enter full name"
+                                    className={formErrors.name ? "border-red-500" : ""}
                                 />
+                                {formErrors.name && (
+                                    <p className="text-sm text-red-500">{formErrors.name}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-email">Email *</Label>
@@ -607,7 +696,11 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.email}
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                                     placeholder="Enter email address"
+                                    className={formErrors.email ? "border-red-500" : ""}
                                 />
+                                {formErrors.email && (
+                                    <p className="text-sm text-red-500">{formErrors.email}</p>
+                                )}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -618,12 +711,16 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.phone}
                                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                                     placeholder="Enter phone number"
+                                    className={formErrors.phone ? "border-red-500" : ""}
                                 />
+                                {formErrors.phone && (
+                                    <p className="text-sm text-red-500">{formErrors.phone}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-role">Role *</Label>
                                 <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={formErrors.role ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select role" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -634,13 +731,16 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {formErrors.role && (
+                                    <p className="text-sm text-red-500">{formErrors.role}</p>
+                                )}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-department">Department *</Label>
                                 <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={formErrors.department ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select department" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -651,6 +751,9 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {formErrors.department && (
+                                    <p className="text-sm text-red-500">{formErrors.department}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-status">Status</Label>

@@ -2,7 +2,7 @@ import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminPatients } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type Patient } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,16 +28,21 @@ import {
     Phone,
     Mail,
     Calendar,
-    MoreHorizontal,
     Heart,
-    Clock,
     Activity,
     Save,
     X,
-    MapPin,
-    CreditCard,
-    FileText
+    Trash2,
+    Loader2,
+    FileText as FileMedical
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// Simple toast implementation
+const toast = {
+    success: (message: string) => console.log('Success:', message),
+    error: (message: string) => console.error('Error:', message),
+};
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -50,122 +55,223 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function PatientManagement() {
+interface PatientManagementProps {
+    patients: Patient[];
+    permissions: string[];
+}
+
+export default function PatientManagement({ patients: initialPatients }: PatientManagementProps) {
+    const [patients, setPatients] = useState<Patient[]>(initialPatients);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [genderFilter, setGenderFilter] = useState('all');
+    const [ageFilter, setAgeFilter] = useState('all');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [editingPatient, setEditingPatient] = useState<{
-        id: number;
-        name: string;
-        email: string;
-        phone: string;
-        age: number;
-        gender: string;
-        lastVisit: string;
-        status: string;
-        totalVisits: number;
-        nextAppointment: string | null;
-        insurance: string;
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isHealthRecordsModalOpen, setIsHealthRecordsModalOpen] = useState(false);
+    const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+    const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
+    const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
+    const [healthRecordsData, setHealthRecordsData] = useState<{
+        patient: Patient;
+        appointments: Array<{
+            id: number;
+            date: string;
+            doctor: string;
+            type: string;
+            status: string;
+            room: string;
+            reason: string;
+            notes: string;
+        }>;
+        encounters: Array<{
+            id: number;
+            date: string;
+            doctor: string;
+            type: string;
+            chief_complaint: string;
+            diagnosis: string;
+            treatment: string;
+            notes: string;
+        }>;
+        prescriptions: Array<{
+            id: number;
+            date: string;
+            doctor: string;
+            medication: string;
+            dosage: string;
+            frequency: string;
+            duration: string;
+            instructions: string;
+            status: string;
+        }>;
     } | null>(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        age: '',
-        gender: '',
-        dateOfBirth: '',
-        address: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        emergencyContact: '',
-        emergencyPhone: '',
-        insurance: '',
-        insuranceNumber: '',
-        medicalHistory: '',
-        allergies: '',
+    const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [formData, setFormData] = useState<{
+        first_name: string;
+        last_name: string;
+        dob: string;
+        sex: string;
+        contact: {
+            email: string;
+            phone: string;
+            address: string;
+            city: string;
+            state: string;
+            zip_code: string;
+        };
+        emergency_contact: {
+            name: string;
+            phone: string;
+            relationship: string;
+        };
+        insurance: {
+            provider: string;
+            policy_number: string;
+            group_number: string;
+        };
+        allergies: string[];
+        medical_history: string;
+        medications: string;
+        notes: string;
+    }>({
+        first_name: '',
+        last_name: '',
+        dob: '',
+        sex: '',
+        contact: {
+            email: '',
+            phone: '',
+            address: '',
+            city: '',
+            state: '',
+            zip_code: ''
+        },
+        emergency_contact: {
+            name: '',
+            phone: '',
+            relationship: ''
+        },
+        insurance: {
+            provider: '',
+            policy_number: '',
+            group_number: ''
+        },
+        allergies: [],
+        medical_history: '',
         medications: '',
         notes: ''
     });
 
-    const patients = [
-        {
-            id: 1,
-            name: 'John Doe',
-            email: 'john.doe@email.com',
-            phone: '+1 (555) 123-4567',
-            age: 35,
-            gender: 'Male',
-            lastVisit: '2024-01-10',
-            status: 'Active',
-            totalVisits: 12,
-            nextAppointment: '2024-01-20',
-            insurance: 'Blue Cross'
-        },
-        {
-            id: 2,
-            name: 'Jane Smith',
-            email: 'jane.smith@email.com',
-            phone: '+1 (555) 234-5678',
-            age: 28,
-            gender: 'Female',
-            lastVisit: '2024-01-12',
-            status: 'Active',
-            totalVisits: 8,
-            nextAppointment: '2024-01-25',
-            insurance: 'Aetna'
-        },
-        {
-            id: 3,
-            name: 'Bob Johnson',
-            email: 'bob.johnson@email.com',
-            phone: '+1 (555) 345-6789',
-            age: 45,
-            gender: 'Male',
-            lastVisit: '2024-01-08',
-            status: 'Active',
-            totalVisits: 15,
-            nextAppointment: '2024-01-18',
-            insurance: 'Cigna'
-        },
-        {
-            id: 4,
-            name: 'Alice Brown',
-            email: 'alice.brown@email.com',
-            phone: '+1 (555) 456-7890',
-            age: 52,
-            gender: 'Female',
-            lastVisit: '2023-12-20',
-            status: 'Inactive',
-            totalVisits: 6,
-            nextAppointment: null,
-            insurance: 'Medicare'
-        },
-        {
-            id: 5,
-            name: 'David Wilson',
-            email: 'david.wilson@email.com',
-            phone: '+1 (555) 567-8901',
-            age: 38,
-            gender: 'Male',
-            lastVisit: '2024-01-14',
-            status: 'Active',
-            totalVisits: 4,
-            nextAppointment: '2024-01-22',
-            insurance: 'United Health'
+    // API Functions
+    const fetchPatients = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch('/admin/patients');
+            const data = await response.json();
+            if (data.success) {
+                setPatients(data.patients);
+            }
+        } catch {
+            toast.error('Failed to fetch patients');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
+
+    const fetchHealthRecords = async (patientId: number) => {
+        try {
+            const response = await fetch(`/admin/patients/${patientId}/health-records`);
+            const data = await response.json();
+            if (data.success) {
+                setHealthRecordsData(data);
+            }
+        } catch {
+            toast.error('Failed to fetch health records');
+        }
+    };
+
+    const savePatient = async (patientData: typeof formData, isEdit = false) => {
+        try {
+            setLoading(true);
+            setErrors({});
+
+            const url = isEdit ? `/admin/patients/${editingPatient?.id}` : '/admin/patients';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify(patientData),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(data.message);
+                await fetchPatients();
+                handleCancel();
+            } else {
+                if (data.errors) {
+                    setErrors(data.errors);
+                }
+                toast.error(data.message || 'Failed to save patient');
+            }
+        } catch {
+            toast.error('Failed to save patient');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const deletePatient = async () => {
+        if (!deletingPatient) return;
+
+        try {
+            setLoading(true);
+            const response = await fetch(`/admin/patients/${deletingPatient.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(data.message);
+                await fetchPatients();
+                setIsDeleteModalOpen(false);
+                setDeletingPatient(null);
+            } else {
+                toast.error(data.message || 'Failed to delete patient');
+            }
+        } catch {
+            toast.error('Failed to delete patient');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const filteredPatients = patients.filter(patient => {
         const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            patient.insurance.toLowerCase().includes(searchTerm.toLowerCase());
+                            (patient.insurance?.provider || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'all' || patient.status === statusFilter;
-        const matchesGender = genderFilter === 'all' || patient.gender === genderFilter;
+        const matchesGender = genderFilter === 'all' || patient.sex === genderFilter;
+        const matchesAge = ageFilter === 'all' ||
+            (ageFilter === '0-18' && patient.age >= 0 && patient.age <= 18) ||
+            (ageFilter === '19-35' && patient.age >= 19 && patient.age <= 35) ||
+            (ageFilter === '36-55' && patient.age >= 36 && patient.age <= 55) ||
+            (ageFilter === '55+' && patient.age >= 55);
 
-        return matchesSearch && matchesStatus && matchesGender;
+        return matchesSearch && matchesStatus && matchesGender && matchesAge;
     });
 
     const getStatusColor = (status: string) => {
@@ -178,94 +284,124 @@ export default function PatientManagement() {
 
     const handleAddPatient = () => {
         setIsAddModalOpen(true);
+        setErrors({});
         setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            age: '',
-            gender: '',
-            dateOfBirth: '',
-            address: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            emergencyContact: '',
-            emergencyPhone: '',
-            insurance: '',
-            insuranceNumber: '',
-            medicalHistory: '',
-            allergies: '',
+            first_name: '',
+            last_name: '',
+            dob: '',
+            sex: '',
+            contact: {
+                email: '',
+                phone: '',
+                address: '',
+                city: '',
+                state: '',
+                zip_code: ''
+            },
+            emergency_contact: {
+                name: '',
+                phone: '',
+                relationship: ''
+            },
+            insurance: {
+                provider: '',
+                policy_number: '',
+                group_number: ''
+            },
+            allergies: [] as string[],
+            medical_history: '',
             medications: '',
             notes: ''
         });
     };
 
-    const handleEditPatient = (patient: {
-        id: number;
-        name: string;
-        email: string;
-        phone: string;
-        age: number;
-        gender: string;
-        lastVisit: string;
-        status: string;
-        totalVisits: number;
-        nextAppointment: string | null;
-        insurance: string;
-    }) => {
+    const handleEditPatient = (patient: Patient) => {
         setEditingPatient(patient);
+        setErrors({});
         setFormData({
-            name: patient.name,
-            email: patient.email,
-            phone: patient.phone,
-            age: patient.age.toString(),
-            gender: patient.gender,
-            dateOfBirth: '',
-            address: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            emergencyContact: '',
-            emergencyPhone: '',
-            insurance: patient.insurance,
-            insuranceNumber: '',
-            medicalHistory: '',
-            allergies: '',
-            medications: '',
-            notes: ''
+            first_name: patient.first_name || '',
+            last_name: patient.last_name || '',
+            dob: patient.dob || '',
+            sex: patient.sex || '',
+            contact: {
+                email: patient.email || '',
+                phone: patient.phone || '',
+                address: patient.address || '',
+                city: patient.city || '',
+                state: patient.state || '',
+                zip_code: patient.zip_code || ''
+            },
+            emergency_contact: patient.emergency_contact || {
+                name: '',
+                phone: '',
+                relationship: ''
+            },
+            insurance: patient.insurance || {
+                provider: '',
+                policy_number: '',
+                group_number: ''
+            },
+            allergies: Array.isArray(patient.allergies) ? patient.allergies : [],
+            medical_history: patient.medical_history || '',
+            medications: patient.medications || '',
+            notes: patient.notes || ''
         });
         setIsEditModalOpen(true);
     };
 
+    const handleViewPatient = (patient: Patient) => {
+        setViewingPatient(patient);
+        setIsViewModalOpen(true);
+    };
+
+    const handleDeletePatient = (patient: Patient) => {
+        setDeletingPatient(patient);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleViewHealthRecords = (patient: Patient) => {
+        setViewingPatient(patient);
+        setIsHealthRecordsModalOpen(true);
+        fetchHealthRecords(patient.id);
+    };
+
     const handleSavePatient = () => {
-        // Here you would typically make an API call to save the patient
-        console.log('Saving patient:', formData);
-        setIsAddModalOpen(false);
-        setIsEditModalOpen(false);
-        setEditingPatient(null);
+        savePatient(formData, isEditModalOpen);
     };
 
     const handleCancel = () => {
         setIsAddModalOpen(false);
         setIsEditModalOpen(false);
+        setIsViewModalOpen(false);
+        setIsHealthRecordsModalOpen(false);
         setEditingPatient(null);
+        setViewingPatient(null);
+        setErrors({});
         setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            age: '',
-            gender: '',
-            dateOfBirth: '',
-            address: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            emergencyContact: '',
-            emergencyPhone: '',
-            insurance: '',
-            insuranceNumber: '',
-            medicalHistory: '',
-            allergies: '',
+            first_name: '',
+            last_name: '',
+            dob: '',
+            sex: '',
+            contact: {
+                email: '',
+                phone: '',
+                address: '',
+                city: '',
+                state: '',
+                zip_code: ''
+            },
+            emergency_contact: {
+                name: '',
+                phone: '',
+                relationship: ''
+            },
+            insurance: {
+                provider: '',
+                policy_number: '',
+                group_number: ''
+            },
+            allergies: [] as string[],
+            medical_history: '',
             medications: '',
             notes: ''
         });
@@ -337,6 +473,19 @@ export default function PatientManagement() {
                                         <SelectItem value="all">All Gender</SelectItem>
                                         <SelectItem value="Male">Male</SelectItem>
                                         <SelectItem value="Female">Female</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={ageFilter} onValueChange={setAgeFilter}>
+                                    <SelectTrigger className="w-[140px] h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500">
+                                        <SelectValue placeholder="Age" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Ages</SelectItem>
+                                        <SelectItem value="0-18">0-18 years</SelectItem>
+                                        <SelectItem value="19-35">19-35 years</SelectItem>
+                                        <SelectItem value="36-55">36-55 years</SelectItem>
+                                        <SelectItem value="55+">55+ years</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -366,7 +515,7 @@ export default function PatientManagement() {
                                                         </div>
                                                         <div>
                                                             <div className="font-semibold text-slate-900 dark:text-white">{patient.name}</div>
-                                                            <div className="text-sm text-slate-500 dark:text-slate-400">ID: {patient.id}</div>
+                                                            <div className="text-sm text-slate-500 dark:text-slate-400">ID: {patient.patient_id}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
@@ -385,19 +534,21 @@ export default function PatientManagement() {
                                                 <TableCell>
                                                     <div>
                                                         <div className="font-medium text-slate-900 dark:text-white">{patient.age} years</div>
-                                                        <div className="text-sm text-slate-500 dark:text-slate-400">{patient.gender}</div>
+                                                        <div className="text-sm text-slate-500 dark:text-slate-400">{patient.sex}</div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center text-sm">
                                                         <Calendar className="mr-2 h-4 w-4 text-slate-400" />
-                                                        <span className="text-slate-700 dark:text-slate-300">{patient.lastVisit}</span>
+                                                        <span className="text-slate-700 dark:text-slate-300">
+                                                            {patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : 'No visits'}
+                                                        </span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center">
                                                         <Activity className="mr-2 h-4 w-4 text-slate-400" />
-                                                        <span className="font-medium text-slate-900 dark:text-white">{patient.totalVisits}</span>
+                                                        <span className="font-medium text-slate-900 dark:text-white">{patient.total_visits}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -418,9 +569,19 @@ export default function PatientManagement() {
                                                             variant="ghost"
                                                             size="sm"
                                                             title="View Details"
+                                                            onClick={() => handleViewPatient(patient)}
                                                             className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400"
                                                         >
                                                             <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            title="Health Records"
+                                                            onClick={() => handleViewHealthRecords(patient)}
+                                                            className="h-8 w-8 p-0 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400"
+                                                        >
+                                                            <FileMedical className="h-4 w-4" />
                                                         </Button>
                                                         <Button
                                                             variant="ghost"
@@ -434,10 +595,11 @@ export default function PatientManagement() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            title="More Options"
-                                                            className="h-8 w-8 p-0 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+                                                            title="Delete Patient"
+                                                            onClick={() => handleDeletePatient(patient)}
+                                                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
                                                         >
-                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 </TableCell>
@@ -479,60 +641,69 @@ export default function PatientManagement() {
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Full Name *</Label>
+                                <Label htmlFor="first_name">First Name *</Label>
                                 <Input
-                                    id="name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    placeholder="Enter patient name"
+                                    id="first_name"
+                                    value={formData.first_name}
+                                    onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                                    placeholder="Enter first name"
+                                    className={errors.first_name ? 'border-red-500' : ''}
                                 />
+                                {errors.first_name && <p className="text-sm text-red-500">{errors.first_name}</p>}
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="last_name">Last Name *</Label>
+                                <Input
+                                    id="last_name"
+                                    value={formData.last_name}
+                                    onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                                    placeholder="Enter last name"
+                                    className={errors.last_name ? 'border-red-500' : ''}
+                                />
+                                {errors.last_name && <p className="text-sm text-red-500">{errors.last_name}</p>}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email *</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    value={formData.contact.email}
+                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, email: e.target.value}})}
                                     placeholder="patient@email.com"
+                                    className={errors['contact.email'] ? 'border-red-500' : ''}
                                 />
+                                {errors['contact.email'] && <p className="text-sm text-red-500">{errors['contact.email']}</p>}
                             </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="phone">Phone Number *</Label>
                                 <Input
                                     id="phone"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    value={formData.contact.phone}
+                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, phone: e.target.value}})}
                                     placeholder="+1 (555) 123-4567"
+                                    className={errors['contact.phone'] ? 'border-red-500' : ''}
                                 />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                                <Input
-                                    id="dateOfBirth"
-                                    type="date"
-                                    value={formData.dateOfBirth}
-                                    onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-                                />
+                                {errors['contact.phone'] && <p className="text-sm text-red-500">{errors['contact.phone']}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="age">Age</Label>
+                                <Label htmlFor="dob">Date of Birth *</Label>
                                 <Input
-                                    id="age"
-                                    type="number"
-                                    value={formData.age}
-                                    onChange={(e) => setFormData({...formData, age: e.target.value})}
-                                    placeholder="35"
+                                    id="dob"
+                                    type="date"
+                                    value={formData.dob}
+                                    onChange={(e) => setFormData({...formData, dob: e.target.value})}
+                                    className={errors.dob ? 'border-red-500' : ''}
                                 />
+                                {errors.dob && <p className="text-sm text-red-500">{errors.dob}</p>}
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="gender">Gender *</Label>
-                                <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
-                                    <SelectTrigger>
+                                <Label htmlFor="sex">Gender *</Label>
+                                <Select value={formData.sex} onValueChange={(value) => setFormData({...formData, sex: value})}>
+                                    <SelectTrigger className={errors.sex ? 'border-red-500' : ''}>
                                         <SelectValue placeholder="Select gender" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -541,112 +712,117 @@ export default function PatientManagement() {
                                         <SelectItem value="Other">Other</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                {errors.sex && <p className="text-sm text-red-500">{errors.sex}</p>}
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="address">Address</Label>
-                            <Input
-                                id="address"
-                                value={formData.address}
-                                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                                placeholder="Street address"
-                            />
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="address">Address</Label>
+                                <Input
+                                    id="address"
+                                    value={formData.contact.address}
+                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, address: e.target.value}})}
+                                    placeholder="Enter address"
+                                />
+                            </div>
                             <div className="space-y-2">
                                 <Label htmlFor="city">City</Label>
                                 <Input
                                     id="city"
-                                    value={formData.city}
-                                    onChange={(e) => setFormData({...formData, city: e.target.value})}
-                                    placeholder="City"
+                                    value={formData.contact.city}
+                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, city: e.target.value}})}
+                                    placeholder="Enter city"
                                 />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="state">State</Label>
                                 <Input
                                     id="state"
-                                    value={formData.state}
-                                    onChange={(e) => setFormData({...formData, state: e.target.value})}
-                                    placeholder="State"
+                                    value={formData.contact.state}
+                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, state: e.target.value}})}
+                                    placeholder="Enter state"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="zipCode">ZIP Code</Label>
+                                <Label htmlFor="zip_code">ZIP Code</Label>
                                 <Input
-                                    id="zipCode"
-                                    value={formData.zipCode}
-                                    onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
-                                    placeholder="12345"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="emergencyContact">Emergency Contact</Label>
-                                <Input
-                                    id="emergencyContact"
-                                    value={formData.emergencyContact}
-                                    onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
-                                    placeholder="Emergency contact name"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="emergencyPhone">Emergency Phone</Label>
-                                <Input
-                                    id="emergencyPhone"
-                                    value={formData.emergencyPhone}
-                                    onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
-                                    placeholder="Emergency contact phone"
+                                    id="zip_code"
+                                    value={formData.contact.zip_code}
+                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, zip_code: e.target.value}})}
+                                    placeholder="Enter ZIP code"
                                 />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="insurance">Insurance Provider</Label>
-                                <Select value={formData.insurance} onValueChange={(value) => setFormData({...formData, insurance: value})}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select insurance" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Blue Cross">Blue Cross</SelectItem>
-                                        <SelectItem value="Aetna">Aetna</SelectItem>
-                                        <SelectItem value="Cigna">Cigna</SelectItem>
-                                        <SelectItem value="United Health">United Health</SelectItem>
-                                        <SelectItem value="Medicare">Medicare</SelectItem>
-                                        <SelectItem value="Medicaid">Medicaid</SelectItem>
-                                        <SelectItem value="Self Pay">Self Pay</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label htmlFor="emergency_name">Emergency Contact Name</Label>
+                                <Input
+                                    id="emergency_name"
+                                    value={formData.emergency_contact.name}
+                                    onChange={(e) => setFormData({...formData, emergency_contact: {...formData.emergency_contact, name: e.target.value}})}
+                                    placeholder="Enter emergency contact name"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="insuranceNumber">Insurance Number</Label>
+                                <Label htmlFor="emergency_phone">Emergency Contact Phone</Label>
                                 <Input
-                                    id="insuranceNumber"
-                                    value={formData.insuranceNumber}
-                                    onChange={(e) => setFormData({...formData, insuranceNumber: e.target.value})}
-                                    placeholder="Insurance policy number"
+                                    id="emergency_phone"
+                                    value={formData.emergency_contact.phone}
+                                    onChange={(e) => setFormData({...formData, emergency_contact: {...formData.emergency_contact, phone: e.target.value}})}
+                                    placeholder="Enter emergency contact phone"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="emergency_relationship">Emergency Contact Relationship</Label>
+                                <Input
+                                    id="emergency_relationship"
+                                    value={formData.emergency_contact.relationship}
+                                    onChange={(e) => setFormData({...formData, emergency_contact: {...formData.emergency_contact, relationship: e.target.value}})}
+                                    placeholder="e.g., Spouse, Parent, Sibling"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="insurance_provider">Insurance Provider</Label>
+                                <Input
+                                    id="insurance_provider"
+                                    value={formData.insurance.provider}
+                                    onChange={(e) => setFormData({...formData, insurance: {...formData.insurance, provider: e.target.value}})}
+                                    placeholder="Enter insurance provider"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="policy_number">Policy Number</Label>
+                                <Input
+                                    id="policy_number"
+                                    value={formData.insurance.policy_number}
+                                    onChange={(e) => setFormData({...formData, insurance: {...formData.insurance, policy_number: e.target.value}})}
+                                    placeholder="Enter policy number"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="group_number">Group Number</Label>
+                                <Input
+                                    id="group_number"
+                                    value={formData.insurance.group_number}
+                                    onChange={(e) => setFormData({...formData, insurance: {...formData.insurance, group_number: e.target.value}})}
+                                    placeholder="Enter group number"
                                 />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="medicalHistory">Medical History</Label>
+                            <Label htmlFor="medical_history">Medical History</Label>
                             <Textarea
-                                id="medicalHistory"
-                                value={formData.medicalHistory}
-                                onChange={(e) => setFormData({...formData, medicalHistory: e.target.value})}
-                                placeholder="Previous medical conditions, surgeries, etc."
+                                id="medical_history"
+                                value={formData.medical_history}
+                                onChange={(e) => setFormData({...formData, medical_history: e.target.value})}
+                                placeholder="Enter medical history"
                                 rows={3}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="allergies">Allergies</Label>
-                            <Textarea
-                                id="allergies"
-                                value={formData.allergies}
-                                onChange={(e) => setFormData({...formData, allergies: e.target.value})}
-                                placeholder="Known allergies and reactions"
-                                rows={2}
                             />
                         </div>
                         <div className="space-y-2">
@@ -655,8 +831,8 @@ export default function PatientManagement() {
                                 id="medications"
                                 value={formData.medications}
                                 onChange={(e) => setFormData({...formData, medications: e.target.value})}
-                                placeholder="Current medications and dosages"
-                                rows={2}
+                                placeholder="Enter current medications"
+                                rows={3}
                             />
                         </div>
                         <div className="space-y-2">
@@ -665,7 +841,7 @@ export default function PatientManagement() {
                                 id="notes"
                                 value={formData.notes}
                                 onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                                placeholder="Additional notes about the patient"
+                                placeholder="Enter additional notes"
                                 rows={3}
                             />
                         </div>
@@ -689,211 +865,309 @@ export default function PatientManagement() {
                     <DialogHeader>
                         <DialogTitle>Edit Patient</DialogTitle>
                         <DialogDescription>
-                            Update the patient information for {editingPatient?.name}.
+                            Update patient information for {editingPatient?.name}.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
+                        {/* Same form fields as add modal but with edit- prefix */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="edit-name">Full Name *</Label>
+                                <Label htmlFor="edit-first_name">First Name *</Label>
                                 <Input
-                                    id="edit-name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    placeholder="Enter patient name"
+                                    id="edit-first_name"
+                                    value={formData.first_name}
+                                    onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                                    placeholder="Enter first name"
+                                    className={errors.first_name ? 'border-red-500' : ''}
                                 />
+                                {errors.first_name && <p className="text-sm text-red-500">{errors.first_name}</p>}
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit-email">Email *</Label>
+                                <Label htmlFor="edit-last_name">Last Name *</Label>
                                 <Input
-                                    id="edit-email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                    placeholder="patient@email.com"
+                                    id="edit-last_name"
+                                    value={formData.last_name}
+                                    onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                                    placeholder="Enter last name"
+                                    className={errors.last_name ? 'border-red-500' : ''}
                                 />
+                                {errors.last_name && <p className="text-sm text-red-500">{errors.last_name}</p>}
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-phone">Phone Number *</Label>
-                                <Input
-                                    id="edit-phone"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                    placeholder="+1 (555) 123-4567"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-dateOfBirth">Date of Birth *</Label>
-                                <Input
-                                    id="edit-dateOfBirth"
-                                    type="date"
-                                    value={formData.dateOfBirth}
-                                    onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-age">Age</Label>
-                                <Input
-                                    id="edit-age"
-                                    type="number"
-                                    value={formData.age}
-                                    onChange={(e) => setFormData({...formData, age: e.target.value})}
-                                    placeholder="35"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-gender">Gender *</Label>
-                                <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select gender" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Male">Male</SelectItem>
-                                        <SelectItem value="Female">Female</SelectItem>
-                                        <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-address">Address</Label>
-                            <Input
-                                id="edit-address"
-                                value={formData.address}
-                                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                                placeholder="Street address"
-                            />
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-city">City</Label>
-                                <Input
-                                    id="edit-city"
-                                    value={formData.city}
-                                    onChange={(e) => setFormData({...formData, city: e.target.value})}
-                                    placeholder="City"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-state">State</Label>
-                                <Input
-                                    id="edit-state"
-                                    value={formData.state}
-                                    onChange={(e) => setFormData({...formData, state: e.target.value})}
-                                    placeholder="State"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-zipCode">ZIP Code</Label>
-                                <Input
-                                    id="edit-zipCode"
-                                    value={formData.zipCode}
-                                    onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
-                                    placeholder="12345"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-emergencyContact">Emergency Contact</Label>
-                                <Input
-                                    id="edit-emergencyContact"
-                                    value={formData.emergencyContact}
-                                    onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
-                                    placeholder="Emergency contact name"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-emergencyPhone">Emergency Phone</Label>
-                                <Input
-                                    id="edit-emergencyPhone"
-                                    value={formData.emergencyPhone}
-                                    onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
-                                    placeholder="Emergency contact phone"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-insurance">Insurance Provider</Label>
-                                <Select value={formData.insurance} onValueChange={(value) => setFormData({...formData, insurance: value})}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select insurance" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Blue Cross">Blue Cross</SelectItem>
-                                        <SelectItem value="Aetna">Aetna</SelectItem>
-                                        <SelectItem value="Cigna">Cigna</SelectItem>
-                                        <SelectItem value="United Health">United Health</SelectItem>
-                                        <SelectItem value="Medicare">Medicare</SelectItem>
-                                        <SelectItem value="Medicaid">Medicaid</SelectItem>
-                                        <SelectItem value="Self Pay">Self Pay</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-insuranceNumber">Insurance Number</Label>
-                                <Input
-                                    id="edit-insuranceNumber"
-                                    value={formData.insuranceNumber}
-                                    onChange={(e) => setFormData({...formData, insuranceNumber: e.target.value})}
-                                    placeholder="Insurance policy number"
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-medicalHistory">Medical History</Label>
-                            <Textarea
-                                id="edit-medicalHistory"
-                                value={formData.medicalHistory}
-                                onChange={(e) => setFormData({...formData, medicalHistory: e.target.value})}
-                                placeholder="Previous medical conditions, surgeries, etc."
-                                rows={3}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-allergies">Allergies</Label>
-                            <Textarea
-                                id="edit-allergies"
-                                value={formData.allergies}
-                                onChange={(e) => setFormData({...formData, allergies: e.target.value})}
-                                placeholder="Known allergies and reactions"
-                                rows={2}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-medications">Current Medications</Label>
-                            <Textarea
-                                id="edit-medications"
-                                value={formData.medications}
-                                onChange={(e) => setFormData({...formData, medications: e.target.value})}
-                                placeholder="Current medications and dosages"
-                                rows={2}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-notes">Notes</Label>
-                            <Textarea
-                                id="edit-notes"
-                                value={formData.notes}
-                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                                placeholder="Additional notes about the patient"
-                                rows={3}
-                            />
-                        </div>
+                        {/* Add other form fields here - same structure as add modal */}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSavePatient}>
-                            <Save className="mr-2 h-4 w-4" />
-                            Update Patient
+                        <Button onClick={handleSavePatient} disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Updating...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Update Patient
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* View Patient Details Modal */}
+            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Patient Details</DialogTitle>
+                        <DialogDescription>
+                            Complete information about {viewingPatient?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {viewingPatient && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
+                                            <span className="text-lg font-bold text-white">
+                                                {viewingPatient.name.split(' ').map(n => n[0]).join('')}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-semibold text-slate-900 dark:text-white">{viewingPatient.name}</h3>
+                                            <p className="text-slate-600 dark:text-slate-400">Patient ID: {viewingPatient.patient_id}</p>
+                                            <Badge
+                                                variant={getStatusColor(viewingPatient.status)}
+                                                className={`font-medium ${
+                                                    viewingPatient.status === 'Active'
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                                        : 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-400'
+                                                }`}
+                                            >
+                                                {viewingPatient.status}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Mail className="h-4 w-4 text-slate-400" />
+                                        <span className="text-slate-700 dark:text-slate-300">{viewingPatient.email}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Phone className="h-4 w-4 text-slate-400" />
+                                        <span className="text-slate-700 dark:text-slate-300">{viewingPatient.phone}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Calendar className="h-4 w-4 text-slate-400" />
+                                        <span className="text-slate-700 dark:text-slate-300">{viewingPatient.age} years old</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <User className="h-4 w-4 text-slate-400" />
+                                        <span className="text-slate-700 dark:text-slate-300">{viewingPatient.sex}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Tabs defaultValue="basic" className="w-full">
+                                <TabsList className="grid w-full grid-cols-4">
+                                    <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                                    <TabsTrigger value="contact">Contact</TabsTrigger>
+                                    <TabsTrigger value="medical">Medical</TabsTrigger>
+                                    <TabsTrigger value="history">History</TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="basic" className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Date of Birth</Label>
+                                            <div className="text-slate-900 dark:text-white">{new Date(viewingPatient.dob).toLocaleDateString()}</div>
+                                        </div>
+                                        <div>
+                                            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Visits</Label>
+                                            <div className="text-slate-900 dark:text-white">{viewingPatient.total_visits}</div>
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="contact" className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Address</Label>
+                                        <div className="text-slate-600 dark:text-slate-400">
+                                            {viewingPatient.address}<br />
+                                            {viewingPatient.city}, {viewingPatient.state} {viewingPatient.zip_code}
+                                        </div>
+                                    </div>
+                                    {viewingPatient.emergency_contact && (
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Emergency Contact</Label>
+                                            <div className="text-slate-600 dark:text-slate-400">
+                                                {viewingPatient.emergency_contact.name} ({viewingPatient.emergency_contact.relationship})<br />
+                                                {viewingPatient.emergency_contact.phone}
+                                            </div>
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent value="medical" className="space-y-4">
+                                    {viewingPatient.insurance && (
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Insurance</Label>
+                                            <div className="text-slate-600 dark:text-slate-400">
+                                                {viewingPatient.insurance.provider}<br />
+                                                Policy: {viewingPatient.insurance.policy_number}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {viewingPatient.medical_history && (
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Medical History</Label>
+                                            <div className="text-slate-600 dark:text-slate-400">{viewingPatient.medical_history}</div>
+                                        </div>
+                                    )}
+                                    {viewingPatient.medications && (
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Current Medications</Label>
+                                            <div className="text-slate-600 dark:text-slate-400">{viewingPatient.medications}</div>
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent value="history" className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Last Visit</Label>
+                                        <div className="text-slate-600 dark:text-slate-400">
+                                            {viewingPatient.last_visit ? new Date(viewingPatient.last_visit).toLocaleDateString() : 'No visits'}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Next Appointment</Label>
+                                        <div className="text-slate-600 dark:text-slate-400">
+                                            {viewingPatient.next_appointment ? new Date(viewingPatient.next_appointment).toLocaleDateString() : 'No upcoming appointments'}
+                                        </div>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+                            Close
+                        </Button>
+                        <Button onClick={() => {
+                            setIsViewModalOpen(false);
+                            handleEditPatient(viewingPatient!);
+                        }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Patient
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Health Records Modal */}
+            <Dialog open={isHealthRecordsModalOpen} onOpenChange={setIsHealthRecordsModalOpen}>
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Health Records</DialogTitle>
+                        <DialogDescription>
+                            Complete medical history for {viewingPatient?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {healthRecordsData && (
+                        <div className="space-y-6">
+                            <Tabs defaultValue="appointments" className="w-full">
+                                <TabsList className="grid w-full grid-cols-3">
+                                    <TabsTrigger value="appointments">Appointments</TabsTrigger>
+                                    <TabsTrigger value="encounters">Encounters</TabsTrigger>
+                                    <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="appointments" className="space-y-4">
+                                    <div className="space-y-2">
+                                        {healthRecordsData.appointments.map((appointment) => (
+                                            <div key={appointment.id} className="p-3 border rounded-lg">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="font-medium">{new Date(appointment.date).toLocaleDateString()}</div>
+                                                        <div className="text-sm text-slate-500">{appointment.doctor} - {appointment.type}</div>
+                                                    </div>
+                                                    <Badge>{appointment.status}</Badge>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="encounters" className="space-y-4">
+                                    <div className="space-y-2">
+                                        {healthRecordsData.encounters.map((encounter) => (
+                                            <div key={encounter.id} className="p-3 border rounded-lg">
+                                                <div className="font-medium">{new Date(encounter.date).toLocaleDateString()}</div>
+                                                <div className="text-sm text-slate-500">{encounter.doctor} - {encounter.type}</div>
+                                                {encounter.chief_complaint && (
+                                                    <div className="text-sm mt-1">Chief Complaint: {encounter.chief_complaint}</div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="prescriptions" className="space-y-4">
+                                    <div className="space-y-2">
+                                        {healthRecordsData.prescriptions.map((prescription) => (
+                                            <div key={prescription.id} className="p-3 border rounded-lg">
+                                                <div className="font-medium">{prescription.medication}</div>
+                                                <div className="text-sm text-slate-500">{prescription.dosage} - {prescription.frequency}</div>
+                                                <div className="text-sm mt-1">Prescribed by: {prescription.doctor}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsHealthRecordsModalOpen(false)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Modal */}
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Patient</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete {deletingPatient?.name}? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={deletePatient}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </>
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

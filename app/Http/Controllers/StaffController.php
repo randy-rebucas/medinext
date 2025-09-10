@@ -26,11 +26,17 @@ class StaffController extends Controller
         // Get user's clinic
         $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
 
+        // Get available roles (always available regardless of user clinic role)
+        $roles = $this->getAvailableRoles();
+
+        // Get departments (always available)
+        $departments = $this->getDepartments();
+
         if (!$userClinicRole) {
             return Inertia::render('admin/staff', [
                 'staff' => [],
-                'roles' => [],
-                'departments' => [],
+                'roles' => $roles,
+                'departments' => $departments,
                 'permissions' => [],
             ]);
         }
@@ -39,12 +45,6 @@ class StaffController extends Controller
 
         // Get staff members for this clinic
         $staff = $this->getStaffMembers($clinicId);
-
-        // Get available roles
-        $roles = $this->getAvailableRoles();
-
-        // Get departments
-        $departments = $this->getDepartments();
 
         // Get user permissions
         $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
@@ -84,8 +84,25 @@ class StaffController extends Controller
         }
 
         try {
-            $user = $request->user();
+            // Get user from request (works for both web and API)
+            $user = $request->user() ?? $request->get('authenticated_user');
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
             $userClinicRole = $user->userClinicRoles()->with(['clinic'])->first();
+
+            if (!$userClinicRole) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User does not have clinic access'
+                ], 403);
+            }
+
             $clinicId = $userClinicRole->clinic_id;
 
             // Create new user

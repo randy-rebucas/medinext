@@ -50,19 +50,39 @@ export interface Clinic {
 // Patient types
 export interface Patient {
     id: number;
-    name: string;
     patient_id: string;
+    name: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
     dob: string;
+    age: number;
     sex: string;
-    contact: {
-        phone?: string;
-        email?: string;
+    address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    emergency_contact: {
+        name: string;
+        phone: string;
+        relationship: string;
     };
-    address?: string;
-    emergency_contact?: string;
-    allergies?: string[];
-    medical_history?: string[];
-    last_visit?: string;
+    insurance: {
+        provider: string;
+        policy_number: string;
+        group_number: string;
+    };
+    allergies: string[];
+    medical_history: string;
+    medications: string;
+    notes: string;
+    last_visit: string | null;
+    next_appointment: string | null;
+    total_visits: number;
+    total_encounters: number;
+    total_prescriptions: number;
+    status: string;
     created_at: string;
     updated_at: string;
 }
@@ -180,9 +200,31 @@ export interface Doctor {
     phone?: string;
     specialization: string;
     license_number: string;
+    license?: string;
     clinic_id: number;
     clinic?: Clinic;
-    availability?: DoctorAvailability[];
+    availability?: DoctorAvailability[] | {
+        monday: { start: string; end: string; available: boolean };
+        tuesday: { start: string; end: string; available: boolean };
+        wednesday: { start: string; end: string; available: boolean };
+        thursday: { start: string; end: string; available: boolean };
+        friday: { start: string; end: string; available: boolean };
+        saturday: { start: string; end: string; available: boolean };
+        sunday: { start: string; end: string; available: boolean };
+    };
+    status?: string;
+    experience?: string;
+    education?: string;
+    certifications?: string;
+    address?: string;
+    emergency_contact?: string;
+    emergency_phone?: string;
+    notes?: string;
+    consultation_fee?: number;
+    patients?: number;
+    next_appointment?: string;
+    nextAppointment?: string;
+    rating?: number;
     created_at: string;
     updated_at: string;
 }

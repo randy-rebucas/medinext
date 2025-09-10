@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\License;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -19,6 +20,42 @@ class LicenseService
             return License::active()
                 ->where('expires_at', '>', now())
                 ->first();
+        });
+    }
+
+    /**
+     * Get license status from settings
+     */
+    public function getLicenseStatusFromSettings(): array
+    {
+        return Cache::remember('license_status_from_settings', 3600, function () {
+            $status = Setting::getValue('license.status', 'inactive');
+            $type = Setting::getValue('license.type', null);
+            $expiresAt = Setting::getValue('license.expires_at', null);
+            $features = Setting::getValue('license.features', []);
+
+            return [
+                'status' => $status,
+                'type' => $type,
+                'expires_at' => $expiresAt ? Carbon::parse($expiresAt) : null,
+                'features' => $features,
+                'has_license' => $status === 'active' && $type !== null,
+            ];
+        });
+    }
+
+    /**
+     * Get license usage from settings
+     */
+    public function getLicenseUsageFromSettings(): array
+    {
+        return Cache::remember('license_usage_from_settings', 3600, function () {
+            return [
+                'users' => Setting::getValue('license.usage.users', ['current' => 0, 'limit' => 0, 'percentage' => 0]),
+                'clinics' => Setting::getValue('license.usage.clinics', ['current' => 0, 'limit' => 0, 'percentage' => 0]),
+                'patients' => Setting::getValue('license.usage.patients', ['current' => 0, 'limit' => 0, 'percentage' => 0]),
+                'appointments' => Setting::getValue('license.usage.appointments', ['current' => 0, 'limit' => 0, 'percentage' => 0]),
+            ];
         });
     }
 
@@ -81,7 +118,7 @@ class LicenseService
 
         $expiryDate = $license->expires_at->format('F j, Y');
         $daysRemaining = $license->days_until_expiration;
-        
+
         return [
             'valid' => true,
             'message' => "License is valid and available! Expires on {$expiryDate} ({$daysRemaining} days remaining).",
@@ -150,6 +187,14 @@ class LicenseService
      */
     public function hasFeature(string $feature): bool
     {
+        // First try to get from settings (faster)
+        $settingsStatus = $this->getLicenseStatusFromSettings();
+
+        if ($settingsStatus['has_license'] && isset($settingsStatus['features'])) {
+            return in_array($feature, $settingsStatus['features']);
+        }
+
+        // Fallback to license model
         $license = $this->getCurrentLicense();
 
         if (!$license) {
@@ -198,6 +243,14 @@ class LicenseService
      */
     public function getCurrentUsage(string $type): int
     {
+        // First try to get from settings (faster)
+        $usageSettings = $this->getLicenseUsageFromSettings();
+
+        if (isset($usageSettings[$type]['current'])) {
+            return $usageSettings[$type]['current'];
+        }
+
+        // Fallback to license model
         $license = $this->getCurrentLicense();
 
         if (!$license) {
@@ -218,6 +271,14 @@ class LicenseService
      */
     public function getUsageLimit(string $type): int
     {
+        // First try to get from settings (faster)
+        $usageSettings = $this->getLicenseUsageFromSettings();
+
+        if (isset($usageSettings[$type]['limit'])) {
+            return $usageSettings[$type]['limit'];
+        }
+
+        // Fallback to license model
         $license = $this->getCurrentLicense();
 
         if (!$license) {
@@ -246,8 +307,12 @@ class LicenseService
 
         $license->incrementUsage($type, $amount);
 
+        // Update settings with new usage
+        $this->updateUsageInSettings($type);
+
         // Clear cache
         Cache::forget('current_license');
+        Cache::forget('license_usage_from_settings');
 
         return true;
     }
@@ -265,10 +330,57 @@ class LicenseService
 
         $license->decrementUsage($type, $amount);
 
+        // Update settings with new usage
+        $this->updateUsageInSettings($type);
+
         // Clear cache
         Cache::forget('current_license');
+        Cache::forget('license_usage_from_settings');
 
         return true;
+    }
+
+    /**
+     * Update usage in settings
+     */
+    private function updateUsageInSettings(string $type): void
+    {
+        $license = $this->getCurrentLicense();
+        if (!$license) {
+            return;
+        }
+
+        $current = match ($type) {
+            'users' => $license->current_users,
+            'clinics' => $license->current_clinics,
+            'patients' => $license->current_patients,
+            'appointments' => $license->appointments_this_month,
+            default => 0,
+        };
+
+        $limit = match ($type) {
+            'users' => $license->max_users,
+            'clinics' => $license->max_clinics,
+            'patients' => $license->max_patients,
+            'appointments' => $license->max_appointments_per_month,
+            default => 0,
+        };
+
+        $percentage = $limit > 0 ? ($current / $limit) * 100 : 0;
+
+        Setting::setValue(
+            "license.usage.{$type}",
+            [
+                'current' => $current,
+                'limit' => $limit,
+                'percentage' => $percentage
+            ],
+            null,
+            'json',
+            'system',
+            ucfirst($type) . ' usage statistics',
+            false
+        );
     }
 
     /**
@@ -317,6 +429,23 @@ class LicenseService
      */
     public function getLicenseInfo(): array
     {
+        // First try to get from settings (faster)
+        $settingsStatus = $this->getLicenseStatusFromSettings();
+        $usageSettings = $this->getLicenseUsageFromSettings();
+
+        if ($settingsStatus['has_license']) {
+            return [
+                'has_license' => true,
+                'license_type' => $settingsStatus['type'],
+                'customer_name' => $this->getCurrentLicense()?->customer_name,
+                'expires_at' => $settingsStatus['expires_at'],
+                'days_until_expiration' => $settingsStatus['expires_at'] ? now()->diffInDays($settingsStatus['expires_at'], false) : 0,
+                'features' => $settingsStatus['features'] ?? [],
+                'usage' => $usageSettings
+            ];
+        }
+
+        // Fallback to license model
         $license = $this->getCurrentLicense();
 
         if (!$license) {
@@ -360,6 +489,55 @@ class LicenseService
                 ]
             ]
         ];
+    }
+
+    /**
+     * Sync license settings with current license
+     */
+    public function syncLicenseSettings(): void
+    {
+        $license = $this->getCurrentLicense();
+
+        if (!$license) {
+            // Clear license settings if no license
+            Setting::setValue('license.status', 'inactive', null, 'string', 'system', 'Current license status', false);
+            Setting::setValue('license.type', null, null, 'string', 'system', 'Current license type', false);
+            Setting::setValue('license.expires_at', null, null, 'string', 'system', 'License expiration date', false);
+            Setting::setValue('license.features', [], null, 'json', 'system', 'Available license features', false);
+
+            // Clear usage settings
+            foreach (['users', 'clinics', 'patients', 'appointments'] as $type) {
+                Setting::setValue(
+                    "license.usage.{$type}",
+                    ['current' => 0, 'limit' => 0, 'percentage' => 0],
+                    null,
+                    'json',
+                    'system',
+                    ucfirst($type) . ' usage statistics',
+                    false
+                );
+            }
+
+            // Clear cache
+            Cache::forget('license_status_from_settings');
+            Cache::forget('license_usage_from_settings');
+            return;
+        }
+
+        // Update license settings
+        Setting::setValue('license.status', $license->status, null, 'string', 'system', 'Current license status', false);
+        Setting::setValue('license.type', $license->license_type, null, 'string', 'system', 'Current license type', false);
+        Setting::setValue('license.expires_at', $license->expires_at->toDateString(), null, 'string', 'system', 'License expiration date', false);
+        Setting::setValue('license.features', $license->features ?? [], null, 'json', 'system', 'Available license features', false);
+
+        // Update usage settings
+        foreach (['users', 'clinics', 'patients', 'appointments'] as $type) {
+            $this->updateUsageInSettings($type);
+        }
+
+        // Clear cache
+        Cache::forget('license_status_from_settings');
+        Cache::forget('license_usage_from_settings');
     }
 
     /**
@@ -520,7 +698,7 @@ class LicenseService
         // Check if user is authenticated and has valid access (trial or license)
         if (Auth::check()) {
             $user = Auth::user();
-            if ($user->hasValidAccess()) { // @phpstan-ignore-line
+            if ($user instanceof \App\Models\User && $user->hasValidAccess()) {
                 return false; // User has valid access
             }
         }
@@ -548,7 +726,7 @@ class LicenseService
         if (Auth::check()) {
             $user = Auth::user();
 
-            if ($user->isTrialExpired()) { // @phpstan-ignore-line
+            if ($user instanceof \App\Models\User && $user->isTrialExpired()) {
                 return 'Your free trial has expired. Please activate a license to continue using the application.';
             }
 

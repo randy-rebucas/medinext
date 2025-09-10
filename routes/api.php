@@ -56,6 +56,14 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/notifications', [DashboardController::class, 'notifications']);
 
+    // Settings and configuration
+    Route::get('/settings', [SettingsController::class, 'index']);
+    Route::put('/settings', [SettingsController::class, 'update']);
+    Route::get('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'getSettings']);
+    Route::put('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'updateSettings']);
+    Route::get('/settings/user', [SettingsController::class, 'userSettings']);
+    Route::put('/settings/user', [SettingsController::class, 'updateUserSettings']);
+
     // Staff Management Routes
     Route::get('/staff', [App\Http\Controllers\StaffController::class, 'index']);
     Route::post('/staff', [App\Http\Controllers\StaffController::class, 'store']);
@@ -170,13 +178,6 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
         Route::get('/medrep-visits/upcoming', [MedrepController::class, 'upcomingVisits']);
     });
 
-    // Settings and configuration
-    Route::get('/settings', [SettingsController::class, 'index']);
-    Route::put('/settings', [SettingsController::class, 'update']);
-    Route::get('/settings/clinic', [SettingsController::class, 'clinicSettings']);
-    Route::put('/settings/clinic', [SettingsController::class, 'updateClinicSettings']);
-    Route::get('/settings/user', [SettingsController::class, 'userSettings']);
-    Route::put('/settings/user', [SettingsController::class, 'updateUserSettings']);
 
     // License management routes are now in routes/license.php
 

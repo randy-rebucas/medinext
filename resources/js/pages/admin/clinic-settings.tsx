@@ -1,8 +1,9 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminClinicSettings } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -23,27 +24,121 @@ import { Switch } from '@/components/ui/switch';
 import {
     Settings,
     Save,
-    Building2,
     Clock,
-    Mail,
     Phone,
-    MapPin,
-    Globe,
     CheckCircle,
     AlertCircle
 } from 'lucide-react';
 
+interface ClinicSettingsData {
+    clinic_name: string;
+    clinic_code: string;
+    description: string;
+    phone: string;
+    email: string;
+    address: string;
+    website: string;
+    license: string;
+    opening_time: string;
+    closing_time: string;
+    working_days: string[];
+    email_notifications: boolean;
+    sms_notifications: boolean;
+    online_booking: boolean;
+    patient_portal: boolean;
+}
+
+interface Clinic {
+    id: number;
+    name: string;
+    slug?: string;
+    timezone: string;
+    logo_url?: string;
+    address?: string | { formatted?: string; [key: string]: unknown };
+    phone?: string;
+    email?: string;
+    website?: string;
+    description?: string;
+    settings?: Record<string, unknown>;
+}
+
+interface PageProps {
+    clinic: Clinic;
+    settings: ClinicSettingsData;
+    [key: string]: unknown;
+}
+
 export default function ClinicSettings() {
+    const { props } = usePage<PageProps>();
     const [isSaving, setIsSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [errorMessage, setErrorMessage] = useState<string>('');
+    const [formData, setFormData] = useState<ClinicSettingsData>({
+        clinic_name: props.settings?.clinic_name || props.clinic?.name || '',
+        clinic_code: props.settings?.clinic_code || '',
+        description: props.settings?.description || props.clinic?.description || '',
+        phone: props.settings?.phone || props.clinic?.phone || '',
+        email: props.settings?.email || props.clinic?.email || '',
+        address: props.settings?.address || (props.clinic?.address ?
+            (typeof props.clinic.address === 'string' ? props.clinic.address : props.clinic.address.formatted || '') : ''),
+        website: props.settings?.website || props.clinic?.website || '',
+        license: props.settings?.license || '',
+        opening_time: props.settings?.opening_time || '08:00',
+        closing_time: props.settings?.closing_time || '18:00',
+        working_days: props.settings?.working_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        email_notifications: props.settings?.email_notifications ?? true,
+        sms_notifications: props.settings?.sms_notifications ?? true,
+        online_booking: props.settings?.online_booking ?? true,
+        patient_portal: props.settings?.patient_portal ?? true,
+    });
+
+    const handleInputChange = (field: keyof ClinicSettingsData, value: string | boolean | string[]) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleWorkingDayToggle = (day: string) => {
+        setFormData(prev => ({
+            ...prev,
+            working_days: prev.working_days.includes(day)
+                ? prev.working_days.filter(d => d !== day)
+                : [...prev.working_days, day]
+        }));
+    };
 
     const handleSave = async () => {
         setIsSaving(true);
-        // Simulate save operation
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsSaving(false);
-        setSaveStatus('success');
-        setTimeout(() => setSaveStatus('idle'), 3000);
+        setSaveStatus('idle');
+        setErrorMessage('');
+
+        try {
+            const response = await axios.put('/api/settings/clinic', formData);
+
+            if (response.data.success) {
+                setSaveStatus('success');
+                setTimeout(() => setSaveStatus('idle'), 3000);
+            } else {
+                setSaveStatus('error');
+                setErrorMessage(response.data.message || 'Failed to save settings');
+            }
+        } catch (error: unknown) {
+            setSaveStatus('error');
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+                if (axiosError.response?.data?.errors) {
+                    const errors = Object.values(axiosError.response.data.errors).flat();
+                    setErrorMessage(errors.join(', '));
+                } else {
+                    setErrorMessage(axiosError.response?.data?.message || 'Failed to save settings');
+                }
+            } else {
+                setErrorMessage('Failed to save settings');
+            }
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -85,7 +180,8 @@ export default function ClinicSettings() {
                                         <Label htmlFor="clinic-name" className="text-slate-700 dark:text-slate-300 font-medium">Clinic Name</Label>
                                         <Input
                                             id="clinic-name"
-                                            defaultValue="MediNext Clinic"
+                                            value={formData.clinic_name}
+                                            onChange={(e) => handleInputChange('clinic_name', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -93,7 +189,8 @@ export default function ClinicSettings() {
                                         <Label htmlFor="clinic-code" className="text-slate-700 dark:text-slate-300 font-medium">Clinic Code</Label>
                                         <Input
                                             id="clinic-code"
-                                            defaultValue="MNC001"
+                                            value={formData.clinic_code}
+                                            onChange={(e) => handleInputChange('clinic_code', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -102,7 +199,8 @@ export default function ClinicSettings() {
                                     <Label htmlFor="description" className="text-slate-700 dark:text-slate-300 font-medium">Description</Label>
                                     <Textarea
                                         id="description"
-                                        defaultValue="A modern healthcare facility providing comprehensive medical services."
+                                        value={formData.description}
+                                        onChange={(e) => handleInputChange('description', e.target.value)}
                                         rows={3}
                                         className="border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                     />
@@ -129,7 +227,8 @@ export default function ClinicSettings() {
                                         <Label htmlFor="phone" className="text-slate-700 dark:text-slate-300 font-medium">Phone Number</Label>
                                         <Input
                                             id="phone"
-                                            defaultValue="+1 (555) 123-4567"
+                                            value={formData.phone}
+                                            onChange={(e) => handleInputChange('phone', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -138,7 +237,8 @@ export default function ClinicSettings() {
                                         <Input
                                             id="email"
                                             type="email"
-                                            defaultValue="info@medinext.com"
+                                            value={formData.email}
+                                            onChange={(e) => handleInputChange('email', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -147,7 +247,8 @@ export default function ClinicSettings() {
                                     <Label htmlFor="address" className="text-slate-700 dark:text-slate-300 font-medium">Address</Label>
                                     <Textarea
                                         id="address"
-                                        defaultValue="123 Medical Center Drive, Healthcare City, HC 12345"
+                                        value={formData.address}
+                                        onChange={(e) => handleInputChange('address', e.target.value)}
                                         rows={2}
                                         className="border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                     />
@@ -157,7 +258,8 @@ export default function ClinicSettings() {
                                         <Label htmlFor="website" className="text-slate-700 dark:text-slate-300 font-medium">Website</Label>
                                         <Input
                                             id="website"
-                                            defaultValue="https://www.medinext.com"
+                                            value={formData.website}
+                                            onChange={(e) => handleInputChange('website', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -165,7 +267,8 @@ export default function ClinicSettings() {
                                         <Label htmlFor="license" className="text-slate-700 dark:text-slate-300 font-medium">License Number</Label>
                                         <Input
                                             id="license"
-                                            defaultValue="HC-2024-001"
+                                            value={formData.license}
+                                            onChange={(e) => handleInputChange('license', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -193,7 +296,8 @@ export default function ClinicSettings() {
                                         <Input
                                             id="opening-time"
                                             type="time"
-                                            defaultValue="08:00"
+                                            value={formData.opening_time}
+                                            onChange={(e) => handleInputChange('opening_time', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -202,7 +306,8 @@ export default function ClinicSettings() {
                                         <Input
                                             id="closing-time"
                                             type="time"
-                                            defaultValue="18:00"
+                                            value={formData.closing_time}
+                                            onChange={(e) => handleInputChange('closing_time', e.target.value)}
                                             className="h-11 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                                         />
                                     </div>
@@ -210,14 +315,19 @@ export default function ClinicSettings() {
                                 <div className="space-y-2">
                                     <Label htmlFor="working-days" className="text-slate-700 dark:text-slate-300 font-medium">Working Days</Label>
                                     <div className="flex flex-wrap gap-2">
-                                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
                                             <Button
                                                 key={day}
-                                                variant="outline"
+                                                type="button"
+                                                variant={formData.working_days.includes(day) ? "default" : "outline"}
                                                 size="sm"
-                                                className="border-slate-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500"
+                                                onClick={() => handleWorkingDayToggle(day)}
+                                                className={formData.working_days.includes(day)
+                                                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                                                    : "border-slate-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500"
+                                                }
                                             >
-                                                {day}
+                                                {day.charAt(0).toUpperCase() + day.slice(1)}
                                             </Button>
                                         ))}
                                     </div>
@@ -247,7 +357,10 @@ export default function ClinicSettings() {
                                                 Send email notifications for appointments and updates
                                             </p>
                                         </div>
-                                        <Switch defaultChecked />
+                                        <Switch
+                                            checked={formData.email_notifications}
+                                            onCheckedChange={(checked) => handleInputChange('email_notifications', checked)}
+                                        />
                                     </div>
                                     <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
                                         <div className="space-y-1">
@@ -256,7 +369,10 @@ export default function ClinicSettings() {
                                                 Send SMS reminders for appointments
                                             </p>
                                         </div>
-                                        <Switch defaultChecked />
+                                        <Switch
+                                            checked={formData.sms_notifications}
+                                            onCheckedChange={(checked) => handleInputChange('sms_notifications', checked)}
+                                        />
                                     </div>
                                     <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
                                         <div className="space-y-1">
@@ -265,7 +381,10 @@ export default function ClinicSettings() {
                                                 Allow patients to book appointments online
                                             </p>
                                         </div>
-                                        <Switch defaultChecked />
+                                        <Switch
+                                            checked={formData.online_booking}
+                                            onCheckedChange={(checked) => handleInputChange('online_booking', checked)}
+                                        />
                                     </div>
                                     <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl">
                                         <div className="space-y-1">
@@ -274,14 +393,17 @@ export default function ClinicSettings() {
                                                 Enable patient portal access
                                             </p>
                                         </div>
-                                        <Switch defaultChecked />
+                                        <Switch
+                                            checked={formData.patient_portal}
+                                            onCheckedChange={(checked) => handleInputChange('patient_portal', checked)}
+                                        />
                                     </div>
                                 </div>
                             </CardContent>
                     </Card>
 
                         {/* Save Button */}
-                        <div className="flex justify-end space-x-3">
+                        <div className="flex flex-col items-end space-y-3">
                             {saveStatus === 'success' && (
                                 <div className="flex items-center text-green-600 dark:text-green-400">
                                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -291,7 +413,7 @@ export default function ClinicSettings() {
                             {saveStatus === 'error' && (
                                 <div className="flex items-center text-red-600 dark:text-red-400">
                                     <AlertCircle className="mr-2 h-4 w-4" />
-                                    Failed to save settings
+                                    {errorMessage || 'Failed to save settings'}
                                 </div>
                             )}
                             <Button
