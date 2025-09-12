@@ -43,6 +43,8 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             // Clinic Management Group
             \App\Nova\Clinic::class,
             \App\Nova\Room::class,
+            \App\Nova\Queue::class,
+            \App\Nova\QueuePatient::class,
 
             // Medical Staff Group
             \App\Nova\Doctor::class,
@@ -52,6 +54,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             // Patient Management Group
             \App\Nova\Patient::class,
             \App\Nova\Encounter::class,
+            \App\Nova\Insurance::class,
 
             // Clinical Services Group
             \App\Nova\Appointment::class,
@@ -59,11 +62,16 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             \App\Nova\PrescriptionItem::class,
             \App\Nova\LabResult::class,
 
+            // Billing Group
+            \App\Nova\Bill::class,
+            \App\Nova\BillItem::class,
+
             // System Management Group
             \App\Nova\Setting::class,
             \App\Nova\License::class,
             \App\Nova\FileAsset::class,
             \App\Nova\ActivityLog::class,
+            \App\Nova\Notification::class,
         ]);
 
         // Customize Nova main menu
@@ -84,6 +92,8 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                 MenuSection::make('Clinic Management', [
                     MenuItem::resource(\App\Nova\Clinic::class),
                     MenuItem::resource(\App\Nova\Room::class),
+                    MenuItem::resource(\App\Nova\Queue::class),
+                    MenuItem::resource(\App\Nova\QueuePatient::class),
                 ])->icon('building-office')->collapsable(),
 
                 // Medical Staff Group
@@ -97,6 +107,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                 MenuSection::make('Patient Management', [
                     MenuItem::resource(\App\Nova\Patient::class),
                     MenuItem::resource(\App\Nova\Encounter::class),
+                    MenuItem::resource(\App\Nova\Insurance::class),
                 ])->icon('heart')->collapsable(),
 
                 // Clinical Services Group
@@ -107,12 +118,19 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
                     MenuItem::resource(\App\Nova\LabResult::class),
                 ])->icon('document-text')->collapsable(),
 
+                // Billing Group
+                MenuSection::make('Billing', [
+                    MenuItem::resource(\App\Nova\Bill::class),
+                    MenuItem::resource(\App\Nova\BillItem::class),
+                ])->icon('currency-dollar')->collapsable(),
+
                 // System Management Group
                 MenuSection::make('System Management', [
                     MenuItem::resource(\App\Nova\Setting::class),
                     MenuItem::resource(\App\Nova\License::class),
                     MenuItem::resource(\App\Nova\FileAsset::class),
-                    MenuItem::resource(\App\Nova\ActivityLog::class)
+                    MenuItem::resource(\App\Nova\ActivityLog::class),
+                    MenuItem::resource(\App\Nova\Notification::class)
                 ])->icon('cog')->collapsable(),
             ];
         });
@@ -226,6 +244,8 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             // Clinic Management Group
             \App\Nova\Clinic::class,
             \App\Nova\Room::class,
+            \App\Nova\Queue::class,
+            \App\Nova\QueuePatient::class,
 
             // Medical Staff Group
             \App\Nova\Doctor::class,
@@ -235,6 +255,7 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             // Patient Management Group
             \App\Nova\Patient::class,
             \App\Nova\Encounter::class,
+            \App\Nova\Insurance::class,
 
             // Clinical Services Group
             \App\Nova\Appointment::class,
@@ -242,11 +263,16 @@ class NovaServiceProvider extends NovaApplicationServiceProvider
             \App\Nova\PrescriptionItem::class,
             \App\Nova\LabResult::class,
 
+            // Billing Group
+            \App\Nova\Bill::class,
+            \App\Nova\BillItem::class,
+
             // System Management Group
             \App\Nova\Setting::class,
             \App\Nova\License::class,
             \App\Nova\FileAsset::class,
-            \App\Nova\ActivityLog::class
+            \App\Nova\ActivityLog::class,
+            \App\Nova\Notification::class
         ];
         // Debug: Log the resources being returned
         Log::info('NovaServiceProvider returning resources', ['count' => count($resources)]);

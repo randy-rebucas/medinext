@@ -5,35 +5,31 @@ namespace App\Nova;
 use Illuminate\Http\Request;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\Date;
-use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Textarea;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\BelongsTo;
-use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
 use App\Nova\Actions\BulkUpdate;
-use App\Nova\Filters\StatusFilter;
 use App\Nova\Filters\DateRangeFilter;
-use App\Nova\Lenses\ActiveRecords;
 
-class Patient extends Resource
+class BillItem extends Resource
 {
     /**
      * The model the resource corresponds to.
      *
-     * @var class-string<\App\Models\Patient>
+     * @var class-string<\App\Models\BillItem>
      */
-    public static $model = \App\Models\Patient::class;
+    public static $model = \App\Models\BillItem::class;
 
     /**
      * The single value that should be used to represent the resource when being displayed.
      *
      * @var string
      */
-    public static $title = 'first_name';
+    public static $title = 'description';
 
     /**
      * The columns that should be searched.
@@ -41,7 +37,7 @@ class Patient extends Resource
      * @var array
      */
     public static $search = [
-        'id', 'first_name', 'last_name', 'code'
+        'id', 'description', 'item_code'
     ];
 
     /**
@@ -51,7 +47,7 @@ class Patient extends Resource
      */
     public static function label()
     {
-        return 'Patients';
+        return 'Bill Items';
     }
 
     /**
@@ -61,7 +57,7 @@ class Patient extends Resource
      */
     public static function singularLabel()
     {
-        return 'Patient';
+        return 'Bill Item';
     }
 
     /**
@@ -71,7 +67,7 @@ class Patient extends Resource
      */
     public static function uriKey()
     {
-        return 'patients';
+        return 'bill-items';
     }
 
     /**
@@ -83,7 +79,7 @@ class Patient extends Resource
      */
     public static function indexQuery(NovaRequest $request, $query)
     {
-        return $query->with(['clinic', 'appointments', 'encounters']);
+        return $query->with(['bill']);
     }
 
     /**
@@ -95,7 +91,7 @@ class Patient extends Resource
      */
     public static function detailQuery(NovaRequest $request, $query)
     {
-        return $query->with(['clinic', 'appointments.doctor', 'encounters.doctor', 'prescriptions', 'labResults']);
+        return $query->with(['bill']);
     }
 
     /**
@@ -108,70 +104,50 @@ class Patient extends Resource
         return [
             ID::make()->sortable(),
 
-            Text::make('Code')
-                ->sortable()
-                ->rules('required', 'max:50'),
-
-            Text::make('First Name', 'first_name')
-                ->sortable()
-                ->rules('required', 'max:255'),
-
-            Text::make('Last Name', 'last_name')
-                ->sortable()
-                ->rules('required', 'max:255'),
-
-            Date::make('Date of Birth', 'dob')
-                ->sortable()
-                ->rules('required', 'date', 'before:today'),
-
-            Select::make('Sex')
-                ->options([
-                    'male' => 'Male',
-                    'female' => 'Female',
-                    'other' => 'Other',
-                    'prefer_not_to_say' => 'Prefer not to say'
-                ])
-                ->sortable()
-                ->rules('required'),
-
-            BelongsTo::make('Clinic')
+            BelongsTo::make('Bill')
                 ->searchable()
-                ->sortable(),
+                ->sortable()
+                ->rules('required', 'exists:bills,id'),
 
-            \Laravel\Nova\Fields\KeyValue::make('Contact')
+            Text::make('Item Code', 'item_code')
+                ->sortable()
+                ->nullable()
+                ->rules('nullable', 'max:50')
+                ->help('Internal item code'),
+
+            Text::make('Description')
+                ->sortable()
+                ->rules('required', 'max:255'),
+
+            Textarea::make('Details')
                 ->nullable()
                 ->hideFromIndex()
-                ->help('Contact information (phone, email, address)'),
+                ->help('Additional details about the item'),
 
-            \Laravel\Nova\Fields\KeyValue::make('Allergies')
-                ->nullable()
-                ->hideFromIndex()
-                ->help('Patient allergies and reactions'),
+            Number::make('Quantity')
+                ->sortable()
+                ->rules('required', 'numeric', 'min:0.01')
+                ->help('Quantity of the item'),
 
-            \Laravel\Nova\Fields\KeyValue::make('Consents')
-                ->nullable()
-                ->hideFromIndex()
-                ->help('Patient consent forms and agreements'),
+            Number::make('Unit Price', 'unit_price')
+                ->sortable()
+                ->step(0.01)
+                ->rules('required', 'numeric', 'min:0')
+                ->help('Price per unit'),
 
-            \Laravel\Nova\Fields\Text::make('Full Name', function () {
-                return $this->first_name . ' ' . $this->last_name;
-            })->sortable()
-                ->exceptOnForms(),
+            Number::make('Total')
+                ->sortable()
+                ->step(0.01)
+                ->rules('required', 'numeric', 'min:0')
+                ->help('Total amount (quantity × unit price)'),
 
-            \Laravel\Nova\Fields\Number::make('Age', function () {
-                return $this->dob ? $this->dob->age : null;
-            })->sortable()
-                ->exceptOnForms(),
+            \Laravel\Nova\Fields\Text::make('Bill Number', function () {
+                return $this->bill ? $this->bill->bill_number : 'N/A';
+            })->onlyOnIndex(),
 
-            \Laravel\Nova\Fields\Number::make('Total Appointments', function () {
-                return $this->appointments()->count();
-            })->sortable()
-                ->exceptOnForms(),
-
-            \Laravel\Nova\Fields\Number::make('Total Encounters', function () {
-                return $this->encounters()->count();
-            })->sortable()
-                ->exceptOnForms(),
+            \Laravel\Nova\Fields\Text::make('Patient Name', function () {
+                return $this->bill && $this->bill->patient ? $this->bill->patient->full_name : 'N/A';
+            })->onlyOnIndex(),
 
             DateTime::make('Created At')
                 ->sortable()
@@ -181,21 +157,6 @@ class Patient extends Resource
             DateTime::make('Updated At')
                 ->sortable()
                 ->exceptOnForms()
-                ->hideFromIndex(),
-
-            HasMany::make('Appointments')
-                ->hideFromIndex(),
-            HasMany::make('Encounters')
-                ->hideFromIndex(),
-            HasMany::make('Prescriptions')
-                ->hideFromIndex(),
-            HasMany::make('Lab Results')
-                ->hideFromIndex(),
-            HasMany::make('Insurance')
-                ->hideFromIndex(),
-            HasMany::make('Bills')
-                ->hideFromIndex(),
-            HasMany::make('Queue Patients', 'queuePatients', QueuePatient::class)
                 ->hideFromIndex(),
         ];
     }
@@ -218,7 +179,6 @@ class Patient extends Resource
     public function filters(NovaRequest $request): array
     {
         return [
-            new StatusFilter,
             new DateRangeFilter,
         ];
     }
@@ -230,9 +190,7 @@ class Patient extends Resource
      */
     public function lenses(NovaRequest $request): array
     {
-        return [
-            new ActiveRecords,
-        ];
+        return [];
     }
 
     /**
@@ -245,8 +203,6 @@ class Patient extends Resource
         return [
             new ExportData,
             new BulkUpdate,
-            new \App\Nova\Actions\GeneratePatientReport,
-            new \App\Nova\Actions\UpdatePatientInsurance,
         ];
     }
 }

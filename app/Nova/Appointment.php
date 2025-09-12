@@ -207,6 +207,17 @@ class Appointment extends Resource
                 ->exceptOnForms()
                 ->hideFromIndex(),
 
+            BelongsTo::make('Encounter')
+                ->nullable()
+                ->searchable()
+                ->hideFromIndex()
+                ->rules('nullable', 'exists:encounters,id'),
+
+            DateTime::make('Created At')
+                ->sortable()
+                ->exceptOnForms()
+                ->hideFromIndex(),
+
             DateTime::make('Updated At')
                 ->sortable()
                 ->exceptOnForms()
@@ -234,6 +245,10 @@ class Appointment extends Resource
         return [
             new StatusFilter,
             new DateRangeFilter,
+            new \App\Nova\Filters\AppointmentStatusFilter,
+            new \App\Nova\Filters\DoctorFilter,
+            new \App\Nova\Filters\PatientFilter,
+            new \App\Nova\Filters\ClinicFilter,
         ];
     }
 
@@ -246,6 +261,7 @@ class Appointment extends Resource
     {
         return [
             new ActiveRecords,
+            new \App\Nova\Lenses\TodaysAppointments,
         ];
     }
 
@@ -259,6 +275,9 @@ class Appointment extends Resource
         return [
             new ExportData,
             new BulkUpdate,
+            new \App\Nova\Actions\ConfirmAppointments,
+            new \App\Nova\Actions\CancelAppointments,
+            new \App\Nova\Actions\RescheduleAppointments,
         ];
     }
 }

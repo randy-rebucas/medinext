@@ -202,6 +202,9 @@ class LabResult extends Resource
         return [
             new StatusFilter,
             new DateRangeFilter,
+            new \App\Nova\Filters\DoctorFilter,
+            new \App\Nova\Filters\PatientFilter,
+            new \App\Nova\Filters\ClinicFilter,
         ];
     }
 
@@ -214,6 +217,7 @@ class LabResult extends Resource
     {
         return [
             new ActiveRecords,
+            new \App\Nova\Lenses\RecentLabResults,
         ];
     }
 
@@ -227,6 +231,7 @@ class LabResult extends Resource
         return [
             new ExportData,
             new BulkUpdate,
+            new \App\Nova\Actions\ApproveLabResults,
         ];
     }
 }

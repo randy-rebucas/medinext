@@ -164,7 +164,8 @@ class Doctor extends Resource
             HasMany::make('Appointments', 'appointments', Appointment::class),
             HasMany::make('Encounters', 'encounters', Encounter::class),
             HasMany::make('Prescriptions', 'prescriptions', Prescription::class),
-            HasMany::make('Lab Results', 'labResults', LabResult::class),
+            HasMany::make('Lab Results Ordered', 'labResultsOrdered', LabResult::class),
+            HasMany::make('Lab Results Reviewed', 'labResultsReviewed', LabResult::class),
             HasMany::make('Medrep Visits', 'medrepVisits', MedrepVisit::class),
         ];
     }

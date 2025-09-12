@@ -4,36 +4,33 @@ namespace App\Nova;
 
 use Illuminate\Http\Request;
 use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\Date;
 use Laravel\Nova\Fields\Select;
-use Laravel\Nova\Fields\Textarea;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\BelongsTo;
-use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\DateTime;
+use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
 use App\Nova\Actions\BulkUpdate;
 use App\Nova\Filters\StatusFilter;
 use App\Nova\Filters\DateRangeFilter;
-use App\Nova\Lenses\ActiveRecords;
 
-class Patient extends Resource
+class QueuePatient extends Resource
 {
     /**
      * The model the resource corresponds to.
      *
-     * @var class-string<\App\Models\Patient>
+     * @var class-string<\App\Models\QueuePatient>
      */
-    public static $model = \App\Models\Patient::class;
+    public static $model = \App\Models\QueuePatient::class;
 
     /**
      * The single value that should be used to represent the resource when being displayed.
      *
      * @var string
      */
-    public static $title = 'first_name';
+    public static $title = 'id';
 
     /**
      * The columns that should be searched.
@@ -41,7 +38,7 @@ class Patient extends Resource
      * @var array
      */
     public static $search = [
-        'id', 'first_name', 'last_name', 'code'
+        'id', 'status'
     ];
 
     /**
@@ -51,7 +48,7 @@ class Patient extends Resource
      */
     public static function label()
     {
-        return 'Patients';
+        return 'Queue Patients';
     }
 
     /**
@@ -61,7 +58,7 @@ class Patient extends Resource
      */
     public static function singularLabel()
     {
-        return 'Patient';
+        return 'Queue Patient';
     }
 
     /**
@@ -71,7 +68,7 @@ class Patient extends Resource
      */
     public static function uriKey()
     {
-        return 'patients';
+        return 'queue-patients';
     }
 
     /**
@@ -83,7 +80,7 @@ class Patient extends Resource
      */
     public static function indexQuery(NovaRequest $request, $query)
     {
-        return $query->with(['clinic', 'appointments', 'encounters']);
+        return $query->with(['queue', 'patient']);
     }
 
     /**
@@ -95,7 +92,7 @@ class Patient extends Resource
      */
     public static function detailQuery(NovaRequest $request, $query)
     {
-        return $query->with(['clinic', 'appointments.doctor', 'encounters.doctor', 'prescriptions', 'labResults']);
+        return $query->with(['queue', 'patient']);
     }
 
     /**
@@ -108,70 +105,82 @@ class Patient extends Resource
         return [
             ID::make()->sortable(),
 
-            Text::make('Code')
+            BelongsTo::make('Queue')
+                ->searchable()
                 ->sortable()
-                ->rules('required', 'max:50'),
+                ->rules('required', 'exists:queues,id'),
 
-            Text::make('First Name', 'first_name')
+            BelongsTo::make('Patient')
+                ->searchable()
                 ->sortable()
-                ->rules('required', 'max:255'),
+                ->rules('required', 'exists:patients,id'),
 
-            Text::make('Last Name', 'last_name')
-                ->sortable()
-                ->rules('required', 'max:255'),
-
-            Date::make('Date of Birth', 'dob')
-                ->sortable()
-                ->rules('required', 'date', 'before:today'),
-
-            Select::make('Sex')
+            Select::make('Status')
                 ->options([
-                    'male' => 'Male',
-                    'female' => 'Female',
-                    'other' => 'Other',
-                    'prefer_not_to_say' => 'Prefer not to say'
+                    'waiting' => 'Waiting',
+                    'called' => 'Called',
+                    'served' => 'Served',
+                    'removed' => 'Removed',
+                    'cancelled' => 'Cancelled'
                 ])
                 ->sortable()
                 ->rules('required'),
 
-            BelongsTo::make('Clinic')
-                ->searchable()
-                ->sortable(),
+            Number::make('Priority')
+                ->sortable()
+                ->rules('required', 'integer', 'min:1', 'max:5')
+                ->help('Priority level (1-5, 5 being highest)'),
 
-            \Laravel\Nova\Fields\KeyValue::make('Contact')
+            DateTime::make('Joined At', 'joined_at')
+                ->sortable()
+                ->rules('required', 'date'),
+
+            DateTime::make('Called At', 'called_at')
+                ->sortable()
+                ->nullable()
+                ->exceptOnForms(),
+
+            DateTime::make('Served At', 'served_at')
+                ->sortable()
+                ->nullable()
+                ->exceptOnForms(),
+
+            DateTime::make('Removed At', 'removed_at')
+                ->sortable()
+                ->nullable()
+                ->exceptOnForms(),
+
+            KeyValue::make('Metadata')
                 ->nullable()
                 ->hideFromIndex()
-                ->help('Contact information (phone, email, address)'),
+                ->help('Additional metadata for this queue entry'),
 
-            \Laravel\Nova\Fields\KeyValue::make('Allergies')
-                ->nullable()
-                ->hideFromIndex()
-                ->help('Patient allergies and reactions'),
+            \Laravel\Nova\Fields\Text::make('Patient Name', function () {
+                return $this->patient ? $this->patient->full_name : 'N/A';
+            })->onlyOnIndex(),
 
-            \Laravel\Nova\Fields\KeyValue::make('Consents')
-                ->nullable()
-                ->hideFromIndex()
-                ->help('Patient consent forms and agreements'),
+            \Laravel\Nova\Fields\Text::make('Queue Name', function () {
+                return $this->queue ? $this->queue->name : 'N/A';
+            })->onlyOnIndex(),
 
-            \Laravel\Nova\Fields\Text::make('Full Name', function () {
-                return $this->first_name . ' ' . $this->last_name;
-            })->sortable()
-                ->exceptOnForms(),
+            \Laravel\Nova\Fields\Number::make('Wait Time (minutes)', function () {
+                if ($this->served_at && $this->joined_at) {
+                    return $this->joined_at->diffInMinutes($this->served_at);
+                } elseif ($this->called_at && $this->joined_at) {
+                    return $this->joined_at->diffInMinutes($this->called_at);
+                }
+                return null;
+            })->exceptOnForms()
+                ->hideFromIndex(),
 
-            \Laravel\Nova\Fields\Number::make('Age', function () {
-                return $this->dob ? $this->dob->age : null;
-            })->sortable()
-                ->exceptOnForms(),
-
-            \Laravel\Nova\Fields\Number::make('Total Appointments', function () {
-                return $this->appointments()->count();
-            })->sortable()
-                ->exceptOnForms(),
-
-            \Laravel\Nova\Fields\Number::make('Total Encounters', function () {
-                return $this->encounters()->count();
-            })->sortable()
-                ->exceptOnForms(),
+            \Laravel\Nova\Fields\Badge::make('Status')
+                ->map([
+                    'waiting' => 'warning',
+                    'called' => 'info',
+                    'served' => 'success',
+                    'removed' => 'danger',
+                    'cancelled' => 'danger',
+                ]),
 
             DateTime::make('Created At')
                 ->sortable()
@@ -181,21 +190,6 @@ class Patient extends Resource
             DateTime::make('Updated At')
                 ->sortable()
                 ->exceptOnForms()
-                ->hideFromIndex(),
-
-            HasMany::make('Appointments')
-                ->hideFromIndex(),
-            HasMany::make('Encounters')
-                ->hideFromIndex(),
-            HasMany::make('Prescriptions')
-                ->hideFromIndex(),
-            HasMany::make('Lab Results')
-                ->hideFromIndex(),
-            HasMany::make('Insurance')
-                ->hideFromIndex(),
-            HasMany::make('Bills')
-                ->hideFromIndex(),
-            HasMany::make('Queue Patients', 'queuePatients', QueuePatient::class)
                 ->hideFromIndex(),
         ];
     }
@@ -220,6 +214,9 @@ class Patient extends Resource
         return [
             new StatusFilter,
             new DateRangeFilter,
+            new \App\Nova\Filters\QueueStatusFilter,
+            new \App\Nova\Filters\PatientFilter,
+            new \App\Nova\Filters\ClinicFilter,
         ];
     }
 
@@ -231,7 +228,7 @@ class Patient extends Resource
     public function lenses(NovaRequest $request): array
     {
         return [
-            new ActiveRecords,
+            new \App\Nova\Lenses\QueueStatus,
         ];
     }
 
@@ -245,8 +242,8 @@ class Patient extends Resource
         return [
             new ExportData,
             new BulkUpdate,
-            new \App\Nova\Actions\GeneratePatientReport,
-            new \App\Nova\Actions\UpdatePatientInsurance,
+            new \App\Nova\Actions\CallNextPatient,
+            new \App\Nova\Actions\ServePatient,
         ];
     }
 }

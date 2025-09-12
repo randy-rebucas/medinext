@@ -2,11 +2,11 @@
 
 namespace App\Nova\Metrics;
 
-use App\Models\Patient;
+use App\Models\Bill;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Metrics\Trend;
 
-class PatientGrowthTrend extends Trend
+class RevenueTrend extends Trend
 {
     /**
      * Get the displayable name of the metric.
@@ -15,7 +15,7 @@ class PatientGrowthTrend extends Trend
      */
     public function name()
     {
-        return __('Patient Growth Trend');
+        return __('Revenue Trend');
     }
 
     /**
@@ -26,7 +26,7 @@ class PatientGrowthTrend extends Trend
      */
     public function calculate(NovaRequest $request)
     {
-        return $this->countByDays($request, Patient::class)
+        return $this->sumByDays($request, Bill::class, 'total_amount')
             ->showLatestValue();
     }
 
@@ -62,6 +62,6 @@ class PatientGrowthTrend extends Trend
      */
     public function uriKey()
     {
-        return 'patient-growth-trend';
+        return 'revenue-trend';
     }
 }

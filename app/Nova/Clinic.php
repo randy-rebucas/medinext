@@ -166,6 +166,14 @@ class Clinic extends Resource
             HasMany::make('Patients', 'patients', Patient::class),
             HasMany::make('Rooms', 'rooms', Room::class),
             HasMany::make('Appointments', 'appointments', Appointment::class),
+            HasMany::make('Encounters', 'encounters', Encounter::class),
+            HasMany::make('Prescriptions', 'prescriptions', Prescription::class),
+            HasMany::make('Lab Results', 'labResults', LabResult::class),
+            HasMany::make('Activity Logs', 'activityLogs', ActivityLog::class),
+            HasMany::make('Medrep Visits', 'medrepVisits', MedrepVisit::class),
+            HasMany::make('File Assets', 'fileAssets', FileAsset::class),
+            HasMany::make('Bills', 'bills', Bill::class),
+            HasMany::make('Queues', 'queues', Queue::class),
             HasMany::make('User Clinic Roles', 'userClinicRoles', UserClinicRole::class),
         ];
     }

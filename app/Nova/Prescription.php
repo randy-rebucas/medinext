@@ -158,6 +158,10 @@ class Prescription extends Resource
         return [
             new StatusFilter,
             new DateRangeFilter,
+            new \App\Nova\Filters\PrescriptionStatusFilter,
+            new \App\Nova\Filters\DoctorFilter,
+            new \App\Nova\Filters\PatientFilter,
+            new \App\Nova\Filters\ClinicFilter,
         ];
     }
 
@@ -170,6 +174,7 @@ class Prescription extends Resource
     {
         return [
             new ActiveRecords,
+            new \App\Nova\Lenses\ActivePrescriptions,
         ];
     }
 
@@ -183,6 +188,8 @@ class Prescription extends Resource
         return [
             new ExportData,
             new BulkUpdate,
+            new \App\Nova\Actions\DispensePrescriptions,
+            new \App\Nova\Actions\RefillPrescriptions,
         ];
     }
 }
