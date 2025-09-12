@@ -58,6 +58,9 @@ class SystemController extends BaseController
     public function health(): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('system.info');
+
             // Check database connection
             $dbStatus = 'connected';
             try {

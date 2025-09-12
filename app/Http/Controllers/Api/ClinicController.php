@@ -187,6 +187,9 @@ class ClinicController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('clinics.view');
+
             $user = $this->getAuthenticatedUser();
             if (!$user instanceof User) {
                 return $this->errorResponse('User not found', null, 404);

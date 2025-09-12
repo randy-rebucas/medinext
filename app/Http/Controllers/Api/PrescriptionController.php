@@ -173,6 +173,9 @@ class PrescriptionController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('prescriptions.view');
+
             $currentClinic = $this->getCurrentClinic();
 
             if (!$currentClinic) {
@@ -304,6 +307,9 @@ class PrescriptionController extends BaseController
     public function store(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('prescriptions.create');
+
             $currentClinic = $this->getCurrentClinic();
 
             if (!$currentClinic) {

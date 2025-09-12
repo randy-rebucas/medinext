@@ -117,7 +117,16 @@ class ActivityLogController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = ActivityLog::with('user');
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('activity_logs.view');
+
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            $query = ActivityLog::with('user')
+                ->where('clinic_id', $currentClinic->id);
 
             // Apply filters
             if ($request->has('user_id')) {

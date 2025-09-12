@@ -100,7 +100,16 @@ class QueueController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Queue::with(['doctor', 'clinic']);
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('queue.view');
+
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            $query = Queue::with(['doctor', 'clinic'])
+                ->where('clinic_id', $currentClinic->id);
 
             // Apply filters
             if ($request->has('doctor_id')) {

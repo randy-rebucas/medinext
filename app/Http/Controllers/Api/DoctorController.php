@@ -97,7 +97,16 @@ class DoctorController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Doctor::with(['user', 'clinic']);
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('doctors.view');
+
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            $query = Doctor::with(['user', 'clinic'])
+                ->where('clinic_id', $currentClinic->id);
 
             // Apply filters
             if ($request->has('search')) {
@@ -112,7 +121,9 @@ class DoctorController extends BaseController
             }
 
             if ($request->has('clinic_id')) {
-                $query->where('clinic_id', $request->get('clinic_id'));
+                $clinicId = $request->get('clinic_id');
+                $this->requireClinicAccess($clinicId);
+                $query->where('clinic_id', $clinicId);
             }
 
             if ($request->has('specialization')) {

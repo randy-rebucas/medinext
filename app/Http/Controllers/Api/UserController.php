@@ -199,7 +199,20 @@ class UserController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('users.view');
+
             $query = User::with(['roles', 'clinics']);
+
+            // Apply clinic filtering for non-superadmin users
+            if (!$this->hasRole('superadmin')) {
+                $currentClinic = $this->getCurrentClinic();
+                if ($currentClinic) {
+                    $query->whereHas('userClinicRoles', function ($q) use ($currentClinic) {
+                        $q->where('clinic_id', $currentClinic->id);
+                    });
+                }
+            }
 
             // Apply filters
             if ($request->has('search')) {
@@ -218,6 +231,14 @@ class UserController extends BaseController
 
             if ($request->has('status')) {
                 $query->where('is_active', $request->get('status') === 'active');
+            }
+
+            if ($request->has('clinic_id')) {
+                $clinicId = $request->get('clinic_id');
+                $this->requireClinicAccess($clinicId);
+                $query->whereHas('userClinicRoles', function ($q) use ($clinicId) {
+                    $q->where('clinic_id', $clinicId);
+                });
             }
 
             $users = $query->paginate($request->get('per_page', 15));
@@ -278,6 +299,9 @@ class UserController extends BaseController
     public function store(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('users.create');
+
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
@@ -290,6 +314,15 @@ class UserController extends BaseController
 
             if ($validator->fails()) {
                 return $this->validationErrorResponse($validator->errors());
+            }
+
+            // Ensure user has access to the clinic they're creating a user for
+            $this->requireClinicAccess($request->clinic_id);
+
+            // Check if user can assign the specified role
+            $role = Role::findOrFail($request->role_id);
+            if (!$this->hasRole('superadmin') && $role->name === 'superadmin') {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Cannot create superadmin users');
             }
 
             $user = User::create([
@@ -358,7 +391,18 @@ class UserController extends BaseController
     public function show($id): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('users.view');
+
             $user = User::with(['roles', 'clinics', 'permissions'])->findOrFail($id);
+
+            // Check if user can view this specific user (clinic access)
+            if (!$this->hasRole('superadmin')) {
+                $currentClinic = $this->getCurrentClinic();
+                if ($currentClinic && !$user->userClinicRoles()->where('clinic_id', $currentClinic->id)->exists()) {
+                    throw new \Illuminate\Auth\Access\AuthorizationException('No access to view this user');
+                }
+            }
 
             return $this->successResponse(['user' => $user], 'User retrieved successfully');
 
@@ -538,7 +582,19 @@ class UserController extends BaseController
     public function permissions($id): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('users.view');
+
             $user = User::findOrFail($id);
+
+            // Check if user can view this specific user's permissions (clinic access)
+            if (!$this->hasRole('superadmin')) {
+                $currentClinic = $this->getCurrentClinic();
+                if ($currentClinic && !$user->userClinicRoles()->where('clinic_id', $currentClinic->id)->exists()) {
+                    throw new \Illuminate\Auth\Access\AuthorizationException('No access to view this user\'s permissions');
+                }
+            }
+
             $permissions = $user->getAllPermissions();
 
             return $this->successResponse(['permissions' => $permissions], 'User permissions retrieved successfully');

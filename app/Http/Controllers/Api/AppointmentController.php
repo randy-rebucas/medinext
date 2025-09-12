@@ -103,7 +103,16 @@ class AppointmentController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Appointment::with(['patient', 'doctor', 'clinic']);
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('appointments.view');
+
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            $query = Appointment::with(['patient', 'doctor', 'clinic'])
+                ->where('clinic_id', $currentClinic->id);
 
             // Apply filters
             if ($request->has('patient_id')) {
@@ -177,6 +186,14 @@ class AppointmentController extends BaseController
     public function store(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('appointments.create');
+
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
             $validator = Validator::make($request->all(), [
                 'patient_id' => 'required|exists:patients,id',
                 'doctor_id' => 'required|exists:doctors,id',
@@ -191,8 +208,19 @@ class AppointmentController extends BaseController
                 return $this->errorResponse('Validation failed', $validator->errors(), 422);
             }
 
+            // Verify patient and doctor belong to the current clinic
+            $patient = Patient::findOrFail($request->patient_id);
+            if ($patient->clinic_id !== $currentClinic->id) {
+                return $this->errorResponse('Patient does not belong to your clinic', null, 403);
+            }
+
+            $doctor = Doctor::findOrFail($request->doctor_id);
+            if ($doctor->clinic_id !== $currentClinic->id) {
+                return $this->errorResponse('Doctor does not belong to your clinic', null, 403);
+            }
+
             $appointmentData = $request->all();
-            $appointmentData['clinic_id'] = Auth::user()->current_clinic_id ?? 1;
+            $appointmentData['clinic_id'] = $currentClinic->id;
             $appointmentData['status'] = $appointmentData['status'] ?? 'scheduled';
 
             $appointment = Appointment::create($appointmentData);

@@ -368,6 +368,7 @@ class Role extends Model
     public function hasMinimumPermissions(): bool
     {
         $minimumPermissions = [
+            'superadmin' => ['system.admin', 'clinics.view', 'users.view'],
             'admin' => ['clinics.view', 'users.view'],
             'doctor' => ['patients.view', 'appointments.view'],
             'patient' => ['appointments.view', 'profile.edit'],
@@ -376,6 +377,6 @@ class Role extends Model
         ];
 
         $required = $minimumPermissions[$this->name] ?? [];
-        return $this->hasAllPermissions($required);
+        return empty($required) || $this->hasAllPermissions($required);
     }
 }

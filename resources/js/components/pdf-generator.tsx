@@ -6,11 +6,11 @@ import { type Prescription, type Encounter, type Patient } from '@/types';
 interface PDFGeneratorProps {
     type: 'prescription' | 'medical-report';
     data: Prescription | Encounter;
-    patient: Patient;
+    patient?: Patient;
     onDownload?: (url: string) => void;
 }
 
-export function PDFGenerator({ type, data, patient, onDownload }: PDFGeneratorProps) {
+export function PDFGenerator({ type, data, onDownload }: PDFGeneratorProps) {
     const [isGenerating, setIsGenerating] = useState(false);
 
     const generatePDF = async () => {

@@ -133,11 +133,184 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user has a specific permission (checks in current clinic or any clinic)
+     */
+    public function hasPermission(string $permission): bool
+    {
+        // First try to get current clinic from session or user's first clinic
+        $currentClinic = $this->getCurrentClinic();
+
+        if ($currentClinic) {
+            // Check permission in current clinic
+            return $this->hasPermissionInClinic($permission, $currentClinic->id);
+        }
+
+        // If no current clinic, check if user has permission in any clinic
+        return $this->userClinicRoles()
+            ->whereHas('role.permissions', function ($query) use ($permission) {
+                $query->where('slug', $permission)
+                    ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if user has any of the given permissions
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        $currentClinic = $this->getCurrentClinic();
+
+        if ($currentClinic) {
+            return $this->userClinicRoles()
+                ->where('clinic_id', $currentClinic->id)
+                ->whereHas('role.permissions', function ($query) use ($permissions) {
+                    foreach ($permissions as $permission) {
+                        $query->orWhere('slug', $permission)
+                              ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+                    }
+                })->exists();
+        }
+
+        return $this->userClinicRoles()
+            ->whereHas('role.permissions', function ($query) use ($permissions) {
+                foreach ($permissions as $permission) {
+                    $query->orWhere('slug', $permission)
+                          ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+                }
+            })->exists();
+    }
+
+    /**
+     * Check if user has all of the given permissions
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        $currentClinic = $this->getCurrentClinic();
+
+        if ($currentClinic) {
+            $permissionCount = $this->userClinicRoles()
+                ->where('clinic_id', $currentClinic->id)
+                ->whereHas('role.permissions', function ($query) use ($permissions) {
+                    foreach ($permissions as $permission) {
+                        $query->orWhere('slug', $permission)
+                              ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+                    }
+                })->count();
+        } else {
+            $permissionCount = $this->userClinicRoles()
+                ->whereHas('role.permissions', function ($query) use ($permissions) {
+                    foreach ($permissions as $permission) {
+                        $query->orWhere('slug', $permission)
+                              ->orWhereRaw("CONCAT(module, '.', action) = ?", [$permission]);
+                    }
+                })->count();
+        }
+
+        return $permissionCount >= count($permissions);
+    }
+
+    /**
+     * Get all permissions for the user
+     */
+    public function getAllPermissions(): array
+    {
+        $currentClinic = $this->getCurrentClinic();
+
+        if ($currentClinic) {
+            return $this->userClinicRoles()
+                ->where('clinic_id', $currentClinic->id)
+                ->with('role.permissions')
+                ->get()
+                ->pluck('role.permissions')
+                ->flatten()
+                ->unique('id')
+                ->values()
+                ->toArray();
+        }
+
+        return $this->userClinicRoles()
+            ->with('role.permissions')
+            ->get()
+            ->pluck('role.permissions')
+            ->flatten()
+            ->unique('id')
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Get permissions for user in specific clinic
+     */
+    public function getPermissionsInClinic(int $clinicId): array
+    {
+        return $this->userClinicRoles()
+            ->where('clinic_id', $clinicId)
+            ->with('role.permissions')
+            ->get()
+            ->pluck('role.permissions')
+            ->flatten()
+            ->unique('id')
+            ->values()
+            ->toArray();
+    }
+
+    /**
      * Check if user is a doctor in a specific clinic
      */
     public function isDoctorInClinic(int $clinicId): bool
     {
         return $this->doctors()->where('clinic_id', $clinicId)->exists();
+    }
+
+    /**
+     * Check if user is admin in clinic
+     */
+    public function isAdminInClinic(int $clinicId): bool
+    {
+        return $this->hasRoleInClinic('admin', $clinicId) || $this->hasRoleInClinic('superadmin', $clinicId);
+    }
+
+    /**
+     * Check if user is receptionist in clinic
+     */
+    public function isReceptionistInClinic(int $clinicId): bool
+    {
+        return $this->hasRoleInClinic('receptionist', $clinicId);
+    }
+
+    /**
+     * Check if user is patient in clinic
+     */
+    public function isPatientInClinic(int $clinicId): bool
+    {
+        return $this->hasRoleInClinic('patient', $clinicId);
+    }
+
+    /**
+     * Check if user is medical representative in clinic
+     */
+    public function isMedrepInClinic(int $clinicId): bool
+    {
+        return $this->hasRoleInClinic('medrep', $clinicId);
+    }
+
+    /**
+     * Check if user has valid access (trial or license)
+     */
+    public function hasValidAccess(): bool
+    {
+        // Check if user has activated license
+        if ($this->has_activated_license) {
+            return true;
+        }
+
+        // Check if user is in trial period
+        if ($this->is_trial_user && $this->trial_ends_at && $this->trial_ends_at->isFuture()) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -328,13 +501,6 @@ class User extends Authenticatable
         return true;
     }
 
-    /**
-     * Check if the user has a valid license (either trial or activated)
-     */
-    public function hasValidAccess(): bool
-    {
-        return $this->isOnTrial() || $this->has_activated_license;
-    }
 
     /**
      * Get the user's license relationship

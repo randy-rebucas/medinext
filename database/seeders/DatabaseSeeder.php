@@ -8,9 +8,23 @@ class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
+     *
+     * For production deployment, use: php artisan db:seed --class=InitialSeeder
+     * For development with demo data, use: php artisan db:seed
      */
     public function run(): void
     {
+        // Check if this is a fresh installation (no users exist)
+        $hasUsers = \App\Models\User::count() > 0;
+
+        if (!$hasUsers) {
+            $this->command->info('Fresh installation detected. Running initial seeder...');
+            $this->call(InitialSeeder::class);
+            return;
+        }
+
+        $this->command->info('Existing data detected. Running full development seeders...');
+
         $this->call([
             // Core system seeders (no dependencies)
             ClinicSeeder::class,

@@ -99,7 +99,16 @@ class BillController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Bill::with(['patient', 'clinic']);
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('billing.view');
+
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            $query = Bill::with(['patient', 'clinic'])
+                ->where('clinic_id', $currentClinic->id);
 
             // Apply filters
             if ($request->has('patient_id')) {

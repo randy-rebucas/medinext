@@ -63,15 +63,33 @@ const toast = {
     error: (message: string) => console.error('Error:', message),
 };
 
+interface Patient {
+    id: number;
+    name: string;
+    patient_id: string;
+}
+
+interface Doctor {
+    id: number;
+    name: string;
+    specialization: string;
+}
+
+interface Room {
+    id: number;
+    name: string;
+    room_number: string;
+}
+
 interface AdminAppointmentsProps {
     appointments: Appointment[];
-    patients: any[];
-    doctors: any[];
-    rooms: any[];
+    patients: Patient[];
+    doctors: Doctor[];
+    rooms: Room[];
     permissions: string[];
 }
 
-export default function AdminAppointments({ appointments: initialAppointments, patients, doctors, rooms, permissions }: AdminAppointmentsProps) {
+export default function AdminAppointments({ appointments: initialAppointments, patients, doctors, rooms }: AdminAppointmentsProps) {
     const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -87,7 +105,7 @@ export default function AdminAppointments({ appointments: initialAppointments, p
     const [deletingAppointment, setDeletingAppointment] = useState<Appointment | null>(null);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [calendarData, setCalendarData] = useState<any[]>([]);
+    const [calendarData, setCalendarData] = useState<Appointment[]>([]);
     const [formData, setFormData] = useState({
         patient_id: '',
         doctor_id: '',
@@ -144,7 +162,7 @@ export default function AdminAppointments({ appointments: initialAppointments, p
         }
     };
 
-    const saveAppointment = async (appointmentData: any, isEdit = false) => {
+    const saveAppointment = async (appointmentData: Record<string, unknown>, isEdit = false) => {
         try {
             setLoading(true);
             setErrors({});
@@ -209,29 +227,29 @@ export default function AdminAppointments({ appointments: initialAppointments, p
         }
     };
 
-    const updateAppointmentStatus = async (appointmentId: number, status: string) => {
-        try {
-            const response = await fetch(`/admin/appointments/${appointmentId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({ status }),
-            });
+    // const updateAppointmentStatus = async (appointmentId: number, status: string) => {
+    //     try {
+    //         const response = await fetch(`/admin/appointments/${appointmentId}/status`, {
+    //             method: 'PUT',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+    //             },
+    //             body: JSON.stringify({ status }),
+    //         });
 
-            const data = await response.json();
+    //         const data = await response.json();
 
-            if (data.success) {
-                toast.success(data.message);
-                await fetchAppointments();
-            } else {
-                toast.error(data.message || 'Failed to update appointment status');
-            }
-        } catch {
-            toast.error('Failed to update appointment status');
-        }
-    };
+    //         if (data.success) {
+    //             toast.success(data.message);
+    //             await fetchAppointments();
+    //         } else {
+    //             toast.error(data.message || 'Failed to update appointment status');
+    //         }
+    //     } catch {
+    //         toast.error('Failed to update appointment status');
+    //     }
+    // };
 
     const getStatusColor = (status: string) => {
         switch (status) {

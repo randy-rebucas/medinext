@@ -51,7 +51,7 @@ export function LicenseActivationModal({ trigger, onSuccess }: LicenseActivation
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 setValidationResult({
                     valid: true,
@@ -61,9 +61,9 @@ export function LicenseActivationModal({ trigger, onSuccess }: LicenseActivation
                 // Handle different response structures
                 const errorMessage = result.data?.message || result.message || 'License key validation failed.';
                 const errorCode = result.data?.error_code || result.error_code;
-                
+
                 let detailedMessage = errorMessage;
-                
+
                 // The backend now provides detailed messages, so we can use them directly
                 // But we can still add some frontend-specific enhancements
                 if (errorCode === 'LICENSE_ALREADY_IN_USE') {
@@ -78,13 +78,13 @@ export function LicenseActivationModal({ trigger, onSuccess }: LicenseActivation
                 } else if (errorCode === 'LICENSE_INACTIVE') {
                     detailedMessage = errorMessage;
                 }
-                
+
                 setValidationResult({
                     valid: false,
                     message: detailedMessage,
                 });
             }
-        } catch (error) {
+        } catch {
             setValidationResult({
                 valid: false,
                 message: 'Failed to validate license key. Please try again.',

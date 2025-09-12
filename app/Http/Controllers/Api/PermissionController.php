@@ -76,6 +76,9 @@ class PermissionController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('permissions.view');
+
             $query = Permission::query();
 
             // Apply filters
@@ -143,6 +146,9 @@ class PermissionController extends BaseController
     public function store(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('permissions.create');
+
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255|unique:permissions',
                 'module' => 'required|string|max:255',
@@ -152,6 +158,11 @@ class PermissionController extends BaseController
 
             if ($validator->fails()) {
                 return $this->validationErrorResponse($validator->errors());
+            }
+
+            // Only superadmin can create system-level permissions
+            if (in_array($request->module, ['system', 'licenses']) && !$this->hasRole('superadmin')) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Cannot create system-level permissions');
             }
 
             $permission = Permission::create([

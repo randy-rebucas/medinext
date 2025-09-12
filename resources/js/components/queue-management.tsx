@@ -3,11 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-    Clock, 
-    User, 
-    AlertCircle, 
-    CheckCircle, 
+import {
+    Clock,
+    User,
+    AlertCircle,
+    CheckCircle,
     Stethoscope,
     Eye,
     Edit,
@@ -31,13 +31,13 @@ interface QueueManagementProps {
     showActions?: boolean;
 }
 
-export function QueueManagement({ 
-    initialQueue, 
-    onQueueUpdate, 
+export function QueueManagement({
+    initialQueue,
+    onQueueUpdate,
     onPatientSelect,
     onEncounterComplete,
     userRole,
-    showActions = true 
+    showActions = true
 }: QueueManagementProps) {
     const [queue, setQueue] = useState<QueueItem[]>(initialQueue);
     const [filteredQueue, setFilteredQueue] = useState<QueueItem[]>(initialQueue);
@@ -54,7 +54,7 @@ export function QueueManagement({
 
         // Search filter
         if (searchQuery) {
-            filtered = filtered.filter(item => 
+            filtered = filtered.filter(item =>
                 item.patient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 item.encounter_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 item.patient.patient_id.toLowerCase().includes(searchQuery.toLowerCase())
@@ -84,7 +84,7 @@ export function QueueManagement({
                     'Content-Type': 'application/json',
                 },
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setQueue(data.data || []);
@@ -232,9 +232,9 @@ export function QueueManagement({
                                 Manage patient queue and encounter flow
                             </CardDescription>
                         </div>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={refreshQueue}
                             disabled={isRefreshing}
                         >
@@ -294,7 +294,7 @@ export function QueueManagement({
                                                 {item.estimated_wait_time}
                                             </p>
                                         </div>
-                                        
+
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <h4 className="font-semibold text-lg">{item.patient_name}</h4>
@@ -305,7 +305,7 @@ export function QueueManagement({
                                                     {item.status}
                                                 </Badge>
                                             </div>
-                                            
+
                                             <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                                                 <div>
                                                     <p><strong>Patient ID:</strong> {item.patient.patient_id}</p>
@@ -316,9 +316,9 @@ export function QueueManagement({
                                                     <p><strong>Arrived:</strong> {new Date(item.created_at).toLocaleTimeString()}</p>
                                                 </div>
                                             </div>
-                                            
+
                                             <p className="text-sm"><strong>Reason:</strong> {item.reason_for_visit}</p>
-                                            
+
                                             {item.patient.allergies && item.patient.allergies.length > 0 && (
                                                 <Badge variant="destructive" className="text-xs">
                                                     <AlertCircle className="h-3 w-3 mr-1" />
@@ -330,34 +330,34 @@ export function QueueManagement({
 
                                     <div className="flex flex-col gap-2">
                                         {userRole === 'doctor' && (
-                                            <Button 
-                                                size="sm" 
+                                            <Button
+                                                size="sm"
                                                 onClick={() => handlePatientSelect(item)}
                                             >
                                                 <Stethoscope className="h-4 w-4 mr-2" />
                                                 Start Encounter
                                             </Button>
                                         )}
-                                        
+
                                         {userRole === 'receptionist' && showActions && (
                                             <div className="flex gap-1">
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     variant="outline"
                                                     onClick={() => movePatientUp(item.id)}
                                                     disabled={item.queue_position === 1}
                                                 >
                                                     <ArrowUp className="h-4 w-4" />
                                                 </Button>
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     variant="outline"
                                                     onClick={() => movePatientDown(item.id)}
                                                 >
                                                     <ArrowDown className="h-4 w-4" />
                                                 </Button>
-                                                <Button 
-                                                    size="sm" 
+                                                <Button
+                                                    size="sm"
                                                     variant="outline"
                                                     onClick={() => removeFromQueue(item.id)}
                                                 >
@@ -365,9 +365,9 @@ export function QueueManagement({
                                                 </Button>
                                             </div>
                                         )}
-                                        
-                                        <Button 
-                                            size="sm" 
+
+                                        <Button
+                                            size="sm"
                                             variant="outline"
                                             onClick={() => handlePatientSelect(item)}
                                         >
@@ -385,7 +385,7 @@ export function QueueManagement({
                             <Clock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                             <h3 className="text-xl font-semibold mb-2">No patients in queue</h3>
                             <p className="text-muted-foreground">
-                                {searchQuery || statusFilter !== 'all' || visitTypeFilter !== 'all' 
+                                {searchQuery || statusFilter !== 'all' || visitTypeFilter !== 'all'
                                     ? 'No patients match your current filters.'
                                     : 'The queue is currently empty. Patients will appear here when they check in.'
                                 }
@@ -405,7 +405,7 @@ export function QueueManagement({
                         </DialogDescription>
                     </DialogHeader>
                     {selectedPatient && (
-                        <PatientDetailsView 
+                        <PatientDetailsView
                             patient={selectedPatient}
                             onCompleteEncounter={handleCompleteEncounter}
                             userRole={userRole}
@@ -418,16 +418,15 @@ export function QueueManagement({
 }
 
 // Patient Details View Component
-function PatientDetailsView({ 
-    patient, 
+function PatientDetailsView({
+    patient,
     onCompleteEncounter,
-    userRole 
-}: { 
+    userRole
+}: {
     patient: QueueItem;
     onCompleteEncounter: (encounterId: number) => void;
     userRole: 'receptionist' | 'doctor';
 }) {
-    const [activeTab, setActiveTab] = useState('overview');
 
     return (
         <div className="space-y-6">

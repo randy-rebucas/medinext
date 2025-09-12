@@ -343,6 +343,152 @@ class BaseController extends Controller
     }
 
     /**
+     * Check if user has a specific permission
+     */
+    protected function hasPermission(string $permission): bool
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return false;
+        }
+
+        /** @var \App\Models\User $user */
+        return $user->hasPermission($permission);
+    }
+
+    /**
+     * Check if user has any of the specified permissions
+     */
+    protected function hasAnyPermission(array $permissions): bool
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return false;
+        }
+
+        /** @var \App\Models\User $user */
+        return $user->hasAnyPermission($permissions);
+    }
+
+    /**
+     * Check if user has all of the specified permissions
+     */
+    protected function hasAllPermissions(array $permissions): bool
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return false;
+        }
+
+        /** @var \App\Models\User $user */
+        return $user->hasAllPermissions($permissions);
+    }
+
+    /**
+     * Check if user has a specific role
+     */
+    protected function hasRole(string $role): bool
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return false;
+        }
+
+        /** @var \App\Models\User $user */
+        return $user->hasRole($role);
+    }
+
+    /**
+     * Check if user has a specific role in a clinic
+     */
+    protected function hasRoleInClinic(string $role, int $clinicId): bool
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return false;
+        }
+
+        /** @var \App\Models\User $user */
+        return $user->hasRoleInClinic($role, $clinicId);
+    }
+
+    /**
+     * Check if user has permission in a specific clinic
+     */
+    protected function hasPermissionInClinic(string $permission, int $clinicId): bool
+    {
+        $user = $this->getAuthenticatedUser();
+        if (!$user) {
+            return false;
+        }
+
+        /** @var \App\Models\User $user */
+        return $user->hasPermissionInClinic($permission, $clinicId);
+    }
+
+    /**
+     * Ensure user has a specific permission, throw exception if not
+     */
+    protected function requirePermission(string $permission): void
+    {
+        if (!$this->hasPermission($permission)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("Insufficient permissions. Required: {$permission}");
+        }
+    }
+
+    /**
+     * Ensure user has any of the specified permissions, throw exception if not
+     */
+    protected function requireAnyPermission(array $permissions): void
+    {
+        if (!$this->hasAnyPermission($permissions)) {
+            $permissionsList = implode(', ', $permissions);
+            throw new \Illuminate\Auth\Access\AuthorizationException("Insufficient permissions. Required one of: {$permissionsList}");
+        }
+    }
+
+    /**
+     * Ensure user has all of the specified permissions, throw exception if not
+     */
+    protected function requireAllPermissions(array $permissions): void
+    {
+        if (!$this->hasAllPermissions($permissions)) {
+            $permissionsList = implode(', ', $permissions);
+            throw new \Illuminate\Auth\Access\AuthorizationException("Insufficient permissions. Required all of: {$permissionsList}");
+        }
+    }
+
+    /**
+     * Ensure user has access to a specific clinic, throw exception if not
+     */
+    protected function requireClinicAccess(int $clinicId): void
+    {
+        if (!$this->hasClinicAccess($clinicId)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("No access to clinic ID: {$clinicId}");
+        }
+    }
+
+    /**
+     * Ensure user has a specific role, throw exception if not
+     */
+    protected function requireRole(string $role): void
+    {
+        if (!$this->hasRole($role)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("Insufficient role. Required: {$role}");
+        }
+    }
+
+    /**
+     * Ensure user has a specific role in a clinic, throw exception if not
+     */
+    protected function requireRoleInClinic(string $role, int $clinicId): void
+    {
+        if (!$this->hasRoleInClinic($role, $clinicId)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("Insufficient role in clinic. Required: {$role} in clinic ID: {$clinicId}");
+        }
+    }
+
+    /**
      * Return a forbidden response
      */
     protected function forbiddenResponse(string $message = 'Access forbidden'): JsonResponse

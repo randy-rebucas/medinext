@@ -31,40 +31,6 @@ import {
 } from 'lucide-react';
 
 export default function Analytics() {
-    const analytics = [
-        {
-            title: 'Patient Growth',
-            value: '+12.5%',
-            change: '+2.3%',
-            trend: 'up',
-            icon: Users,
-            color: 'text-blue-600'
-        },
-        {
-            title: 'Appointment Volume',
-            value: '1,456',
-            change: '+8.7%',
-            trend: 'up',
-            icon: Calendar,
-            color: 'text-green-600'
-        },
-        {
-            title: 'Revenue Growth',
-            value: '+15.2%',
-            change: '+3.1%',
-            trend: 'up',
-            icon: DollarSign,
-            color: 'text-purple-600'
-        },
-        {
-            title: 'Doctor Utilization',
-            value: '87%',
-            change: '-2.1%',
-            trend: 'down',
-            icon: Stethoscope,
-            color: 'text-orange-600'
-        }
-    ];
 
     const topPerformers = [
         {

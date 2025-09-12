@@ -74,38 +74,99 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::put('/auth/password', [AuthController::class, 'updatePassword']);
 
     // Dashboard and analytics
-    Route::get('/dashboard', [DashboardController::class, 'index']);
-    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
-    Route::get('/dashboard/notifications', [DashboardController::class, 'notifications']);
+    Route::middleware(['api.permission:dashboard.view'])->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('/dashboard/notifications', [DashboardController::class, 'notifications']);
+    });
+
+    Route::middleware(['api.permission:dashboard.stats'])->group(function () {
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    });
 
     // Settings and configuration
-    Route::get('/settings', [SettingsController::class, 'index']);
-    Route::put('/settings', [SettingsController::class, 'update']);
-    Route::get('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'getSettings']);
-    Route::put('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'updateSettings']);
-    Route::get('/settings/user', [SettingsController::class, 'userSettings']);
-    Route::put('/settings/user', [SettingsController::class, 'updateUserSettings']);
+    Route::middleware(['api.permission:settings.view'])->group(function () {
+        Route::get('/settings', [SettingsController::class, 'index']);
+        Route::get('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'getSettings']);
+        Route::get('/settings/user', [SettingsController::class, 'userSettings']);
+    });
+
+    Route::middleware(['api.permission:settings.manage'])->group(function () {
+        Route::put('/settings', [SettingsController::class, 'update']);
+        Route::put('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'updateSettings']);
+        Route::put('/settings/user', [SettingsController::class, 'updateUserSettings']);
+    });
 
     // User Management Routes
-    Route::apiResource('users', App\Http\Controllers\Api\UserController::class);
-    Route::get('/users/{user}/permissions', [App\Http\Controllers\Api\UserController::class, 'permissions']);
-    Route::post('/users/{user}/permissions', [App\Http\Controllers\Api\UserController::class, 'assignPermissions']);
-    Route::get('/users/{user}/roles', [App\Http\Controllers\Api\UserController::class, 'roles']);
-    Route::post('/users/{user}/roles', [App\Http\Controllers\Api\UserController::class, 'assignRoles']);
-    Route::get('/users/{user}/activity', [App\Http\Controllers\Api\UserController::class, 'activity']);
-    Route::post('/users/{user}/activate', [App\Http\Controllers\Api\UserController::class, 'activate']);
-    Route::post('/users/{user}/deactivate', [App\Http\Controllers\Api\UserController::class, 'deactivate']);
-    Route::post('/users/{user}/reset-password', [App\Http\Controllers\Api\UserController::class, 'resetPassword']);
+    Route::middleware(['api.permission:users.view'])->group(function () {
+        Route::get('/users', [App\Http\Controllers\Api\UserController::class, 'index']);
+        Route::get('/users/{user}', [App\Http\Controllers\Api\UserController::class, 'show']);
+        Route::get('/users/{user}/permissions', [App\Http\Controllers\Api\UserController::class, 'permissions']);
+        Route::get('/users/{user}/roles', [App\Http\Controllers\Api\UserController::class, 'roles']);
+        Route::get('/users/{user}/activity', [App\Http\Controllers\Api\UserController::class, 'activity']);
+    });
+
+    Route::middleware(['api.permission:users.create'])->group(function () {
+        Route::post('/users', [App\Http\Controllers\Api\UserController::class, 'store']);
+    });
+
+    Route::middleware(['api.permission:users.edit'])->group(function () {
+        Route::put('/users/{user}', [App\Http\Controllers\Api\UserController::class, 'update']);
+        Route::post('/users/{user}/permissions', [App\Http\Controllers\Api\UserController::class, 'assignPermissions']);
+        Route::post('/users/{user}/roles', [App\Http\Controllers\Api\UserController::class, 'assignRoles']);
+        Route::post('/users/{user}/reset-password', [App\Http\Controllers\Api\UserController::class, 'resetPassword']);
+    });
+
+    Route::middleware(['api.permission:users.delete'])->group(function () {
+        Route::delete('/users/{user}', [App\Http\Controllers\Api\UserController::class, 'destroy']);
+    });
+
+    Route::middleware(['api.permission:users.activate'])->group(function () {
+        Route::post('/users/{user}/activate', [App\Http\Controllers\Api\UserController::class, 'activate']);
+    });
+
+    Route::middleware(['api.permission:users.deactivate'])->group(function () {
+        Route::post('/users/{user}/deactivate', [App\Http\Controllers\Api\UserController::class, 'deactivate']);
+    });
 
     // Role Management Routes
-    Route::apiResource('roles', App\Http\Controllers\Api\RoleController::class);
-    Route::get('/roles/{role}/permissions', [App\Http\Controllers\Api\RoleController::class, 'permissions']);
-    Route::post('/roles/{role}/permissions', [App\Http\Controllers\Api\RoleController::class, 'assignPermissions']);
-    Route::get('/roles/{role}/users', [App\Http\Controllers\Api\RoleController::class, 'users']);
+    Route::middleware(['api.permission:roles.view'])->group(function () {
+        Route::get('/roles', [App\Http\Controllers\Api\RoleController::class, 'index']);
+        Route::get('/roles/{role}', [App\Http\Controllers\Api\RoleController::class, 'show']);
+        Route::get('/roles/{role}/permissions', [App\Http\Controllers\Api\RoleController::class, 'permissions']);
+        Route::get('/roles/{role}/users', [App\Http\Controllers\Api\RoleController::class, 'users']);
+    });
+
+    Route::middleware(['api.permission:roles.create'])->group(function () {
+        Route::post('/roles', [App\Http\Controllers\Api\RoleController::class, 'store']);
+    });
+
+    Route::middleware(['api.permission:roles.edit'])->group(function () {
+        Route::put('/roles/{role}', [App\Http\Controllers\Api\RoleController::class, 'update']);
+        Route::post('/roles/{role}/permissions', [App\Http\Controllers\Api\RoleController::class, 'assignPermissions']);
+    });
+
+    Route::middleware(['api.permission:roles.delete'])->group(function () {
+        Route::delete('/roles/{role}', [App\Http\Controllers\Api\RoleController::class, 'destroy']);
+    });
 
     // Permission Management Routes
-    Route::apiResource('permissions', App\Http\Controllers\Api\PermissionController::class);
-    Route::get('/permissions/modules', [App\Http\Controllers\Api\PermissionController::class, 'modules']);
+    Route::middleware(['api.permission:permissions.view'])->group(function () {
+        Route::get('/permissions', [App\Http\Controllers\Api\PermissionController::class, 'index']);
+        Route::get('/permissions/{permission}', [App\Http\Controllers\Api\PermissionController::class, 'show']);
+        Route::get('/permissions/modules', [App\Http\Controllers\Api\PermissionController::class, 'modules']);
+    });
+
+    Route::middleware(['api.permission:permissions.create'])->group(function () {
+        Route::post('/permissions', [App\Http\Controllers\Api\PermissionController::class, 'store']);
+    });
+
+    Route::middleware(['api.permission:permissions.edit'])->group(function () {
+        Route::put('/permissions/{permission}', [App\Http\Controllers\Api\PermissionController::class, 'update']);
+    });
+
+    Route::middleware(['api.permission:permissions.delete'])->group(function () {
+        Route::delete('/permissions/{permission}', [App\Http\Controllers\Api\PermissionController::class, 'destroy']);
+    });
 
     // Staff Management Routes (Legacy - redirects to users)
     Route::get('/staff', [App\Http\Controllers\StaffController::class, 'index']);
@@ -114,84 +175,176 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::delete('/staff/{id}', [App\Http\Controllers\StaffController::class, 'destroy']);
 
     // Clinic management (with usage validation)
-    Route::middleware(['license.usage:clinics'])->group(function () {
+    Route::middleware(['license.usage:clinics', 'api.permission:clinics.create'])->group(function () {
         Route::post('/clinics', [ClinicController::class, 'store']);
     });
 
-    Route::apiResource('clinics', ClinicController::class)->except(['store']);
-    Route::get('/clinics/{clinic}/users', [ClinicController::class, 'users']);
-    Route::get('/clinics/{clinic}/doctors', [ClinicController::class, 'doctors']);
-    Route::get('/clinics/{clinic}/patients', [ClinicController::class, 'patients']);
-    Route::get('/clinics/{clinic}/appointments', [ClinicController::class, 'appointments']);
-    Route::get('/clinics/{clinic}/statistics', [ClinicController::class, 'statistics']);
+    Route::middleware(['api.permission:clinics.view'])->group(function () {
+        Route::get('/clinics', [ClinicController::class, 'index']);
+        Route::get('/clinics/{clinic}', [ClinicController::class, 'show']);
+        Route::get('/clinics/{clinic}/users', [ClinicController::class, 'users']);
+        Route::get('/clinics/{clinic}/doctors', [ClinicController::class, 'doctors']);
+        Route::get('/clinics/{clinic}/patients', [ClinicController::class, 'patients']);
+        Route::get('/clinics/{clinic}/appointments', [ClinicController::class, 'appointments']);
+        Route::get('/clinics/{clinic}/statistics', [ClinicController::class, 'statistics']);
+    });
+
+    Route::middleware(['api.permission:clinics.edit'])->group(function () {
+        Route::put('/clinics/{clinic}', [ClinicController::class, 'update']);
+    });
+
+    Route::middleware(['api.permission:clinics.delete'])->group(function () {
+        Route::delete('/clinics/{clinic}', [ClinicController::class, 'destroy']);
+    });
 
     // Patient management (with usage validation)
-    Route::middleware(['license.usage:patients'])->group(function () {
+    Route::middleware(['license.usage:patients', 'api.permission:patients.create'])->group(function () {
         Route::post('/patients', [PatientController::class, 'store']);
     });
 
-    Route::apiResource('patients', PatientController::class)->except(['store']);
-    Route::get('/patients/{patient}/appointments', [PatientController::class, 'appointments']);
-    Route::get('/patients/{patient}/encounters', [PatientController::class, 'encounters']);
-    Route::get('/patients/{patient}/prescriptions', [PatientController::class, 'prescriptions']);
-    Route::get('/patients/{patient}/lab-results', [PatientController::class, 'labResults']);
-    Route::get('/patients/{patient}/medical-history', [PatientController::class, 'medicalHistory']);
-    Route::get('/patients/{patient}/file-assets', [PatientController::class, 'fileAssets']);
-    Route::post('/patients/{patient}/file-assets', [PatientController::class, 'uploadFile']);
-    Route::get('/patients/search', [PatientController::class, 'search']);
+    Route::middleware(['api.permission:patients.view'])->group(function () {
+        Route::get('/patients', [PatientController::class, 'index']);
+        Route::get('/patients/{patient}', [PatientController::class, 'show']);
+        Route::get('/patients/{patient}/appointments', [PatientController::class, 'appointments']);
+        Route::get('/patients/{patient}/encounters', [PatientController::class, 'encounters']);
+        Route::get('/patients/{patient}/prescriptions', [PatientController::class, 'prescriptions']);
+        Route::get('/patients/{patient}/lab-results', [PatientController::class, 'labResults']);
+        Route::get('/patients/{patient}/medical-history', [PatientController::class, 'medicalHistory']);
+        Route::get('/patients/{patient}/file-assets', [PatientController::class, 'fileAssets']);
+        Route::get('/patients/search', [PatientController::class, 'search']);
+    });
+
+    Route::middleware(['api.permission:patients.edit'])->group(function () {
+        Route::put('/patients/{patient}', [PatientController::class, 'update']);
+    });
+
+    Route::middleware(['api.permission:patients.delete'])->group(function () {
+        Route::delete('/patients/{patient}', [PatientController::class, 'destroy']);
+    });
+
+    Route::middleware(['api.permission:file_assets.upload'])->group(function () {
+        Route::post('/patients/{patient}/file-assets', [PatientController::class, 'uploadFile']);
+    });
 
     // Doctor management (with usage validation)
-    Route::middleware(['license.usage:users'])->group(function () {
+    Route::middleware(['license.usage:users', 'api.permission:doctors.create'])->group(function () {
         Route::post('/doctors', [DoctorController::class, 'store']);
     });
 
-    Route::apiResource('doctors', DoctorController::class)->except(['store']);
-    Route::get('/doctors/{doctor}/appointments', [DoctorController::class, 'appointments']);
-    Route::get('/doctors/{doctor}/encounters', [DoctorController::class, 'encounters']);
-    Route::get('/doctors/{doctor}/patients', [DoctorController::class, 'patients']);
-    Route::get('/doctors/{doctor}/availability', [DoctorController::class, 'availability']);
-    Route::get('/doctors/{doctor}/statistics', [DoctorController::class, 'statistics']);
-    Route::post('/doctors/{doctor}/availability', [DoctorController::class, 'updateAvailability']);
+    Route::middleware(['api.permission:doctors.view'])->group(function () {
+        Route::get('/doctors', [DoctorController::class, 'index']);
+        Route::get('/doctors/{doctor}', [DoctorController::class, 'show']);
+        Route::get('/doctors/{doctor}/appointments', [DoctorController::class, 'appointments']);
+        Route::get('/doctors/{doctor}/encounters', [DoctorController::class, 'encounters']);
+        Route::get('/doctors/{doctor}/patients', [DoctorController::class, 'patients']);
+        Route::get('/doctors/{doctor}/availability', [DoctorController::class, 'availability']);
+        Route::get('/doctors/{doctor}/statistics', [DoctorController::class, 'statistics']);
+    });
+
+    Route::middleware(['api.permission:doctors.edit'])->group(function () {
+        Route::put('/doctors/{doctor}', [DoctorController::class, 'update']);
+        Route::post('/doctors/{doctor}/availability', [DoctorController::class, 'updateAvailability']);
+    });
+
+    Route::middleware(['api.permission:doctors.delete'])->group(function () {
+        Route::delete('/doctors/{doctor}', [DoctorController::class, 'destroy']);
+    });
 
     // Appointment management (with usage validation)
-    Route::middleware(['license.usage:appointments'])->group(function () {
+    Route::middleware(['license.usage:appointments', 'api.permission:appointments.create'])->group(function () {
         Route::post('/appointments', [AppointmentController::class, 'store']);
     });
 
-    Route::apiResource('appointments', AppointmentController::class)->except(['store']);
-    Route::post('/appointments/{appointment}/check-in', [AppointmentController::class, 'checkIn']);
-    Route::post('/appointments/{appointment}/check-out', [AppointmentController::class, 'checkOut']);
-    Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
-    Route::post('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);
-    Route::post('/appointments/{appointment}/reminder', [AppointmentController::class, 'sendReminder']);
-    Route::get('/appointments/available-slots', [AppointmentController::class, 'availableSlots']);
-    Route::get('/appointments/conflicts', [AppointmentController::class, 'checkConflicts']);
-    Route::get('/appointments/today', [AppointmentController::class, 'today']);
-    Route::get('/appointments/upcoming', [AppointmentController::class, 'upcoming']);
+    Route::middleware(['api.permission:appointments.view'])->group(function () {
+        Route::get('/appointments', [AppointmentController::class, 'index']);
+        Route::get('/appointments/{appointment}', [AppointmentController::class, 'show']);
+        Route::get('/appointments/available-slots', [AppointmentController::class, 'availableSlots']);
+        Route::get('/appointments/conflicts', [AppointmentController::class, 'checkConflicts']);
+        Route::get('/appointments/today', [AppointmentController::class, 'today']);
+        Route::get('/appointments/upcoming', [AppointmentController::class, 'upcoming']);
+    });
+
+    Route::middleware(['api.permission:appointments.edit'])->group(function () {
+        Route::put('/appointments/{appointment}', [AppointmentController::class, 'update']);
+        Route::post('/appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule']);
+        Route::post('/appointments/{appointment}/reminder', [AppointmentController::class, 'sendReminder']);
+    });
+
+    Route::middleware(['api.permission:appointments.delete'])->group(function () {
+        Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy']);
+    });
+
+    Route::middleware(['api.permission:appointments.checkin'])->group(function () {
+        Route::post('/appointments/{appointment}/check-in', [AppointmentController::class, 'checkIn']);
+        Route::post('/appointments/{appointment}/check-out', [AppointmentController::class, 'checkOut']);
+    });
+
+    Route::middleware(['api.permission:appointments.cancel'])->group(function () {
+        Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel']);
+    });
 
     // Encounter management
-    Route::apiResource('encounters', EncounterController::class);
-    Route::get('/encounters/{encounter}/prescriptions', [EncounterController::class, 'prescriptions']);
-    Route::get('/encounters/{encounter}/lab-results', [EncounterController::class, 'labResults']);
-    Route::get('/encounters/{encounter}/file-assets', [EncounterController::class, 'fileAssets']);
-    Route::post('/encounters/{encounter}/file-assets', [EncounterController::class, 'uploadFile']);
-    Route::put('/encounters/{encounter}/soap-notes', [EncounterController::class, 'updateSoapNotes']);
-    Route::post('/encounters/{encounter}/complete', [EncounterController::class, 'complete']);
+    Route::middleware(['api.permission:encounters.view'])->group(function () {
+        Route::get('/encounters', [EncounterController::class, 'index']);
+        Route::get('/encounters/{encounter}', [EncounterController::class, 'show']);
+        Route::get('/encounters/{encounter}/prescriptions', [EncounterController::class, 'prescriptions']);
+        Route::get('/encounters/{encounter}/lab-results', [EncounterController::class, 'labResults']);
+        Route::get('/encounters/{encounter}/file-assets', [EncounterController::class, 'fileAssets']);
+    });
+
+    Route::middleware(['api.permission:encounters.create'])->group(function () {
+        Route::post('/encounters', [EncounterController::class, 'store']);
+    });
+
+    Route::middleware(['api.permission:encounters.edit'])->group(function () {
+        Route::put('/encounters/{encounter}', [EncounterController::class, 'update']);
+        Route::put('/encounters/{encounter}/soap-notes', [EncounterController::class, 'updateSoapNotes']);
+    });
+
+    Route::middleware(['api.permission:encounters.delete'])->group(function () {
+        Route::delete('/encounters/{encounter}', [EncounterController::class, 'destroy']);
+    });
+
+    Route::middleware(['api.permission:encounters.complete'])->group(function () {
+        Route::post('/encounters/{encounter}/complete', [EncounterController::class, 'complete']);
+    });
+
+    Route::middleware(['api.permission:file_assets.upload'])->group(function () {
+        Route::post('/encounters/{encounter}/file-assets', [EncounterController::class, 'uploadFile']);
+    });
 
     // Prescription management
-    Route::apiResource('prescriptions', PrescriptionController::class);
-    Route::get('/prescriptions/{prescription}/items', [PrescriptionController::class, 'items']);
-    Route::post('/prescriptions/{prescription}/items', [PrescriptionController::class, 'addItem']);
-    Route::put('/prescriptions/{prescription}/items/{item}', [PrescriptionController::class, 'updateItem']);
-    Route::delete('/prescriptions/{prescription}/items/{item}', [PrescriptionController::class, 'removeItem']);
-    Route::post('/prescriptions/{prescription}/verify', [PrescriptionController::class, 'verify']);
-    Route::post('/prescriptions/{prescription}/dispense', [PrescriptionController::class, 'dispense']);
-    Route::post('/prescriptions/{prescription}/refill', [PrescriptionController::class, 'refill']);
-    Route::get('/prescriptions/{prescription}/pdf', [PrescriptionController::class, 'downloadPdf']);
-    Route::get('/prescriptions/{prescription}/qr', [PrescriptionController::class, 'qrCode']);
-    Route::get('/prescriptions/active', [PrescriptionController::class, 'active']);
-    Route::get('/prescriptions/expired', [PrescriptionController::class, 'expired']);
-    Route::get('/prescriptions/needs-refill', [PrescriptionController::class, 'needsRefill']);
+    Route::middleware(['api.permission:prescriptions.view'])->group(function () {
+        Route::get('/prescriptions', [PrescriptionController::class, 'index']);
+        Route::get('/prescriptions/{prescription}', [PrescriptionController::class, 'show']);
+        Route::get('/prescriptions/{prescription}/items', [PrescriptionController::class, 'items']);
+        Route::get('/prescriptions/{prescription}/qr', [PrescriptionController::class, 'qrCode']);
+        Route::get('/prescriptions/active', [PrescriptionController::class, 'active']);
+        Route::get('/prescriptions/expired', [PrescriptionController::class, 'expired']);
+        Route::get('/prescriptions/needs-refill', [PrescriptionController::class, 'needsRefill']);
+    });
+
+    Route::middleware(['api.permission:prescriptions.create'])->group(function () {
+        Route::post('/prescriptions', [PrescriptionController::class, 'store']);
+        Route::post('/prescriptions/{prescription}/items', [PrescriptionController::class, 'addItem']);
+    });
+
+    Route::middleware(['api.permission:prescriptions.edit'])->group(function () {
+        Route::put('/prescriptions/{prescription}', [PrescriptionController::class, 'update']);
+        Route::put('/prescriptions/{prescription}/items/{item}', [PrescriptionController::class, 'updateItem']);
+        Route::post('/prescriptions/{prescription}/verify', [PrescriptionController::class, 'verify']);
+        Route::post('/prescriptions/{prescription}/dispense', [PrescriptionController::class, 'dispense']);
+        Route::post('/prescriptions/{prescription}/refill', [PrescriptionController::class, 'refill']);
+    });
+
+    Route::middleware(['api.permission:prescriptions.delete'])->group(function () {
+        Route::delete('/prescriptions/{prescription}', [PrescriptionController::class, 'destroy']);
+        Route::delete('/prescriptions/{prescription}/items/{item}', [PrescriptionController::class, 'removeItem']);
+    });
+
+    Route::middleware(['api.permission:prescriptions.download'])->group(function () {
+        Route::get('/prescriptions/{prescription}/pdf', [PrescriptionController::class, 'downloadPdf']);
+    });
 
     // Lab result management (requires lab_results feature)
     Route::middleware(['license.feature:lab_results'])->group(function () {
@@ -231,12 +384,27 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::post('/notifications/send', [App\Http\Controllers\Api\NotificationController::class, 'send']);
 
     // Queue Management
-    Route::apiResource('queues', App\Http\Controllers\Api\QueueController::class);
-    Route::get('/queues/{queue}/patients', [App\Http\Controllers\Api\QueueController::class, 'patients']);
-    Route::post('/queues/{queue}/add-patient', [App\Http\Controllers\Api\QueueController::class, 'addPatient']);
-    Route::post('/queues/{queue}/remove-patient', [App\Http\Controllers\Api\QueueController::class, 'removePatient']);
-    Route::post('/queues/{queue}/next-patient', [App\Http\Controllers\Api\QueueController::class, 'nextPatient']);
-    Route::get('/queues/active', [App\Http\Controllers\Api\QueueController::class, 'active']);
+    Route::middleware(['api.permission:queue.view'])->group(function () {
+        Route::get('/queues', [App\Http\Controllers\Api\QueueController::class, 'index']);
+        Route::get('/queues/{queue}', [App\Http\Controllers\Api\QueueController::class, 'show']);
+        Route::get('/queues/{queue}/patients', [App\Http\Controllers\Api\QueueController::class, 'patients']);
+        Route::get('/queues/active', [App\Http\Controllers\Api\QueueController::class, 'active']);
+    });
+
+    Route::middleware(['api.permission:queue.add'])->group(function () {
+        Route::post('/queues', [App\Http\Controllers\Api\QueueController::class, 'store']);
+        Route::post('/queues/{queue}/add-patient', [App\Http\Controllers\Api\QueueController::class, 'addPatient']);
+    });
+
+    Route::middleware(['api.permission:queue.remove'])->group(function () {
+        Route::delete('/queues/{queue}', [App\Http\Controllers\Api\QueueController::class, 'destroy']);
+        Route::post('/queues/{queue}/remove-patient', [App\Http\Controllers\Api\QueueController::class, 'removePatient']);
+    });
+
+    Route::middleware(['api.permission:queue.process'])->group(function () {
+        Route::put('/queues/{queue}', [App\Http\Controllers\Api\QueueController::class, 'update']);
+        Route::post('/queues/{queue}/next-patient', [App\Http\Controllers\Api\QueueController::class, 'nextPatient']);
+    });
 
     // Billing and Payment Management
     Route::apiResource('bills', App\Http\Controllers\Api\BillController::class);
@@ -269,12 +437,20 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     // License management routes are now in routes/license.php
 
     // Search and filtering
-    Route::get('/search/patients', [PatientController::class, 'search']);
-    Route::get('/search/doctors', [DoctorController::class, 'search']);
-    Route::get('/search/appointments', [AppointmentController::class, 'search']);
-    Route::get('/search/prescriptions', [PrescriptionController::class, 'search']);
-    Route::get('/search/users', [UserController::class, 'search']);
-    Route::get('/search/global', [App\Http\Controllers\Api\SearchController::class, 'global']);
+    Route::middleware(['api.permission:search.patients'])->group(function () {
+        Route::get('/search/patients', [PatientController::class, 'search']);
+    });
+
+    Route::middleware(['api.permission:search.doctors'])->group(function () {
+        Route::get('/search/doctors', [DoctorController::class, 'search']);
+    });
+
+    Route::middleware(['api.permission:search.global'])->group(function () {
+        Route::get('/search/appointments', [AppointmentController::class, 'search']);
+        Route::get('/search/prescriptions', [PrescriptionController::class, 'search']);
+        Route::get('/search/users', [UserController::class, 'search']);
+        Route::get('/search/global', [App\Http\Controllers\Api\SearchController::class, 'global']);
+    });
 
     // Bulk Operations
     Route::prefix('bulk')->group(function () {
@@ -324,14 +500,17 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
         Route::get('/export/prescriptions', [PrescriptionController::class, 'export']);
     });
 
-    // System Management Routes (Admin only)
-    Route::middleware(['api.permission:admin'])->group(function () {
+    // System Management Routes
+    Route::middleware(['api.permission:system.info'])->group(function () {
         Route::get('/system/health', [App\Http\Controllers\Api\SystemController::class, 'health']);
         Route::get('/system/status', [App\Http\Controllers\Api\SystemController::class, 'status']);
+        Route::get('/system/usage', [App\Http\Controllers\Api\SystemController::class, 'usage']);
+    });
+
+    Route::middleware(['api.permission:system.admin'])->group(function () {
         Route::get('/system/logs', [App\Http\Controllers\Api\SystemController::class, 'logs']);
         Route::post('/system/backup', [App\Http\Controllers\Api\SystemController::class, 'backup']);
         Route::post('/system/clear-cache', [App\Http\Controllers\Api\SystemController::class, 'clearCache']);
-        Route::get('/system/usage', [App\Http\Controllers\Api\SystemController::class, 'usage']);
     });
 
     // Integration Routes
@@ -358,11 +537,14 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     });
 
     // Audit and Compliance Routes
-    Route::middleware(['api.permission:admin'])->group(function () {
+    Route::middleware(['api.permission:activity_logs.view'])->group(function () {
         Route::get('/audit/logs', [App\Http\Controllers\Api\AuditController::class, 'logs']);
-        Route::get('/audit/export', [App\Http\Controllers\Api\AuditController::class, 'export']);
         Route::get('/audit/compliance', [App\Http\Controllers\Api\AuditController::class, 'compliance']);
         Route::get('/audit/security', [App\Http\Controllers\Api\AuditController::class, 'security']);
+    });
+
+    Route::middleware(['api.permission:activity_logs.export'])->group(function () {
+        Route::get('/audit/export', [App\Http\Controllers\Api\AuditController::class, 'export']);
     });
 });
 

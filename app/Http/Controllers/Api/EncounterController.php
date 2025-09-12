@@ -124,6 +124,9 @@ class EncounterController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('encounters.view');
+
             $currentClinic = $this->getCurrentClinic();
 
             if (!$currentClinic) {
@@ -254,6 +257,9 @@ class EncounterController extends BaseController
     public function store(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('encounters.create');
+
             $currentClinic = $this->getCurrentClinic();
 
             if (!$currentClinic) {

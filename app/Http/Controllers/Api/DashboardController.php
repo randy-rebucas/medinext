@@ -86,7 +86,16 @@ class DashboardController extends BaseController
     public function stats(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('dashboard.stats');
+
             $clinicId = $request->get('clinic_id', Auth::user()->current_clinic_id ?? 1);
+            
+            // Ensure user has access to the requested clinic
+            if ($clinicId) {
+                $this->requireClinicAccess($clinicId);
+            }
+            
             $dateFrom = $request->get('date_from');
             $dateTo = $request->get('date_to');
 
@@ -451,6 +460,9 @@ class DashboardController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('dashboard.view');
+
             $user = $this->getAuthenticatedUser();
             if (!$user instanceof User) {
                 return $this->errorResponse('User not found', null, 404);

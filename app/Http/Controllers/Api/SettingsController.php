@@ -58,6 +58,9 @@ class SettingsController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('settings.view');
+
             $currentClinic = $this->getCurrentClinic();
 
             if (!$currentClinic) {

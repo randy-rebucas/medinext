@@ -123,14 +123,6 @@ export default function RoomManagement() {
         }
     ];
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'Available': return 'default';
-            case 'Occupied': return 'secondary';
-            case 'Maintenance': return 'destructive';
-            default: return 'secondary';
-        }
-    };
 
     const filteredRooms = rooms.filter(room => {
         const matchesSearch = room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

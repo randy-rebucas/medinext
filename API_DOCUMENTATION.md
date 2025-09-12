@@ -10,13 +10,32 @@ The MediNext API provides comprehensive endpoints for managing a medical EMR (El
 https://your-domain.com/api/v1
 ```
 
-## Authentication
+## Authentication & Authorization
 
-The API uses Laravel Sanctum for authentication. Include the Bearer token in the Authorization header:
+The API uses Laravel Sanctum for authentication with comprehensive permission-based access control. All protected endpoints require:
 
+1. **Authentication**: Valid API token via Bearer authentication
+2. **Permission**: Specific permission based on user role and clinic access
+3. **Clinic Access**: Multi-clinic isolation for data security
+
+### Authentication Header
 ```
 Authorization: Bearer {your-token}
 ```
+
+### Permission System
+- **130+ Permissions** covering all application functionality
+- **6 Role Types** with specific permission sets
+- **Multi-Clinic Support** with clinic-specific access control
+- **Granular Access Control** for every API endpoint
+
+### Role-Based Access
+- **Superadmin**: Full system access (100+ permissions)
+- **Admin**: Clinic management (80+ permissions)
+- **Doctor**: Clinical operations (30+ permissions)
+- **Receptionist**: Front desk operations (25+ permissions)
+- **Patient**: Self-service access (15+ permissions)
+- **Medrep**: Medical representative features (20+ permissions)
 
 ## Response Format
 
@@ -38,6 +57,37 @@ All API responses follow a consistent format:
   "success": false,
   "message": "Error message",
   "errors": { ... },
+  "timestamp": "2024-01-01T00:00:00.000000Z"
+}
+```
+
+### Permission Denied Response (403)
+```json
+{
+  "success": false,
+  "message": "Insufficient permissions",
+  "error_code": "INSUFFICIENT_PERMISSIONS",
+  "required_permission": "patients.create",
+  "timestamp": "2024-01-01T00:00:00.000000Z"
+}
+```
+
+### Unauthenticated Response (401)
+```json
+{
+  "success": false,
+  "message": "Unauthenticated",
+  "error_code": "UNAUTHENTICATED",
+  "timestamp": "2024-01-01T00:00:00.000000Z"
+}
+```
+
+### Clinic Access Denied Response (403)
+```json
+{
+  "success": false,
+  "message": "No access to this clinic",
+  "error_code": "CLINIC_ACCESS_DENIED",
   "timestamp": "2024-01-01T00:00:00.000000Z"
 }
 ```

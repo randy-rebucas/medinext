@@ -115,6 +115,9 @@ class PatientController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('patients.view');
+
             $user = $this->getAuthenticatedUser();
             $currentClinic = $this->getCurrentClinic();
 

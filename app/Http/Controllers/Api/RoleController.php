@@ -78,6 +78,9 @@ class RoleController extends BaseController
     public function index(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('roles.view');
+
             $query = Role::with(['permissions'])->withCount('userClinicRoles');
 
             // Apply filters
@@ -91,6 +94,11 @@ class RoleController extends BaseController
 
             if ($request->has('system_role')) {
                 $query->where('is_system_role', $request->get('system_role'));
+            }
+
+            // Filter out system roles for non-superadmin users
+            if (!$this->hasRole('superadmin')) {
+                $query->where('is_system_role', false);
             }
 
             $roles = $query->paginate($request->get('per_page', 15));
@@ -152,6 +160,9 @@ class RoleController extends BaseController
     public function store(Request $request): JsonResponse
     {
         try {
+            // Permission check is handled by middleware, but we can add additional validation
+            $this->requirePermission('roles.create');
+
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255|unique:roles',
                 'description' => 'required|string|max:1000',
@@ -163,10 +174,15 @@ class RoleController extends BaseController
                 return $this->validationErrorResponse($validator->errors());
             }
 
+            // Prevent non-superadmin users from creating system roles
+            if ($request->has('is_system_role') && $request->is_system_role && !$this->hasRole('superadmin')) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Cannot create system roles');
+            }
+
             $role = Role::create([
                 'name' => $request->name,
                 'description' => $request->description,
-                'is_system_role' => false,
+                'is_system_role' => $request->get('is_system_role', false),
             ]);
 
             if ($request->has('permissions')) {

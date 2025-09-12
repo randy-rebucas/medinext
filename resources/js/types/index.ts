@@ -42,7 +42,7 @@ export interface Clinic {
     email?: string;
     website?: string;
     description?: string;
-    settings?: Record<string, any>;
+    settings?: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
@@ -320,7 +320,7 @@ export interface DashboardStats {
 export interface NavItem {
     title: string;
     href: string;
-    icon?: React.ComponentType<any> | null;
+    icon?: React.ComponentType<{ className?: string }> | null;
 }
 
 // Breadcrumb types
@@ -453,7 +453,7 @@ export interface Notification {
     type: string;
     title: string;
     message: string;
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
     read_at?: string;
     created_at: string;
 }
@@ -484,7 +484,7 @@ export interface ActivityLog {
     description: string;
     model_type: string;
     model_id: number;
-    changes?: Record<string, any>;
+    changes?: Record<string, unknown>;
     ip_address?: string;
     user_agent?: string;
     created_at: string;
@@ -621,7 +621,7 @@ export interface StatCard {
     title: string;
     value: string | number;
     change: string;
-    icon: React.ComponentType<any>;
+    icon: React.ComponentType<{ className?: string }>;
     color: string;
 }
 

@@ -231,19 +231,20 @@ class Permission extends Model
      */
     public function conflictsWith(Permission $other): bool
     {
+        // Only check for actual conflicts, not dependencies
+        // A permission having 'manage' and 'view' is not a conflict, it's a dependency
         $conflicts = [
-            'delete' => ['view'],
-            'manage' => ['view', 'create', 'edit'],
-            'edit' => ['view'],
+            // Only real conflicts - permissions that are mutually exclusive
         ];
 
         if ($this->module === $other->module) {
             $action1 = $this->action;
             $action2 = $other->action;
 
-            foreach ($conflicts as $conflicting => $required) {
-                if (($action1 === $conflicting && in_array($action2, $required)) ||
-                    ($action2 === $conflicting && in_array($action1, $required))) {
+            // Check for actual conflicts (mutually exclusive permissions)
+            foreach ($conflicts as $conflicting => $exclusive) {
+                if (($action1 === $conflicting && in_array($action2, $exclusive)) ||
+                    ($action2 === $conflicting && in_array($action1, $exclusive))) {
                     return true;
                 }
             }
