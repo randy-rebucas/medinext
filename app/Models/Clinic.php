@@ -159,6 +159,22 @@ class Clinic extends Model
     }
 
     /**
+     * Get the bills in this clinic
+     */
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class);
+    }
+
+    /**
+     * Get the queues in this clinic
+     */
+    public function queues(): HasMany
+    {
+        return $this->hasMany(Queue::class);
+    }
+
+    /**
      * Get clinic display name
      */
     public function getDisplayNameAttribute(): string

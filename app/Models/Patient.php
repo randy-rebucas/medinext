@@ -65,6 +65,30 @@ class Patient extends Model
     }
 
     /**
+     * Get the bills for this patient
+     */
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Bill::class);
+    }
+
+    /**
+     * Get the insurance records for this patient
+     */
+    public function insurance(): HasMany
+    {
+        return $this->hasMany(Insurance::class);
+    }
+
+    /**
+     * Get the queue entries for this patient
+     */
+    public function queuePatients(): HasMany
+    {
+        return $this->hasMany(QueuePatient::class);
+    }
+
+    /**
      * Get patient's full name
      */
     public function getFullNameAttribute(): string

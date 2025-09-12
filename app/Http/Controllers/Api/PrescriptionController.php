@@ -9,8 +9,56 @@ use App\Models\Patient;
 use App\Models\Doctor;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Annotations as OA;
+
+/**
+ * @OA\Schema(
+ *     schema="Prescription",
+ *     type="object",
+ *     title="Prescription",
+ *     description="Prescription model",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="patient_id", type="integer", example=1),
+ *     @OA\Property(property="doctor_id", type="integer", example=1),
+ *     @OA\Property(property="clinic_id", type="integer", example=1),
+ *     @OA\Property(property="prescription_number", type="string", example="RX001"),
+ *     @OA\Property(property="prescription_date", type="string", format="date", example="2024-01-15"),
+ *     @OA\Property(property="status", type="string", enum={"draft", "active", "completed", "cancelled"}, example="active"),
+ *     @OA\Property(property="notes", type="string", example="Take with food"),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time"),
+ *     @OA\Property(property="patient", type="object"),
+ *     @OA\Property(property="doctor", type="object"),
+ *     @OA\Property(
+ *         property="items",
+ *         type="array",
+ *         @OA\Items(type="object")
+ *     )
+ * )
+ */
+
+/**
+ * @OA\Schema(
+ *     schema="PrescriptionItem",
+ *     type="object",
+ *     title="Prescription Item",
+ *     description="Prescription item model",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="prescription_id", type="integer", example=1),
+ *     @OA\Property(property="medication_name", type="string", example="Amoxicillin 500mg"),
+ *     @OA\Property(property="dosage", type="string", example="500mg"),
+ *     @OA\Property(property="frequency", type="string", example="Twice daily"),
+ *     @OA\Property(property="duration", type="string", example="7 days"),
+ *     @OA\Property(property="quantity", type="integer", example=14),
+ *     @OA\Property(property="instructions", type="string", example="Take with food"),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ */
+
+
 
 class PrescriptionController extends BaseController
 {
@@ -90,7 +138,7 @@ class PrescriptionController extends BaseController
      *             @OA\Property(
      *                 property="data",
      *                 allOf={
-     *                     @OA\Schema(ref="#/components/schemas/Pagination"),
+     *                     @OA\Schema(type="object"),
      *                     @OA\Schema(
      *                         @OA\Property(
      *                             property="data",
@@ -103,8 +151,8 @@ class PrescriptionController extends BaseController
      *                                 @OA\Property(property="prescription_type", type="string", example="new"),
      *                                 @OA\Property(property="status", type="string", example="pending"),
      *                                 @OA\Property(property="issued_at", type="string", format="date-time"),
-     *                                 @OA\Property(property="patient", ref="#/components/schemas/Patient"),
-     *                                 @OA\Property(property="doctor", ref="#/components/schemas/Doctor"),
+     *                                 @OA\Property(property="patient", type="object"),
+     *                                 @OA\Property(property="doctor", type="object"),
      *                                 @OA\Property(property="items", type="array", @OA\Items(type="object")),
      *                                 @OA\Property(property="created_at", type="string", format="date-time"),
      *                                 @OA\Property(property="updated_at", type="string", format="date-time")

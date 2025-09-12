@@ -4,345 +4,208 @@ namespace App\Http\Controllers;
 
 use App\Models\Clinic;
 use App\Models\Setting;
-use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class ClinicSettingsController extends Controller
 {
     /**
-     * Display the clinic settings page
+     * Get clinic settings
      */
-    public function index(): Response
+    public function getSettings(Request $request): JsonResponse
     {
-        $user = Auth::user();
-
-        if (!$user) {
-            abort(401, 'User not authenticated');
-        }
-
-        $clinic = $this->getCurrentClinic($user);
-
-        if (!$clinic) {
-            abort(403, 'No clinic access. Please ensure you have been assigned to a clinic.');
-        }
-
-        $settings = $this->getClinicSettings($clinic->id);
-
-        return Inertia::render('admin/clinic-settings', [
-            'clinic' => $clinic,
-            'settings' => $settings,
-        ]);
-    }
-
-    /**
-     * Get clinic settings via API
-     */
-    public function getSettings(Request $request)
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not authenticated'
-            ], 401);
-        }
-
-        $clinic = $this->getCurrentClinic($user);
-
-        if (!$clinic) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No clinic access. Please ensure you have been assigned to a clinic.',
-                'debug' => [
-                    'user_id' => $user->id,
-                    'user_email' => $user->email,
-                    'user_clinic_roles_count' => $user->userClinicRoles()->count(),
-                    'user_clinics_count' => $user->clinics()->count(),
-                    'total_clinics' => Clinic::count(),
-                ]
-            ], 403);
-        }
-
-        $settings = $this->getClinicSettings($clinic->id);
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'clinic' => $clinic,
-                'settings' => $settings,
-            ]
-        ]);
-    }
-
-    /**
-     * Update clinic settings via API
-     */
-    public function updateSettings(Request $request)
-    {
-        $user = Auth::user();
-        $clinic = $this->getCurrentClinic($user);
-
-        if (!$clinic) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No clinic access'
-            ], 403);
-        }
-
-        // Check if user has permission to update clinic settings
-        /** @var User $user */
-        if (!$user->hasRoleInClinic('admin', $clinic->id) && !$user->hasRoleInClinic('superadmin', $clinic->id)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Insufficient permissions'
-            ], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'clinic_name' => 'required|string|max:255',
-            'clinic_code' => 'nullable|string|max:50',
-            'description' => 'nullable|string|max:1000',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'address' => 'nullable|string|max:500',
-            'website' => 'nullable|url|max:255',
-            'license' => 'nullable|string|max:100',
-            'opening_time' => 'nullable|date_format:H:i',
-            'closing_time' => 'nullable|date_format:H:i',
-            'working_days' => 'nullable|array',
-            'working_days.*' => 'string|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
-            'email_notifications' => 'boolean',
-            'sms_notifications' => 'boolean',
-            'online_booking' => 'boolean',
-            'patient_portal' => 'boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            DB::beginTransaction();
-
-            // Update clinic basic information
-            $clinic->update([
-                'name' => $request->clinic_name,
-                'description' => $request->description,
-                'phone' => $request->phone,
-                'email' => $request->email,
-                'website' => $request->website,
-            ]);
-
-            // Update clinic address
-            if ($request->address) {
-                $clinic->update([
-                    'address' => [
-                        'street' => $request->address,
-                        'formatted' => $request->address,
-                    ]
-                ]);
+            $clinicId = $request->user()->current_clinic_id;
+            
+            if (!$clinicId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No clinic selected'
+                ], 400);
             }
 
-            // Update settings
-            $this->updateClinicSettings($clinic->id, $request->all());
+            $clinic = Clinic::findOrFail($clinicId);
+            
+            // Get clinic-specific settings
+            $settings = Setting::where('clinic_id', $clinicId)
+                              ->orWhereNull('clinic_id')
+                              ->get()
+                              ->keyBy('key');
 
-            DB::commit();
+            // Get default settings
+            $defaultSettings = [
+                'clinic_name' => $clinic->name,
+                'clinic_address' => $clinic->address,
+                'clinic_phone' => $clinic->phone,
+                'clinic_email' => $clinic->email,
+                'clinic_website' => $clinic->website,
+                'timezone' => 'UTC',
+                'date_format' => 'Y-m-d',
+                'time_format' => 'H:i',
+                'currency' => 'USD',
+                'language' => 'en',
+                'appointment_duration' => 30,
+                'appointment_buffer_time' => 15,
+                'auto_confirm_appointments' => false,
+                'send_appointment_reminders' => true,
+                'reminder_hours_before' => 24,
+                'allow_online_booking' => true,
+                'require_patient_verification' => false,
+                'max_appointments_per_day' => 50,
+                'working_hours' => [
+                    'monday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
+                    'tuesday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
+                    'wednesday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
+                    'thursday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
+                    'friday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
+                    'saturday' => ['start' => '09:00', 'end' => '13:00', 'enabled' => false],
+                    'sunday' => ['start' => '09:00', 'end' => '13:00', 'enabled' => false],
+                ],
+                'notification_settings' => [
+                    'email_notifications' => true,
+                    'sms_notifications' => false,
+                    'push_notifications' => true,
+                    'appointment_reminders' => true,
+                    'prescription_ready' => true,
+                    'lab_results_ready' => true,
+                ],
+                'privacy_settings' => [
+                    'patient_data_retention_days' => 2555, // 7 years
+                    'auto_delete_expired_data' => false,
+                    'require_consent_for_data_sharing' => true,
+                    'allow_patient_portal_access' => true,
+                ],
+                'integration_settings' => [
+                    'lab_integration_enabled' => false,
+                    'pharmacy_integration_enabled' => false,
+                    'insurance_verification_enabled' => false,
+                    'payment_gateway_enabled' => false,
+                ],
+            ];
+
+            // Merge with saved settings
+            $mergedSettings = [];
+            foreach ($defaultSettings as $key => $defaultValue) {
+                $mergedSettings[$key] = $settings->get($key)?->value ?? $defaultValue;
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Clinic settings updated successfully',
                 'data' => [
-                    'clinic' => $clinic->fresh(),
-                    'settings' => $this->getClinicSettings($clinic->id),
+                    'clinic' => $clinic,
+                    'settings' => $mergedSettings,
                 ]
             ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update clinic settings',
+                'message' => 'Failed to retrieve clinic settings',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Get current clinic for the user
-     */
-    private function getCurrentClinic($user): ?Clinic
-    {
-        if (!$user) {
-            return null;
-        }
-
-        // First try to get from user clinic roles
-        $userClinicRole = $user->userClinicRoles()->with('clinic')->first();
-        if ($userClinicRole && $userClinicRole->clinic) {
-            return $userClinicRole->clinic;
-        }
-
-        // If no user clinic roles, try to get from clinics relationship
-        $clinic = $user->clinics()->first();
-        if ($clinic) {
-            return $clinic;
-        }
-
-        // If still no clinic, only auto-assign for superadmin users (for development/testing)
-        if ($user->hasRole('superadmin')) {
-            $firstClinic = Clinic::first();
-            if ($firstClinic) {
-                // Create a user clinic role for superadmin if none exists
-                $superadminRole = \App\Models\Role::where('name', 'superadmin')->first();
-                if ($superadminRole) {
-                    \App\Models\UserClinicRole::firstOrCreate([
-                        'user_id' => $user->id,
-                        'clinic_id' => $firstClinic->id,
-                        'role_id' => $superadminRole->id,
-                    ]);
-                }
-                return $firstClinic;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Get all clinic settings
-     */
-    private function getClinicSettings(int $clinicId): array
-    {
-        $settings = Setting::where('clinic_id', $clinicId)->get()->keyBy('key');
-
-        return [
-            // Basic Information
-            'clinic_name' => $settings->get('clinic.name')?->value ?? '',
-            'clinic_code' => $settings->get('clinic.code')?->value ?? '',
-            'description' => $settings->get('clinic.description')?->value ?? '',
-
-            // Contact Information
-            'phone' => $settings->get('clinic.phone')?->value ?? '',
-            'email' => $settings->get('clinic.email')?->value ?? '',
-            'address' => $settings->get('clinic.address')?->value ?? '',
-            'website' => $settings->get('clinic.website')?->value ?? '',
-            'license' => $settings->get('clinic.license')?->value ?? '',
-
-            // Operating Hours
-            'opening_time' => $settings->get('working_hours.opening_time')?->value ?? '08:00',
-            'closing_time' => $settings->get('working_hours.closing_time')?->value ?? '18:00',
-            'working_days' => $settings->get('working_hours.days')?->value ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-
-            // System Settings
-            'email_notifications' => $settings->get('notifications.email_enabled')?->value ?? true,
-            'sms_notifications' => $settings->get('notifications.sms_enabled')?->value ?? true,
-            'online_booking' => $settings->get('system.online_booking')?->value ?? true,
-            'patient_portal' => $settings->get('system.patient_portal')?->value ?? true,
-        ];
-    }
-
-    /**
      * Update clinic settings
      */
-    private function updateClinicSettings(int $clinicId, array $data): void
+    public function updateSettings(Request $request): JsonResponse
     {
-        $settingsToUpdate = [
-            // Basic Information
-            'clinic.name' => $data['clinic_name'] ?? null,
-            'clinic.code' => $data['clinic_code'] ?? null,
-            'clinic.description' => $data['description'] ?? null,
+        try {
+            $clinicId = $request->user()->current_clinic_id;
+            
+            if (!$clinicId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No clinic selected'
+                ], 400);
+            }
 
-            // Contact Information
-            'clinic.phone' => $data['phone'] ?? null,
-            'clinic.email' => $data['email'] ?? null,
-            'clinic.address' => $data['address'] ?? null,
-            'clinic.website' => $data['website'] ?? null,
-            'clinic.license' => $data['license'] ?? null,
+            $validator = Validator::make($request->all(), [
+                'clinic_name' => 'sometimes|string|max:255',
+                'clinic_address' => 'sometimes|string|max:500',
+                'clinic_phone' => 'sometimes|string|max:20',
+                'clinic_email' => 'sometimes|email|max:255',
+                'clinic_website' => 'sometimes|url|max:255',
+                'timezone' => 'sometimes|string|max:50',
+                'date_format' => 'sometimes|string|max:20',
+                'time_format' => 'sometimes|string|max:20',
+                'currency' => 'sometimes|string|max:3',
+                'language' => 'sometimes|string|max:5',
+                'appointment_duration' => 'sometimes|integer|min:5|max:480',
+                'appointment_buffer_time' => 'sometimes|integer|min:0|max:60',
+                'auto_confirm_appointments' => 'sometimes|boolean',
+                'send_appointment_reminders' => 'sometimes|boolean',
+                'reminder_hours_before' => 'sometimes|integer|min:1|max:168',
+                'allow_online_booking' => 'sometimes|boolean',
+                'require_patient_verification' => 'sometimes|boolean',
+                'max_appointments_per_day' => 'sometimes|integer|min:1|max:200',
+                'working_hours' => 'sometimes|array',
+                'notification_settings' => 'sometimes|array',
+                'privacy_settings' => 'sometimes|array',
+                'integration_settings' => 'sometimes|array',
+            ]);
 
-            // Operating Hours
-            'working_hours.opening_time' => $data['opening_time'] ?? null,
-            'working_hours.closing_time' => $data['closing_time'] ?? null,
-            'working_hours.days' => $data['working_days'] ?? null,
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
-            // System Settings
-            'notifications.email_enabled' => $data['email_notifications'] ?? null,
-            'notifications.sms_enabled' => $data['sms_notifications'] ?? null,
-            'system.online_booking' => $data['online_booking'] ?? null,
-            'system.patient_portal' => $data['patient_portal'] ?? null,
-        ];
+            $clinic = Clinic::findOrFail($clinicId);
+            $settings = $request->except(['clinic_name', 'clinic_address', 'clinic_phone', 'clinic_email', 'clinic_website']);
 
-        foreach ($settingsToUpdate as $key => $value) {
-            if ($value !== null) {
-                $group = explode('.', $key)[0];
-                $type = $this->getSettingType($key, $value);
+            // Update clinic basic information
+            if ($request->has('clinic_name')) {
+                $clinic->name = $request->clinic_name;
+            }
+            if ($request->has('clinic_address')) {
+                $clinic->address = $request->clinic_address;
+            }
+            if ($request->has('clinic_phone')) {
+                $clinic->phone = $request->clinic_phone;
+            }
+            if ($request->has('clinic_email')) {
+                $clinic->email = $request->clinic_email;
+            }
+            if ($request->has('clinic_website')) {
+                $clinic->website = $request->clinic_website;
+            }
+            $clinic->save();
 
-                Setting::setValue(
-                    $key,
-                    $value,
-                    $clinicId,
-                    $type,
-                    $group,
-                    $this->getSettingDescription($key),
-                    false
+            // Update settings
+            foreach ($settings as $key => $value) {
+                Setting::updateOrCreate(
+                    [
+                        'key' => $key,
+                        'clinic_id' => $clinicId,
+                    ],
+                    [
+                        'value' => is_array($value) ? json_encode($value) : $value,
+                        'updated_by' => Auth::id(),
+                    ]
                 );
             }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Clinic settings updated successfully',
+                'data' => [
+                    'clinic' => $clinic->fresh(),
+                    'settings' => $settings,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update clinic settings',
+                'error' => $e->getMessage()
+            ], 500);
         }
-    }
-
-    /**
-     * Get setting type based on key and value
-     */
-    private function getSettingType(string $key, $value): string
-    {
-        if (is_bool($value)) {
-            return 'boolean';
-        }
-
-        if (is_array($value)) {
-            return 'array';
-        }
-
-        if (is_numeric($value)) {
-            return 'integer';
-        }
-
-        return 'string';
-    }
-
-    /**
-     * Get setting description
-     */
-    private function getSettingDescription(string $key): string
-    {
-        $descriptions = [
-            'clinic.name' => 'The official name of the clinic',
-            'clinic.code' => 'Unique clinic identifier code',
-            'clinic.description' => 'Brief description of clinic services',
-            'clinic.phone' => 'Primary contact phone number',
-            'clinic.email' => 'Primary contact email address',
-            'clinic.address' => 'Complete clinic address',
-            'clinic.website' => 'Clinic website URL',
-            'clinic.license' => 'Clinic license number',
-            'working_hours.opening_time' => 'Daily opening time',
-            'working_hours.closing_time' => 'Daily closing time',
-            'working_hours.days' => 'Working days of the week',
-            'notifications.email_enabled' => 'Enable email notifications',
-            'notifications.sms_enabled' => 'Enable SMS notifications',
-            'system.online_booking' => 'Allow online appointment booking',
-            'system.patient_portal' => 'Enable patient portal access',
-        ];
-
-        return $descriptions[$key] ?? '';
     }
 }

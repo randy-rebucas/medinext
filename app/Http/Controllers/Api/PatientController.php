@@ -8,8 +8,12 @@ use App\Models\Clinic;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 use OpenApi\Annotations as OA;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+
+
+
 
 class PatientController extends BaseController
 {
@@ -94,7 +98,7 @@ class PatientController extends BaseController
      *                         @OA\Property(
      *                             property="data",
      *                             type="array",
-     *                             @OA\Items(ref="#/components/schemas/Patient")
+     *                             @OA\Items(type="object")
      *                         )
      *                     )
      *                 }
@@ -210,7 +214,7 @@ class PatientController extends BaseController
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
-     *                 @OA\Property(property="patient", ref="#/components/schemas/Patient")
+     *                 @OA\Property(property="patient", type="object")
      *             )
      *         )
      *     ),
@@ -291,7 +295,7 @@ class PatientController extends BaseController
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
-     *                 @OA\Property(property="patient", ref="#/components/schemas/Patient"),
+     *                 @OA\Property(property="patient", type="object"),
      *                 @OA\Property(
      *                     property="statistics",
      *                     type="object",
@@ -397,7 +401,7 @@ class PatientController extends BaseController
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
-     *                 @OA\Property(property="patient", ref="#/components/schemas/Patient")
+     *                 @OA\Property(property="patient", type="object")
      *             )
      *         )
      *     ),
@@ -577,7 +581,7 @@ class PatientController extends BaseController
      *                         @OA\Property(
      *                             property="data",
      *                             type="array",
-     *                             @OA\Items(ref="#/components/schemas/Appointment")
+     *                             @OA\Items(type="object")
      *                         )
      *                     )
      *                 }
@@ -690,7 +694,7 @@ class PatientController extends BaseController
      *                                 @OA\Property(property="type", type="string", example="consultation"),
      *                                 @OA\Property(property="status", type="string", example="completed"),
      *                                 @OA\Property(property="chief_complaint", type="string", example="Chest pain"),
-     *                                 @OA\Property(property="doctor", ref="#/components/schemas/Doctor"),
+     *                                 @OA\Property(property="doctor", type="object"),
      *                                 @OA\Property(property="created_at", type="string", format="date-time"),
      *                                 @OA\Property(property="updated_at", type="string", format="date-time")
      *                             )
@@ -805,7 +809,7 @@ class PatientController extends BaseController
      *                                 @OA\Property(property="prescription_type", type="string", example="new"),
      *                                 @OA\Property(property="status", type="string", example="pending"),
      *                                 @OA\Property(property="issued_at", type="string", format="date-time"),
-     *                                 @OA\Property(property="doctor", ref="#/components/schemas/Doctor"),
+     *                                 @OA\Property(property="doctor", type="object"),
      *                                 @OA\Property(property="items", type="array", @OA\Items(type="object")),
      *                                 @OA\Property(property="created_at", type="string", format="date-time"),
      *                                 @OA\Property(property="updated_at", type="string", format="date-time")
@@ -1192,7 +1196,7 @@ class PatientController extends BaseController
      *             @OA\Property(
      *                 property="data",
      *                 allOf={
-     *                     @OA\Schema(ref="#/components/schemas/Pagination"),
+     *                     @OA\Schema(type="object"),
      *                     @OA\Schema(
      *                         @OA\Property(
      *                             property="data",
@@ -1419,7 +1423,7 @@ class PatientController extends BaseController
      *                 @OA\Property(
      *                     property="patients",
      *                     type="array",
-     *                     @OA\Items(ref="#/components/schemas/Patient")
+     *                     @OA\Items(type="object")
      *                 ),
      *                 @OA\Property(property="total", type="integer", example=5),
      *                 @OA\Property(property="query", type="string", example="John Doe")

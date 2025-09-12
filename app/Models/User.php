@@ -158,6 +158,94 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the notifications for this user
+     */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get the bills created by this user
+     */
+    public function createdBills(): HasMany
+    {
+        return $this->hasMany(Bill::class, 'created_by');
+    }
+
+    /**
+     * Get the bills updated by this user
+     */
+    public function updatedBills(): HasMany
+    {
+        return $this->hasMany(Bill::class, 'updated_by');
+    }
+
+    /**
+     * Get the bill items created by this user
+     */
+    public function createdBillItems(): HasMany
+    {
+        return $this->hasMany(BillItem::class, 'created_by');
+    }
+
+    /**
+     * Get the bill items updated by this user
+     */
+    public function updatedBillItems(): HasMany
+    {
+        return $this->hasMany(BillItem::class, 'updated_by');
+    }
+
+    /**
+     * Get the insurance records created by this user
+     */
+    public function createdInsurance(): HasMany
+    {
+        return $this->hasMany(Insurance::class, 'created_by');
+    }
+
+    /**
+     * Get the insurance records updated by this user
+     */
+    public function updatedInsurance(): HasMany
+    {
+        return $this->hasMany(Insurance::class, 'updated_by');
+    }
+
+    /**
+     * Get the queues created by this user
+     */
+    public function createdQueues(): HasMany
+    {
+        return $this->hasMany(Queue::class, 'created_by');
+    }
+
+    /**
+     * Get the queues updated by this user
+     */
+    public function updatedQueues(): HasMany
+    {
+        return $this->hasMany(Queue::class, 'updated_by');
+    }
+
+    /**
+     * Get the queue patients created by this user
+     */
+    public function createdQueuePatients(): HasMany
+    {
+        return $this->hasMany(QueuePatient::class, 'created_by');
+    }
+
+    /**
+     * Get the notifications created by this user
+     */
+    public function createdNotifications(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'created_by');
+    }
+
+    /**
      * Get the displayable singular label of the model.
      * This method is required for Nova MorphTo relationships.
      *

@@ -13,6 +13,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Annotations as OA;
 
+
+
+
 class ClinicController extends BaseController
 {
     /**
@@ -185,7 +188,10 @@ class ClinicController extends BaseController
     {
         try {
             $user = $this->getAuthenticatedUser();
-            
+            if (!$user instanceof User) {
+                return $this->errorResponse('User not found', null, 404);
+            }
+
             [$perPage, $page] = $this->getPaginationParams($request);
             [$sort, $direction] = $this->getSortingParams($request, [
                 'id', 'name', 'created_at', 'updated_at'
@@ -712,8 +718,8 @@ class ClinicController extends BaseController
             }
 
             // Check if clinic has any data
-            $hasData = $clinic->patients()->exists() || 
-                      $clinic->appointments()->exists() || 
+            $hasData = $clinic->patients()->exists() ||
+                      $clinic->appointments()->exists() ||
                       $clinic->encounters()->exists();
 
             if ($hasData) {
@@ -1492,7 +1498,7 @@ class ClinicController extends BaseController
                 'total_encounters' => $clinic->encounters()->count(),
                 'total_prescriptions' => $clinic->prescriptions()->count(),
                 'total_lab_results' => $clinic->labResults()->count(),
-                
+
                 'appointments_today' => $clinic->appointments()
                     ->whereDate('start_at', now()->toDateString())
                     ->count(),
@@ -1502,16 +1508,16 @@ class ClinicController extends BaseController
                 'appointments_this_month' => $clinic->appointments()
                     ->whereBetween('start_at', [now()->startOfMonth(), now()->endOfMonth()])
                     ->count(),
-                
+
                 'new_patients_this_month' => $clinic->patients()
                     ->where('created_at', '>=', now()->startOfMonth())
                     ->count(),
-                
+
                 'appointments_by_status' => $clinic->appointments()
                     ->selectRaw('status, COUNT(*) as count')
                     ->groupBy('status')
                     ->get(),
-                
+
                 'appointments_by_type' => $clinic->appointments()
                     ->selectRaw('appointment_type, COUNT(*) as count')
                     ->groupBy('appointment_type')
