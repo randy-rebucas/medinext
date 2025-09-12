@@ -14,7 +14,9 @@ use App\Http\Controllers\Api\FileAssetController;
 use App\Http\Controllers\Api\MedrepController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\ClinicSettingsController;
 use App\Http\Controllers\Api\LicenseController;
+use App\Http\Controllers\Api\LicenseKeyController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
@@ -86,14 +88,15 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     // Settings and configuration
     Route::middleware(['api.permission:settings.view'])->group(function () {
         Route::get('/settings', [SettingsController::class, 'index']);
-        Route::get('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'getSettings']);
+        Route::get('/settings/clinic', [ClinicSettingsController::class, 'getSettings']);
         Route::get('/settings/user', [SettingsController::class, 'userSettings']);
     });
 
     Route::middleware(['api.permission:settings.manage'])->group(function () {
         Route::put('/settings', [SettingsController::class, 'update']);
-        Route::put('/settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'updateSettings']);
+        Route::put('/settings/clinic', [ClinicSettingsController::class, 'updateSettings']);
         Route::put('/settings/user', [SettingsController::class, 'updateUserSettings']);
+        Route::post('/settings/clinic/initialize', [ClinicSettingsController::class, 'initializeSettings']);
     });
 
     // User Management Routes

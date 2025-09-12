@@ -213,11 +213,6 @@ class Appointment extends Resource
                 ->hideFromIndex()
                 ->rules('nullable', 'exists:encounters,id'),
 
-            DateTime::make('Created At')
-                ->sortable()
-                ->exceptOnForms()
-                ->hideFromIndex(),
-
             DateTime::make('Updated At')
                 ->sortable()
                 ->exceptOnForms()

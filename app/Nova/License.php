@@ -21,6 +21,8 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
 use App\Nova\Actions\BulkUpdate;
+use App\Nova\Actions\GenerateLicenseKey;
+use App\Nova\Actions\AutoFillLicenseFields;
 use App\Nova\Filters\StatusFilter;
 use App\Nova\Filters\DateRangeFilter;
 use App\Nova\Lenses\ActiveRecords;
@@ -409,6 +411,8 @@ class License extends Resource
     public function actions(NovaRequest $request): array
     {
         return [
+            new AutoFillLicenseFields,
+            new GenerateLicenseKey,
             new ExportData,
             new BulkUpdate,
         ];

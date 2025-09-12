@@ -18,8 +18,14 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use App\Nova\Actions\ExportData;
 use App\Nova\Actions\BulkUpdate;
+use App\Nova\Actions\ValidateSettings;
+use App\Nova\Actions\ResetSettingsToDefault;
+use App\Nova\Actions\ExportSettings;
 use App\Nova\Filters\StatusFilter;
 use App\Nova\Filters\DateRangeFilter;
+use App\Nova\Filters\SettingGroupFilter;
+use App\Nova\Filters\SettingTypeFilter;
+use App\Nova\Filters\SettingVisibilityFilter;
 use App\Nova\Lenses\ActiveRecords;
 
 class Setting extends Resource
@@ -157,21 +163,21 @@ class Setting extends Resource
             Heading::make('Validation & Requirements'),
 
             Badge::make('Required', function () {
-                return $this->is_required ? 'Yes' : 'No';
+                return $this->isRequired() ? 'Yes' : 'No';
             })->map([
                 'Yes' => 'danger',
                 'No' => 'success',
             ])->sortable(),
 
             Badge::make('Editable', function () {
-                return $this->is_editable ? 'Yes' : 'No';
+                return $this->isEditable() ? 'Yes' : 'No';
             })->map([
                 'Yes' => 'success',
                 'No' => 'warning',
             ])->sortable(),
 
             Badge::make('Valid', function () {
-                return $this->is_valid ? 'Yes' : 'No';
+                return $this->isValid() ? 'Yes' : 'No';
             })->map([
                 'Yes' => 'success',
                 'No' => 'danger',
@@ -233,7 +239,9 @@ class Setting extends Resource
     public function filters(NovaRequest $request): array
     {
         return [
-            new StatusFilter,
+            new SettingGroupFilter,
+            new SettingTypeFilter,
+            new SettingVisibilityFilter,
             new DateRangeFilter,
         ];
     }
@@ -258,6 +266,9 @@ class Setting extends Resource
     public function actions(NovaRequest $request): array
     {
         return [
+            new ValidateSettings,
+            new ResetSettingsToDefault,
+            new ExportSettings,
             new ExportData,
             new BulkUpdate,
         ];

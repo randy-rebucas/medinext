@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\LicenseController;
+use App\Http\Controllers\Api\LicenseKeyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -72,5 +73,29 @@ Route::prefix('v1/license')->group(function () {
             Route::get('/expiring', [LicenseController::class, 'expiring'])
                 ->name('license.expiring');
         });
+    });
+
+    // License key generation routes (admin only)
+    Route::middleware(['api.auth', 'api.permission:admin'])->prefix('key')->group(function () {
+        Route::post('/generate', [LicenseKeyController::class, 'generate'])
+            ->name('api.license.key.generate');
+
+        Route::post('/generate-multiple', [LicenseKeyController::class, 'generateMultiple'])
+            ->name('api.license.key.generate-multiple');
+
+        Route::post('/validate', [LicenseKeyController::class, 'validate'])
+            ->name('api.license.key.validate');
+
+        Route::post('/parse', [LicenseKeyController::class, 'parse'])
+            ->name('api.license.key.parse');
+
+        Route::get('/statistics', [LicenseKeyController::class, 'statistics'])
+            ->name('api.license.key.statistics');
+
+        Route::get('/strategies', [LicenseKeyController::class, 'strategies'])
+            ->name('api.license.key.strategies');
+
+        Route::post('/regenerate/{license}', [LicenseKeyController::class, 'regenerate'])
+            ->name('api.license.key.regenerate');
     });
 });

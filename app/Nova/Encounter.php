@@ -66,6 +66,16 @@ class Encounter extends Resource
     }
 
     /**
+     * Get the URI key for the resource.
+     *
+     * @return string
+     */
+    public static function uriKey()
+    {
+        return 'encounters';
+    }
+
+    /**
      * Get the fields displayed by the resource.
      *
      * @return array<int, \Laravel\Nova\Fields\Field>

@@ -202,8 +202,15 @@ class Setting extends Model
             'notifications' => 'Notifications',
             'branding' => 'Branding',
             'system' => 'System Settings',
-            'billing' => 'Billing',
-            'security' => 'Security',
+            'appointments' => 'Appointment Management',
+            'prescriptions' => 'Prescription Management',
+            'billing' => 'Billing & Payments',
+            'security' => 'Security & Compliance',
+            'integrations' => 'Third-party Integrations',
+            'queue' => 'Queue Management',
+            'emr' => 'EMR Configuration',
+            'files' => 'File Management',
+            'reports' => 'Reporting & Analytics',
             'general' => 'General',
         ];
 

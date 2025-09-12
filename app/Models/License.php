@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Services\LicenseKeyGenerator;
 
 class License extends Model
 {
@@ -109,23 +110,19 @@ class License extends Model
     }
 
     /**
-     * Generate a unique license key
+     * Generate a unique license key using the enhanced generator
      */
-    public static function generateLicenseKey(): string
+    public static function generateLicenseKey(string $strategy = LicenseKeyGenerator::STRATEGY_STANDARD, array $options = []): string
     {
-        do {
-            $key = 'MEDI-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4)) . '-' . strtoupper(Str::random(4));
-        } while (static::where('license_key', $key)->exists());
-
-        return $key;
+        return LicenseKeyGenerator::generate($strategy, $options);
     }
 
     /**
-     * Generate an activation code
+     * Generate an activation code using the enhanced generator
      */
-    public static function generateActivationCode(): string
+    public static function generateActivationCode(int $length = 8): string
     {
-        return strtoupper(Str::random(8));
+        return LicenseKeyGenerator::generateActivationCode($length);
     }
 
     /**
@@ -439,18 +436,11 @@ class License extends Model
     }
 
     /**
-     * Generate server fingerprint
+     * Generate server fingerprint using the enhanced generator
      */
-    public function generateServerFingerprint(): string
+    public function generateServerFingerprint(array $serverInfo = []): string
     {
-        $serverInfo = [
-            'domain' => request()->getHost(),
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'server_name' => $_SERVER['SERVER_NAME'] ?? '',
-        ];
-
-        return hash('sha256', json_encode($serverInfo));
+        return LicenseKeyGenerator::generateServerFingerprint($serverInfo);
     }
 
     /**
@@ -463,7 +453,7 @@ class License extends Model
             'action' => $action,
             'data' => $data,
             'timestamp' => now()->toISOString(),
-            'user' => auth()->user()?->email ?? 'system',
+            'user' => 'system',
         ];
 
         $this->update(['audit_log' => $auditLog]);
@@ -580,6 +570,273 @@ class License extends Model
         return Cache::remember("expiring_licenses_{$days}", 3600, function () use ($days) {
             return static::active()->expiringSoon($days)->get();
         });
+    }
+
+    /**
+     * Validate license key format
+     */
+    public function validateLicenseKeyFormat(): bool
+    {
+        return LicenseKeyGenerator::validateFormat($this->license_key);
+    }
+
+    /**
+     * Parse license key information
+     */
+    public function getLicenseKeyInfo(): array
+    {
+        return LicenseKeyGenerator::parseLicenseKey($this->license_key);
+    }
+
+    /**
+     * Regenerate license key
+     */
+    public function regenerateLicenseKey(string $strategy = LicenseKeyGenerator::STRATEGY_STANDARD, array $options = []): string
+    {
+        $oldKey = $this->license_key;
+        $newKey = LicenseKeyGenerator::generate($strategy, $options);
+        
+        $this->update(['license_key' => $newKey]);
+        
+        $this->addAuditLog('License key regenerated', [
+            'old_key' => $oldKey,
+            'new_key' => $newKey,
+            'strategy' => $strategy,
+            'options' => $options
+        ]);
+        
+        return $newKey;
+    }
+
+    /**
+     * Regenerate activation code
+     */
+    public function regenerateActivationCode(int $length = 8): string
+    {
+        $oldCode = $this->activation_code;
+        $newCode = LicenseKeyGenerator::generateActivationCode($length);
+        
+        $this->update(['activation_code' => $newCode]);
+        
+        $this->addAuditLog('Activation code regenerated', [
+            'old_code' => $oldCode,
+            'new_code' => $newCode,
+            'length' => $length
+        ]);
+        
+        return $newCode;
+    }
+
+    /**
+     * Get license key statistics
+     */
+    public static function getLicenseKeyStatistics(): array
+    {
+        return LicenseKeyGenerator::getStatistics();
+    }
+
+    /**
+     * Get license type configuration with features and limits
+     */
+    public static function getLicenseTypeConfig(string $licenseType): array
+    {
+        $configs = [
+            'standard' => [
+                'name' => 'Standard',
+                'description' => 'Standard license with basic features for small practices',
+                'features' => [
+                    'basic_appointments',
+                    'patient_management',
+                    'prescription_management',
+                    'basic_reporting',
+                ],
+                'limits' => [
+                    'max_users' => 5,
+                    'max_clinics' => 1,
+                    'max_patients' => 500,
+                    'max_appointments_per_month' => 200,
+                ],
+                'grace_period_days' => 7,
+                'billing' => [
+                    'monthly_fee' => 99.00,
+                    'billing_cycle' => 'monthly',
+                    'auto_renew' => true,
+                ],
+                'support' => [
+                    'level' => 'standard',
+                ],
+                'validity' => [
+                    'duration_months' => 12,
+                ],
+            ],
+            'premium' => [
+                'name' => 'Premium',
+                'description' => 'Premium license with advanced features for growing practices',
+                'features' => [
+                    'basic_appointments',
+                    'patient_management',
+                    'prescription_management',
+                    'basic_reporting',
+                    'advanced_reporting',
+                    'lab_results',
+                    'medrep_management',
+                    'multi_clinic',
+                    'email_notifications',
+                ],
+                'limits' => [
+                    'max_users' => 25,
+                    'max_clinics' => 5,
+                    'max_patients' => 2500,
+                    'max_appointments_per_month' => 1000,
+                ],
+                'grace_period_days' => 14,
+                'billing' => [
+                    'monthly_fee' => 299.00,
+                    'billing_cycle' => 'monthly',
+                    'auto_renew' => true,
+                ],
+                'support' => [
+                    'level' => 'premium',
+                ],
+                'validity' => [
+                    'duration_months' => 12,
+                ],
+            ],
+            'enterprise' => [
+                'name' => 'Enterprise',
+                'description' => 'Enterprise license with all features for large organizations',
+                'features' => [
+                    'basic_appointments',
+                    'patient_management',
+                    'prescription_management',
+                    'basic_reporting',
+                    'advanced_reporting',
+                    'lab_results',
+                    'medrep_management',
+                    'multi_clinic',
+                    'email_notifications',
+                    'sms_notifications',
+                    'api_access',
+                    'custom_branding',
+                    'priority_support',
+                    'advanced_analytics',
+                    'backup_restore',
+                ],
+                'limits' => [
+                    'max_users' => 100,
+                    'max_clinics' => 20,
+                    'max_patients' => 10000,
+                    'max_appointments_per_month' => 5000,
+                ],
+                'grace_period_days' => 30,
+                'billing' => [
+                    'monthly_fee' => 999.00,
+                    'billing_cycle' => 'yearly',
+                    'auto_renew' => true,
+                ],
+                'support' => [
+                    'level' => 'enterprise',
+                ],
+                'validity' => [
+                    'duration_months' => 12,
+                ],
+            ],
+        ];
+
+        return $configs[$licenseType] ?? $configs['standard'];
+    }
+
+    /**
+     * Get all available license type configurations
+     */
+    public static function getAllLicenseTypeConfigs(): array
+    {
+        return [
+            'standard' => static::getLicenseTypeConfig('standard'),
+            'premium' => static::getLicenseTypeConfig('premium'),
+            'enterprise' => static::getLicenseTypeConfig('enterprise'),
+        ];
+    }
+
+    /**
+     * Auto-fill license fields based on license type
+     */
+    public function autoFillFromType(string $licenseType, bool $overwriteExisting = false): array
+    {
+        $config = static::getLicenseTypeConfig($licenseType);
+        $updateData = [];
+
+        // Update license type
+        if ($overwriteExisting || !$this->license_type) {
+            $updateData['license_type'] = $licenseType;
+        }
+
+        // Update features
+        if ($overwriteExisting || !$this->features || empty($this->features)) {
+            $updateData['features'] = $config['features'];
+        }
+
+        // Update limits
+        if ($overwriteExisting || !$this->max_users) {
+            $updateData['max_users'] = $config['limits']['max_users'];
+        }
+
+        if ($overwriteExisting || !$this->max_clinics) {
+            $updateData['max_clinics'] = $config['limits']['max_clinics'];
+        }
+
+        if ($overwriteExisting || !$this->max_patients) {
+            $updateData['max_patients'] = $config['limits']['max_patients'];
+        }
+
+        if ($overwriteExisting || !$this->max_appointments_per_month) {
+            $updateData['max_appointments_per_month'] = $config['limits']['max_appointments_per_month'];
+        }
+
+        // Update grace period
+        if ($overwriteExisting || !$this->grace_period_days) {
+            $updateData['grace_period_days'] = $config['grace_period_days'];
+        }
+
+        // Update billing information
+        if ($overwriteExisting || !$this->monthly_fee) {
+            $updateData['monthly_fee'] = $config['billing']['monthly_fee'];
+        }
+
+        if ($overwriteExisting || !$this->billing_cycle) {
+            $updateData['billing_cycle'] = $config['billing']['billing_cycle'];
+        }
+
+        if ($overwriteExisting || !$this->auto_renew) {
+            $updateData['auto_renew'] = $config['billing']['auto_renew'];
+        }
+
+        // Update support level
+        if ($overwriteExisting || !$this->support_level) {
+            $updateData['support_level'] = $config['support']['level'];
+        }
+
+        // Update validity period
+        if ($overwriteExisting || !$this->starts_at) {
+            $updateData['starts_at'] = now();
+        }
+
+        if ($overwriteExisting || !$this->expires_at) {
+            $duration = $config['validity']['duration_months'];
+            $updateData['expires_at'] = now()->addMonths($duration);
+        }
+
+        // Update status if not set
+        if ($overwriteExisting || !$this->status) {
+            $updateData['status'] = 'active';
+        }
+
+        // Update description if not set
+        if ($overwriteExisting || !$this->description) {
+            $updateData['description'] = $config['description'];
+        }
+
+        return $updateData;
     }
 }
 

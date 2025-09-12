@@ -64,6 +64,16 @@ class UserClinicRole extends Resource
     }
 
     /**
+     * Get the URI key for the resource.
+     *
+     * @return string
+     */
+    public static function uriKey()
+    {
+        return 'user-clinic-roles';
+    }
+
+    /**
      * Get the fields displayed by the resource.
      *
      * @return array<int, \Laravel\Nova\Fields\Field>

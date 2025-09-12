@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Clinic;
 use App\Models\Setting;
+use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,13 @@ use Illuminate\Support\Facades\Validator;
 
 class ClinicSettingsController extends Controller
 {
+    protected SettingsService $settingsService;
+
+    public function __construct(SettingsService $settingsService)
+    {
+        $this->settingsService = $settingsService;
+    }
+
     /**
      * Get clinic settings
      */
@@ -18,7 +26,7 @@ class ClinicSettingsController extends Controller
     {
         try {
             $clinicId = $request->user()->current_clinic_id;
-            
+
             if (!$clinicId) {
                 return response()->json([
                     'success' => false,
@@ -27,75 +35,47 @@ class ClinicSettingsController extends Controller
             }
 
             $clinic = Clinic::findOrFail($clinicId);
-            
-            // Get clinic-specific settings
-            $settings = Setting::where('clinic_id', $clinicId)
-                              ->orWhereNull('clinic_id')
-                              ->get()
-                              ->keyBy('key');
 
-            // Get default settings
-            $defaultSettings = [
-                'clinic_name' => $clinic->name,
-                'clinic_address' => $clinic->address,
-                'clinic_phone' => $clinic->phone,
-                'clinic_email' => $clinic->email,
-                'clinic_website' => $clinic->website,
-                'timezone' => 'UTC',
-                'date_format' => 'Y-m-d',
-                'time_format' => 'H:i',
-                'currency' => 'USD',
-                'language' => 'en',
-                'appointment_duration' => 30,
-                'appointment_buffer_time' => 15,
-                'auto_confirm_appointments' => false,
-                'send_appointment_reminders' => true,
-                'reminder_hours_before' => 24,
-                'allow_online_booking' => true,
-                'require_patient_verification' => false,
-                'max_appointments_per_day' => 50,
-                'working_hours' => [
-                    'monday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
-                    'tuesday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
-                    'wednesday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
-                    'thursday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
-                    'friday' => ['start' => '09:00', 'end' => '17:00', 'enabled' => true],
-                    'saturday' => ['start' => '09:00', 'end' => '13:00', 'enabled' => false],
-                    'sunday' => ['start' => '09:00', 'end' => '13:00', 'enabled' => false],
-                ],
-                'notification_settings' => [
-                    'email_notifications' => true,
-                    'sms_notifications' => false,
-                    'push_notifications' => true,
-                    'appointment_reminders' => true,
-                    'prescription_ready' => true,
-                    'lab_results_ready' => true,
-                ],
-                'privacy_settings' => [
-                    'patient_data_retention_days' => 2555, // 7 years
-                    'auto_delete_expired_data' => false,
-                    'require_consent_for_data_sharing' => true,
-                    'allow_patient_portal_access' => true,
-                ],
-                'integration_settings' => [
-                    'lab_integration_enabled' => false,
-                    'pharmacy_integration_enabled' => false,
-                    'insurance_verification_enabled' => false,
-                    'payment_gateway_enabled' => false,
-                ],
-            ];
+            // Get all settings for the clinic using the service
+            $settings = $this->settingsService->getAllForClinic($clinicId);
 
-            // Merge with saved settings
-            $mergedSettings = [];
-            foreach ($defaultSettings as $key => $defaultValue) {
-                $mergedSettings[$key] = $settings->get($key)?->value ?? $defaultValue;
-            }
+            // Get specific setting groups
+            $clinicInfo = $this->settingsService->getClinicInfo($clinicId);
+            $workingHours = $this->settingsService->getWorkingHours($clinicId);
+            $notifications = $this->settingsService->getNotificationSettings($clinicId);
+            $branding = $this->settingsService->getBrandingSettings($clinicId);
+            $system = $this->settingsService->getSystemSettings($clinicId);
+            $appointments = $this->settingsService->getAppointmentSettings($clinicId);
+            $prescriptions = $this->settingsService->getPrescriptionSettings($clinicId);
+            $billing = $this->settingsService->getBillingSettings($clinicId);
+            $security = $this->settingsService->getSecuritySettings($clinicId);
+            $integrations = $this->settingsService->getIntegrationSettings($clinicId);
+            $queue = $this->settingsService->getQueueSettings($clinicId);
+            $emr = $this->settingsService->getEMRSettings($clinicId);
+            $files = $this->settingsService->getFileSettings($clinicId);
+            $reports = $this->settingsService->getReportingSettings($clinicId);
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'clinic' => $clinic,
-                    'settings' => $mergedSettings,
+                    'settings' => $settings,
+                    'clinic_info' => $clinicInfo,
+                    'working_hours' => $workingHours,
+                    'notifications' => $notifications,
+                    'branding' => $branding,
+                    'system' => $system,
+                    'appointments' => $appointments,
+                    'prescriptions' => $prescriptions,
+                    'billing' => $billing,
+                    'security' => $security,
+                    'integrations' => $integrations,
+                    'queue' => $queue,
+                    'emr' => $emr,
+                    'files' => $files,
+                    'reports' => $reports,
+                    'formatted_working_hours' => $this->settingsService->getFormattedWorkingHours($clinicId),
+                    'is_clinic_open' => $this->settingsService->isClinicOpen($clinicId),
                 ]
             ]);
 
@@ -115,7 +95,7 @@ class ClinicSettingsController extends Controller
     {
         try {
             $clinicId = $request->user()->current_clinic_id;
-            
+
             if (!$clinicId) {
                 return response()->json([
                     'success' => false,
@@ -177,26 +157,23 @@ class ClinicSettingsController extends Controller
             }
             $clinic->save();
 
-            // Update settings
+            // Update settings using the service
             foreach ($settings as $key => $value) {
-                Setting::updateOrCreate(
-                    [
-                        'key' => $key,
-                        'clinic_id' => $clinicId,
-                    ],
-                    [
-                        'value' => is_array($value) ? json_encode($value) : $value,
-                        'updated_by' => Auth::id(),
-                    ]
-                );
+                $group = explode('.', $key)[0] ?? 'general';
+                $type = is_array($value) ? 'json' : (is_bool($value) ? 'boolean' : (is_int($value) ? 'integer' : 'string'));
+
+                $this->settingsService->set($key, $value, $clinicId, $type, $group, "Updated via API");
             }
+
+            // Clear cache
+            $this->settingsService->clearCache($clinicId);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Clinic settings updated successfully',
                 'data' => [
                     'clinic' => $clinic->fresh(),
-                    'settings' => $settings,
+                    'settings' => $this->settingsService->getAllForClinic($clinicId),
                 ]
             ]);
 
@@ -204,6 +181,38 @@ class ClinicSettingsController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update clinic settings',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Initialize default settings for a clinic
+     */
+    public function initializeSettings(Request $request): JsonResponse
+    {
+        try {
+            $clinicId = $request->user()->current_clinic_id;
+
+            if (!$clinicId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No clinic selected'
+                ], 400);
+            }
+
+            $this->settingsService->initializeClinicSettings($clinicId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Default settings initialized successfully',
+                'data' => $this->settingsService->getAllForClinic($clinicId)
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to initialize settings',
                 'error' => $e->getMessage()
             ], 500);
         }
