@@ -5,11 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Traits\HasUuid;
-
 class BillItem extends Model
 {
-    use HasFactory, HasUuid;
+    use HasFactory;
 
     protected $fillable = [
         'uuid',
@@ -89,6 +87,12 @@ class BillItem extends Model
     protected static function boot()
     {
         parent::boot();
+        
+        static::creating(function ($item) {
+            if (empty($item->uuid)) {
+                $item->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
         
         static::saving(function ($item) {
             $item->calculateTotal();

@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\SystemController;
 use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\DemoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,6 +53,14 @@ Route::prefix('v1')->group(function () {
     // Public clinic information
     Route::get('/public/clinics', [ClinicController::class, 'publicIndex']);
     Route::get('/public/clinics/{clinic}', [ClinicController::class, 'publicShow']);
+
+    // Demo account management (public routes for easy setup)
+    Route::prefix('demo')->group(function () {
+        Route::post('/create', [DemoController::class, 'createDemoAccount']);
+        Route::get('/info', [DemoController::class, 'getDemoAccountInfo']);
+        Route::delete('/delete', [DemoController::class, 'deleteDemoAccount']);
+        Route::post('/reset', [DemoController::class, 'resetDemoData']);
+    });
 });
 
 // Protected routes (authentication required)

@@ -6,11 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\HasUuid;
-
 class Queue extends Model
 {
-    use HasFactory, HasUuid;
+    use HasFactory;
 
     protected $fillable = [
         'uuid',
@@ -345,6 +343,9 @@ class Queue extends Model
         parent::boot();
         
         static::creating(function ($queue) {
+            if (empty($queue->uuid)) {
+                $queue->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
             if (empty($queue->settings)) {
                 $queue->settings = [
                     'allow_priority' => true,

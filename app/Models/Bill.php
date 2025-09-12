@@ -6,11 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Traits\HasUuid;
-
 class Bill extends Model
 {
-    use HasFactory, HasUuid;
+    use HasFactory;
 
     protected $fillable = [
         'uuid',
@@ -175,6 +173,9 @@ class Bill extends Model
         parent::boot();
         
         static::creating(function ($bill) {
+            if (empty($bill->uuid)) {
+                $bill->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
             if (empty($bill->bill_number)) {
                 $bill->bill_number = $bill->generateBillNumber();
             }

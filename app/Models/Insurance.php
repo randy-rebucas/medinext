@@ -10,7 +10,9 @@ use App\Traits\HasUuid;
 
 class Insurance extends Model
 {
-    use HasFactory, HasUuid;
+    use HasFactory;
+
+    protected $table = 'insurance';
 
     protected $fillable = [
         'uuid',
@@ -197,6 +199,9 @@ class Insurance extends Model
         parent::boot();
         
         static::creating(function ($insurance) {
+            if (empty($insurance->uuid)) {
+                $insurance->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
             if ($insurance->is_primary) {
                 // Ensure only one primary insurance per patient
                 static::where('patient_id', $insurance->patient_id)
