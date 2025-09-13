@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
+use App\Services\SettingsService;
 
 class Appointment extends Model
 {
@@ -344,21 +345,16 @@ class Appointment extends Model
             return $this->start_at->diffInMinutes($this->end_at);
         }
 
-        // Default duration based on type
-        $defaultDurations = [
-            'consultation' => 30,
-            'follow_up' => 20,
-            'emergency' => 60,
-            'routine_checkup' => 45,
-            'specialist_consultation' => 45,
-            'procedure' => 90,
-            'surgery' => 180,
-            'lab_test' => 15,
-            'imaging' => 30,
-            'physical_therapy' => 60,
-        ];
+        // Get duration from settings
+        $settingsService = app(SettingsService::class);
+        $appointmentTypes = $settingsService->get('appointments.types', [], $this->clinic_id);
 
-        return $defaultDurations[$this->appointment_type] ?? 30;
+        if (isset($appointmentTypes[$this->appointment_type]['duration'])) {
+            return $appointmentTypes[$this->appointment_type]['duration'];
+        }
+
+        // Fallback to default duration from settings
+        return $settingsService->get('appointments.default_duration', 30, $this->clinic_id);
     }
 
     /**
@@ -370,21 +366,16 @@ class Appointment extends Model
             return (float) $this->total_amount;
         }
 
-        // Default costs based on type
-        $defaultCosts = [
-            'consultation' => 50.00,
-            'follow_up' => 30.00,
-            'emergency' => 100.00,
-            'routine_checkup' => 75.00,
-            'specialist_consultation' => 100.00,
-            'procedure' => 200.00,
-            'surgery' => 1000.00,
-            'lab_test' => 25.00,
-            'imaging' => 150.00,
-            'physical_therapy' => 80.00,
-        ];
+        // Get cost from settings
+        $settingsService = app(SettingsService::class);
+        $appointmentTypes = $settingsService->get('appointments.types', [], $this->clinic_id);
 
-        return $defaultCosts[$this->appointment_type] ?? 50.00;
+        if (isset($appointmentTypes[$this->appointment_type]['cost'])) {
+            return (float) $appointmentTypes[$this->appointment_type]['cost'];
+        }
+
+        // Fallback to default cost
+        return 50.00;
     }
 
     /**
@@ -534,28 +525,38 @@ class Appointment extends Model
      */
     public static function getAvailableTimeSlots(int $doctorId, Carbon $date, int $duration = 30, ?int $roomId = null): array
     {
+        $doctor = Doctor::find($doctorId);
+        if (!$doctor) {
+            return [];
+        }
+
+        $settingsService = app(SettingsService::class);
+        $dayOfWeek = strtolower($date->format('l')); // monday, tuesday, etc.
+        $workingHours = $settingsService->get("working_hours.{$dayOfWeek}", null, $doctor->clinic_id);
+
+        // If clinic is closed on this day, return empty slots
+        if (!$workingHours || !is_array($workingHours) || $workingHours['closed']) {
+            return [];
+        }
+
         $startOfDay = $date->copy()->startOfDay();
-        $endOfDay = $date->copy()->endOfDay();
-        
         $timeSlots = [];
-        $currentTime = $startOfDay->copy()->addHours(8); // Start at 8 AM
-        $endTime = $startOfDay->copy()->addHours(17); // End at 5 PM
+
+        // Parse working hours
+        $startTime = $startOfDay->copy()->setTimeFromTimeString($workingHours['start']);
+        $endTime = $startOfDay->copy()->setTimeFromTimeString($workingHours['end']);
+
+        $currentTime = $startTime->copy();
 
         while ($currentTime < $endTime) {
-            if (static::isTimeSlotAvailable($doctorId, $currentTime, $duration, $roomId)) {
-                $timeSlots[] = [
-                    'start_time' => $currentTime->format('H:i'),
-                    'end_time' => $currentTime->copy()->addMinutes($duration)->format('H:i'),
-                    'available' => true
-                ];
-            } else {
-                $timeSlots[] = [
-                    'start_time' => $currentTime->format('H:i'),
-                    'end_time' => $currentTime->copy()->addMinutes($duration)->format('H:i'),
-                    'available' => false
-                ];
-            }
-            
+            $isAvailable = static::isTimeSlotAvailable($doctorId, $currentTime, $duration, $roomId);
+
+            $timeSlots[] = [
+                'start_time' => $currentTime->format('H:i'),
+                'end_time' => $currentTime->copy()->addMinutes($duration)->format('H:i'),
+                'available' => $isAvailable
+            ];
+
             $currentTime->addMinutes($duration);
         }
 

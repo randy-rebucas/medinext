@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Services\SettingsService;
 class BillItem extends Model
 {
     use HasFactory;
@@ -79,6 +80,14 @@ class BillItem extends Model
         $subtotal = $this->quantity * $this->unit_price;
         $this->discount_amount = $subtotal * ($this->discount_percentage / 100);
         $netAmount = $subtotal - $this->discount_amount;
+
+        // Use default tax rate from settings if not set
+        if ($this->tax_percentage == 0) {
+            $settingsService = app(SettingsService::class);
+            $taxRate = $settingsService->get('billing.tax_rate', 12.0, $this->bill->clinic_id);
+            $this->tax_percentage = $taxRate;
+        }
+
         $this->tax_amount = $netAmount * ($this->tax_percentage / 100);
         $this->total = $netAmount + $this->tax_amount;
         $this->save();
@@ -87,22 +96,22 @@ class BillItem extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($item) {
             if (empty($item->uuid)) {
                 $item->uuid = (string) \Illuminate\Support\Str::uuid();
             }
         });
-        
+
         static::saving(function ($item) {
             $item->calculateTotal();
         });
-        
+
         static::saved(function ($item) {
             // Recalculate bill total when item is saved
             $item->bill->calculateTotal();
         });
-        
+
         static::deleted(function ($item) {
             // Recalculate bill total when item is deleted
             $item->bill->calculateTotal();

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Role;
 use App\Models\Clinic;
@@ -36,6 +37,7 @@ class User extends Authenticatable
         'license_key',
         'is_trial_user',
         'has_activated_license',
+        'onboarding_completed_at',
     ];
 
     /**
@@ -66,6 +68,7 @@ class User extends Authenticatable
             'trial_ends_at' => 'datetime',
             'is_trial_user' => 'boolean',
             'has_activated_license' => 'boolean',
+            'onboarding_completed_at' => 'datetime',
         ];
     }
 
@@ -311,6 +314,51 @@ class User extends Authenticatable
         }
 
         return false;
+    }
+
+    /**
+     * Ensure user has admin role in their clinic
+     * This method can be called to verify/ensure admin role assignment
+     */
+    public function ensureAdminRole(): bool
+    {
+        $adminRole = Role::where('name', 'admin')->first();
+        
+        if (!$adminRole) {
+            Log::error('Admin role not found when ensuring admin role for user', [
+                'user_id' => $this->id,
+                'user_email' => $this->email
+            ]);
+            return false;
+        }
+
+        // Check if user already has admin role in any clinic
+        $hasAdminRole = $this->userClinicRoles()
+            ->where('role_id', $adminRole->id)
+            ->exists();
+
+        if (!$hasAdminRole) {
+            // Get user's first clinic
+            $clinic = $this->clinics()->first();
+            
+            if ($clinic) {
+                // Assign admin role to existing clinic
+                $this->clinics()->updateExistingPivot($clinic->id, [
+                    'role_id' => $adminRole->id,
+                    'updated_at' => now(),
+                ]);
+                
+                Log::info('Admin role assigned to existing clinic for user', [
+                    'user_id' => $this->id,
+                    'clinic_id' => $clinic->id,
+                    'role_id' => $adminRole->id
+                ]);
+                
+                return true;
+            }
+        }
+
+        return $hasAdminRole;
     }
 
     /**

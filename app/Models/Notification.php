@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use App\Traits\HasUuid;
+use App\Services\SettingsService;
 
 class Notification extends Model
 {
-    use HasFactory, HasUuid;
+    use HasFactory;
 
     protected $fillable = [
         'uuid',
@@ -218,8 +218,23 @@ class Notification extends Model
         string $message,
         array $data = [],
         string $priority = 'normal',
-        int $createdBy = null
+        int $createdBy = null,
+        ?int $clinicId = null
     ): self {
+        $settingsService = app(SettingsService::class);
+
+        // Check if email notifications are enabled
+        $emailEnabled = $settingsService->get('notifications.email_enabled', true, $clinicId);
+        $smsEnabled = $settingsService->get('notifications.sms_enabled', false, $clinicId);
+
+        // Determine delivery method based on settings
+        $deliveryMethod = 'database'; // Default to database
+        if ($emailEnabled && $type === 'appointment_reminder') {
+            $deliveryMethod = 'email';
+        } elseif ($smsEnabled && $type === 'appointment_reminder') {
+            $deliveryMethod = 'sms';
+        }
+
         return static::create([
             'user_id' => $userId,
             'type' => $type,
@@ -227,6 +242,7 @@ class Notification extends Model
             'message' => $message,
             'data' => $data,
             'priority' => $priority,
+            'delivery_method' => $deliveryMethod,
             'created_by' => $createdBy,
         ]);
     }
@@ -240,7 +256,7 @@ class Notification extends Model
         int $createdBy = null
     ): void {
         $userIds = User::pluck('id');
-        
+
         foreach ($userIds as $userId) {
             static::createForUser($userId, $type, $title, $message, $data, $priority, $createdBy);
         }
@@ -258,7 +274,7 @@ class Notification extends Model
         $userIds = User::whereHas('roles', function ($query) use ($roleName) {
             $query->where('name', $roleName);
         })->pluck('id');
-        
+
         foreach ($userIds as $userId) {
             static::createForUser($userId, $type, $title, $message, $data, $priority, $createdBy);
         }
@@ -276,7 +292,7 @@ class Notification extends Model
         $userIds = User::whereHas('clinics', function ($query) use ($clinicId) {
             $query->where('clinic_id', $clinicId);
         })->pluck('id');
-        
+
         foreach ($userIds as $userId) {
             static::createForUser($userId, $type, $title, $message, $data, $priority, $createdBy);
         }
@@ -298,7 +314,7 @@ class Notification extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($notification) {
             // Set default expiration if not set
             if (!$notification->expires_at && $notification->priority === 'urgent') {

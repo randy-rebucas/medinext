@@ -169,9 +169,65 @@ class DashboardController extends Controller
                 'view_system_health', 'manage_backups', 'view_financial_reports'
             ],
             'admin' => [
-                'manage_staff', 'manage_doctors', 'view_appointments', 'view_patients',
-                'view_reports', 'manage_settings', 'view_analytics', 'manage_clinic_settings',
-                'view_financial_reports', 'manage_rooms', 'manage_schedules'
+                // Clinic Management
+                'manage_clinics', 'view_clinics', 'create_clinics', 'edit_clinics', 'delete_clinics',
+                
+                // User & Staff Management
+                'manage_users', 'view_users', 'create_users', 'edit_users', 'delete_users',
+                'manage_staff', 'view_staff', 'create_staff', 'edit_staff', 'delete_staff',
+                
+                // Doctor Management
+                'manage_doctors', 'view_doctors', 'create_doctors', 'edit_doctors', 'delete_doctors',
+                
+                // Patient Management
+                'manage_patients', 'view_patients', 'create_patients', 'edit_patients', 'delete_patients',
+                
+                // Appointment Management
+                'manage_appointments', 'view_appointments', 'create_appointments', 'edit_appointments',
+                'cancel_appointments', 'delete_appointments', 'checkin_appointments',
+                
+                // Prescription Management
+                'manage_prescriptions', 'view_prescriptions', 'create_prescriptions', 'edit_prescriptions',
+                'delete_prescriptions', 'download_prescriptions',
+                
+                // Medical Records
+                'manage_medical_records', 'view_medical_records', 'create_medical_records',
+                'edit_medical_records', 'delete_medical_records',
+                
+                // Queue Management
+                'manage_queue', 'view_queue', 'add_queue', 'remove_queue', 'process_queue',
+                
+                // Room Management
+                'manage_rooms', 'view_rooms', 'create_rooms', 'edit_rooms', 'delete_rooms',
+                
+                // Schedule Management
+                'manage_schedules', 'view_schedules',
+                
+                // Billing & Financial
+                'manage_billing', 'view_billing', 'create_billing', 'edit_billing', 'delete_billing',
+                'view_financial_reports', 'export_financial_reports',
+                
+                // Reports & Analytics
+                'view_reports', 'export_reports', 'generate_reports', 'view_analytics',
+                'view_activity_logs', 'export_activity_logs',
+                
+                // File Management
+                'manage_file_assets', 'view_file_assets', 'upload_file_assets',
+                'download_file_assets', 'delete_file_assets',
+                
+                // Notifications
+                'manage_notifications', 'view_notifications', 'create_notifications',
+                'edit_notifications', 'delete_notifications',
+                
+                // Settings
+                'manage_settings', 'view_settings', 'manage_clinic_settings',
+                
+                // Dashboard & Search
+                'view_dashboard', 'view_dashboard_stats', 'global_search',
+                'search_patients', 'search_doctors',
+                
+                // Profile
+                'view_profile', 'edit_profile'
             ],
             'doctor' => [
                 'work_on_queue', 'view_appointments', 'manage_prescriptions', 'view_medical_records',

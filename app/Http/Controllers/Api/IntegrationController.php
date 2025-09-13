@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseController;
+use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -64,6 +65,19 @@ class IntegrationController extends BaseController
     public function syncLabResults(Request $request): JsonResponse
     {
         try {
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            // Get integration settings
+            $settingsService = app(SettingsService::class);
+            $labIntegrationEnabled = $settingsService->get('integrations.lab_integration_enabled', false, $currentClinic->id);
+
+            if (!$labIntegrationEnabled) {
+                return $this->errorResponse('Lab integration is not enabled for this clinic', null, 403);
+            }
+
             $validator = Validator::make($request->all(), [
                 'provider' => 'required|string|max:255',
                 'date_from' => 'required|date',
@@ -76,13 +90,22 @@ class IntegrationController extends BaseController
                 return $this->errorResponse('Validation failed', $validator->errors(), 422);
             }
 
+            // Get lab integration settings
+            $labApiUrl = $settingsService->get('integrations.lab_api_url', '', $currentClinic->id);
+            $labApiKey = $settingsService->get('integrations.lab_api_key', '', $currentClinic->id);
+            $syncInterval = $settingsService->get('integrations.lab_sync_interval', 24, $currentClinic->id);
+
             // Implementation for lab results sync would go here
             // This is a placeholder response
             $result = [
                 'records_processed' => 25,
                 'records_synced' => 23,
                 'errors' => ['Failed to sync 2 records due to invalid data'],
-                'last_sync' => now()->toISOString()
+                'last_sync' => now()->toISOString(),
+                'settings_used' => [
+                    'api_url' => $labApiUrl,
+                    'sync_interval_hours' => $syncInterval
+                ]
             ];
 
             return $this->successResponse($result, 'Lab results synchronized successfully');
@@ -569,6 +592,19 @@ class IntegrationController extends BaseController
     public function sendSms(Request $request): JsonResponse
     {
         try {
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            // Get SMS settings
+            $settingsService = app(SettingsService::class);
+            $smsEnabled = $settingsService->get('notifications.sms_enabled', false, $currentClinic->id);
+
+            if (!$smsEnabled) {
+                return $this->errorResponse('SMS notifications are not enabled for this clinic', null, 403);
+            }
+
             $validator = Validator::make($request->all(), [
                 'phone_number' => 'required|string|max:20',
                 'message' => 'required|string|max:1600',
@@ -580,13 +616,22 @@ class IntegrationController extends BaseController
                 return $this->errorResponse('Validation failed', $validator->errors(), 422);
             }
 
+            // Get SMS integration settings
+            $smsProvider = $settingsService->get('integrations.sms_provider', 'Twilio', $currentClinic->id);
+            $smsApiKey = $settingsService->get('integrations.sms_api_key', '', $currentClinic->id);
+            $smsFromNumber = $settingsService->get('integrations.sms_from_number', '', $currentClinic->id);
+
             // Implementation for SMS sending would go here
             // This is a placeholder response
             $result = [
                 'message_id' => 'msg_' . uniqid(),
                 'status' => 'sent',
                 'cost' => 0.0075,
-                'sent_at' => now()->toISOString()
+                'sent_at' => now()->toISOString(),
+                'settings_used' => [
+                    'provider' => $smsProvider,
+                    'from_number' => $smsFromNumber
+                ]
             ];
 
             return $this->successResponse($result, 'SMS sent successfully');
@@ -638,6 +683,19 @@ class IntegrationController extends BaseController
     public function sendEmail(Request $request): JsonResponse
     {
         try {
+            $currentClinic = $this->getCurrentClinic();
+            if (!$currentClinic) {
+                return $this->errorResponse('No clinic access', null, 403);
+            }
+
+            // Get email settings
+            $settingsService = app(SettingsService::class);
+            $emailEnabled = $settingsService->get('notifications.email_enabled', true, $currentClinic->id);
+
+            if (!$emailEnabled) {
+                return $this->errorResponse('Email notifications are not enabled for this clinic', null, 403);
+            }
+
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email|max:255',
                 'subject' => 'required|string|max:255',
@@ -651,12 +709,21 @@ class IntegrationController extends BaseController
                 return $this->errorResponse('Validation failed', $validator->errors(), 422);
             }
 
+            // Get email integration settings
+            $emailProvider = $settingsService->get('integrations.email_provider', 'SendGrid', $currentClinic->id);
+            $emailApiKey = $settingsService->get('integrations.email_api_key', '', $currentClinic->id);
+            $emailFromAddress = $settingsService->get('integrations.email_from_address', '', $currentClinic->id);
+
             // Implementation for email sending would go here
             // This is a placeholder response
             $result = [
                 'message_id' => 'email_' . uniqid(),
                 'status' => 'sent',
-                'sent_at' => now()->toISOString()
+                'sent_at' => now()->toISOString(),
+                'settings_used' => [
+                    'provider' => $emailProvider,
+                    'from_address' => $emailFromAddress
+                ]
             ];
 
             return $this->successResponse($result, 'Email sent successfully');

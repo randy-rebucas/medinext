@@ -1,8 +1,10 @@
 import { Head, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminClinicSettings } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import { useSettings } from '@/hooks/use-settings';
+import { applyBrandingStyles } from '@/lib/branding-utils';
 import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -71,6 +73,17 @@ interface PageProps {
 export default function ClinicSettings() {
     const { props } = usePage<PageProps>();
     const [isSaving, setIsSaving] = useState(false);
+    const { settings, getBrandingColor, getClinicName } = useSettings();
+
+    // Apply branding styles when settings change
+    useEffect(() => {
+        if (settings?.branding) {
+            applyBrandingStyles(
+                settings.branding.primary_color,
+                settings.branding.secondary_color
+            );
+        }
+    }, [settings]);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [formData, setFormData] = useState<ClinicSettingsData>({

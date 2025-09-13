@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
+use App\Services\SettingsService;
 
 class Prescription extends Model
 {
@@ -20,54 +21,10 @@ class Prescription extends Model
         'pdf_url',
         'qr_hash',
         'prescription_number',
-        'prescription_type',
-        'diagnosis',
-        'instructions',
-        'dispense_quantity',
-        'refills_allowed',
-        'refills_remaining',
-        'expiry_date',
-        'pharmacy_notes',
-        'patient_instructions',
-        'side_effects',
-        'contraindications',
-        'drug_interactions',
-        'allergies_warning',
-        'pregnancy_warning',
-        'breastfeeding_warning',
-        'driving_warning',
-        'alcohol_warning',
-        'dietary_restrictions',
-        'follow_up_date',
-        'next_refill_date',
-        'total_cost',
-        'insurance_coverage',
-        'copay_amount',
-        'prior_authorization',
-        'prior_auth_number',
-        'prescription_source',
-        'digital_signature',
-        'signature_date',
-        'verification_status',
-        'verification_date',
-        'verification_notes',
     ];
 
     protected $casts = [
         'issued_at' => 'datetime',
-        'expiry_date' => 'datetime',
-        'follow_up_date' => 'datetime',
-        'next_refill_date' => 'datetime',
-        'signature_date' => 'datetime',
-        'verification_date' => 'datetime',
-        'dispense_quantity' => 'integer',
-        'refills_allowed' => 'integer',
-        'refills_remaining' => 'integer',
-        'total_cost' => 'decimal:2',
-        'copay_amount' => 'decimal:2',
-        'insurance_coverage' => 'array',
-        'prior_authorization' => 'boolean',
-        'verification_status' => 'boolean',
     ];
 
     /**
@@ -540,8 +497,11 @@ class Prescription extends Model
             return null;
         }
 
-        // Default to 30 days from now, can be customized based on medication
-        return now()->addDays(30);
+        // Get default expiry days from settings
+        $settingsService = app(SettingsService::class);
+        $expiryDays = $settingsService->get('prescriptions.default_expiry_days', 30, $this->clinic_id);
+
+        return now()->addDays($expiryDays);
     }
 
     /**

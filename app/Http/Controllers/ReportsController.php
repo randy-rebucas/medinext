@@ -12,6 +12,7 @@ use App\Models\Encounter;
 use App\Models\Prescription;
 use App\Models\User;
 use App\Models\UserClinicRole;
+use App\Services\SettingsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -106,6 +107,19 @@ class ReportsController extends Controller
                     'success' => false,
                     'message' => 'No clinic access'
                 ], 403);
+            }
+
+            // Get reports settings
+            $settingsService = app(SettingsService::class);
+            $allowedFormats = $settingsService->get('reports.export_formats', ['pdf', 'excel', 'csv'], $userClinicRole->clinic_id);
+            $includePatientData = $settingsService->get('reports.include_patient_data', true, $userClinicRole->clinic_id);
+
+            // Validate format against allowed formats
+            if (!in_array($request->format, $allowedFormats)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Format not allowed. Allowed formats: ' . implode(', ', $allowedFormats)
+                ], 422);
             }
 
             $clinicId = $userClinicRole->clinic_id;

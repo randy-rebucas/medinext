@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Services\SettingsService;
 class Queue extends Model
 {
     use HasFactory;
@@ -166,6 +167,21 @@ class Queue extends Model
             throw new \Exception('Queue is not active');
         }
 
+        // Get queue settings
+        $settingsService = app(SettingsService::class);
+        $allowWalkIns = $settingsService->get('queue.allow_walk_ins', true, $this->clinic_id);
+        $priorityLevels = $settingsService->get('queue.priority_levels', [1, 2, 3, 4, 5], $this->clinic_id);
+
+        // Validate priority level
+        if (!in_array($priority, $priorityLevels)) {
+            $priority = 1; // Default to lowest priority
+        }
+
+        // Check if walk-ins are allowed for this queue type
+        if ($this->queue_type === 'walk_in' && !$allowWalkIns) {
+            throw new \Exception('Walk-ins are not allowed at this time');
+        }
+
         $queuePatient = $this->patients()->create([
             'patient_id' => $patientId,
             'priority' => $priority,
@@ -219,10 +235,32 @@ class Queue extends Model
             return null;
         }
 
-        $nextPatient->update([
-            'status' => 'called',
-            'called_at' => now(),
-        ]);
+        // Check if auto call next is enabled
+        $settingsService = app(SettingsService::class);
+        $autoCallNext = $settingsService->get('queue.auto_call_next', false, $this->clinic_id);
+
+        if (!$autoCallNext) {
+            // Manual call - just update status
+            $nextPatient->update([
+                'status' => 'called',
+                'called_at' => now(),
+            ]);
+        } else {
+            // Auto call - update status and automatically serve if within max wait time
+            $maxWaitTime = $settingsService->get('queue.max_wait_time_minutes', 30, $this->clinic_id);
+            $waitTime = now()->diffInMinutes($nextPatient->joined_at);
+
+            $nextPatient->update([
+                'status' => $waitTime > $maxWaitTime ? 'served' : 'called',
+                'called_at' => now(),
+                'served_at' => $waitTime > $maxWaitTime ? now() : null,
+            ]);
+
+            if ($waitTime > $maxWaitTime) {
+                $this->decrement('current_count');
+                $this->updateWaitTime();
+            }
+        }
 
         return $nextPatient;
     }
@@ -341,7 +379,7 @@ class Queue extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($queue) {
             if (empty($queue->uuid)) {
                 $queue->uuid = (string) \Illuminate\Support\Str::uuid();

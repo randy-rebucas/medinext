@@ -38,10 +38,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.auth' => \App\Http\Middleware\ApiAuth::class,
             'api.clinic' => \App\Http\Middleware\ApiClinicAccess::class,
             'api.permission' => \App\Http\Middleware\ApiPermission::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
             'license' => \App\Http\Middleware\LicenseValidation::class,
             'license.feature' => \App\Http\Middleware\LicenseFeatureValidation::class,
             'license.usage' => \App\Http\Middleware\LicenseUsageValidation::class,
             'trial.check' => \App\Http\Middleware\CheckTrialStatus::class,
+            'onboarding.check' => \App\Http\Middleware\CheckOnboardingStatus::class,
+            'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
+            'api.rate.limit' => \App\Http\Middleware\ApiRateLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

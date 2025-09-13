@@ -80,9 +80,11 @@ class InitialSeeder extends Seeder
             ['name' => 'Download Prescriptions', 'slug' => 'prescriptions.download', 'description' => 'Download prescription PDFs', 'module' => 'prescriptions', 'action' => 'download'],
 
             // Medical Records permissions
+            ['name' => 'Manage Medical Records', 'slug' => 'medical_records.manage', 'description' => 'Full control over medical records', 'module' => 'medical_records', 'action' => 'manage'],
             ['name' => 'View Medical Records', 'slug' => 'medical_records.view', 'description' => 'View patient medical records', 'module' => 'medical_records', 'action' => 'view'],
             ['name' => 'Create Medical Records', 'slug' => 'medical_records.create', 'description' => 'Create new medical records', 'module' => 'medical_records', 'action' => 'create'],
             ['name' => 'Edit Medical Records', 'slug' => 'medical_records.edit', 'description' => 'Modify medical records', 'module' => 'medical_records', 'action' => 'edit'],
+            ['name' => 'Delete Medical Records', 'slug' => 'medical_records.delete', 'description' => 'Delete medical records', 'module' => 'medical_records', 'action' => 'delete'],
 
             // Schedule permissions
             ['name' => 'View Schedule', 'slug' => 'schedule.view', 'description' => 'View appointment schedules', 'module' => 'schedule', 'action' => 'view'],
@@ -120,6 +122,7 @@ class InitialSeeder extends Seeder
             ['name' => 'Edit Profile', 'slug' => 'profile.edit', 'description' => 'Edit own profile information', 'module' => 'profile', 'action' => 'edit'],
 
             // Product permissions (for medical representatives)
+            ['name' => 'Manage Products', 'slug' => 'products.manage', 'description' => 'Full control over products', 'module' => 'products', 'action' => 'manage'],
             ['name' => 'View Products', 'slug' => 'products.view', 'description' => 'View product information', 'module' => 'products', 'action' => 'view'],
             ['name' => 'Create Products', 'slug' => 'products.create', 'description' => 'Add new products', 'module' => 'products', 'action' => 'create'],
             ['name' => 'Edit Products', 'slug' => 'products.edit', 'description' => 'Modify product information', 'module' => 'products', 'action' => 'edit'],
@@ -134,6 +137,111 @@ class InitialSeeder extends Seeder
             ['name' => 'View Interactions', 'slug' => 'interactions.view', 'description' => 'View interaction records', 'module' => 'interactions', 'action' => 'view'],
             ['name' => 'Create Interactions', 'slug' => 'interactions.create', 'description' => 'Record new interactions', 'module' => 'interactions', 'action' => 'create'],
             ['name' => 'Edit Interactions', 'slug' => 'interactions.edit', 'description' => 'Modify interaction records', 'module' => 'interactions', 'action' => 'edit'],
+
+            // Queue permissions
+            ['name' => 'Manage Queue', 'slug' => 'queue.manage', 'description' => 'Full control over queue operations', 'module' => 'queue', 'action' => 'manage'],
+            ['name' => 'View Queue', 'slug' => 'queue.view', 'description' => 'View queue information', 'module' => 'queue', 'action' => 'view'],
+            ['name' => 'Add to Queue', 'slug' => 'queue.add', 'description' => 'Add patients to queue', 'module' => 'queue', 'action' => 'add'],
+            ['name' => 'Remove from Queue', 'slug' => 'queue.remove', 'description' => 'Remove patients from queue', 'module' => 'queue', 'action' => 'remove'],
+            ['name' => 'Process Queue', 'slug' => 'queue.process', 'description' => 'Process queue items', 'module' => 'queue', 'action' => 'process'],
+
+            // Room permissions
+            ['name' => 'Manage Rooms', 'slug' => 'rooms.manage', 'description' => 'Full control over room operations', 'module' => 'rooms', 'action' => 'manage'],
+            ['name' => 'View Rooms', 'slug' => 'rooms.view', 'description' => 'View room information', 'module' => 'rooms', 'action' => 'view'],
+            ['name' => 'Create Rooms', 'slug' => 'rooms.create', 'description' => 'Create new rooms', 'module' => 'rooms', 'action' => 'create'],
+            ['name' => 'Edit Rooms', 'slug' => 'rooms.edit', 'description' => 'Modify room information', 'module' => 'rooms', 'action' => 'edit'],
+            ['name' => 'Delete Rooms', 'slug' => 'rooms.delete', 'description' => 'Remove rooms', 'module' => 'rooms', 'action' => 'delete'],
+
+            // File Asset permissions
+            ['name' => 'Manage File Assets', 'slug' => 'file_assets.manage', 'description' => 'Full control over file assets', 'module' => 'file_assets', 'action' => 'manage'],
+            ['name' => 'View File Assets', 'slug' => 'file_assets.view', 'description' => 'View file asset information', 'module' => 'file_assets', 'action' => 'view'],
+            ['name' => 'Upload File Assets', 'slug' => 'file_assets.upload', 'description' => 'Upload new file assets', 'module' => 'file_assets', 'action' => 'upload'],
+            ['name' => 'Download File Assets', 'slug' => 'file_assets.download', 'description' => 'Download file assets', 'module' => 'file_assets', 'action' => 'download'],
+            ['name' => 'Delete File Assets', 'slug' => 'file_assets.delete', 'description' => 'Remove file assets', 'module' => 'file_assets', 'action' => 'delete'],
+
+            // Activity Log permissions
+            ['name' => 'View Activity Logs', 'slug' => 'activity_logs.view', 'description' => 'View activity logs', 'module' => 'activity_logs', 'action' => 'view'],
+            ['name' => 'Export Activity Logs', 'slug' => 'activity_logs.export', 'description' => 'Export activity logs', 'module' => 'activity_logs', 'action' => 'export'],
+
+            // Notification permissions
+            ['name' => 'Manage Notifications', 'slug' => 'notifications.manage', 'description' => 'Full control over notifications', 'module' => 'notifications', 'action' => 'manage'],
+            ['name' => 'View Notifications', 'slug' => 'notifications.view', 'description' => 'View notifications', 'module' => 'notifications', 'action' => 'view'],
+            ['name' => 'Create Notifications', 'slug' => 'notifications.create', 'description' => 'Create new notifications', 'module' => 'notifications', 'action' => 'create'],
+            ['name' => 'Edit Notifications', 'slug' => 'notifications.edit', 'description' => 'Modify notifications', 'module' => 'notifications', 'action' => 'edit'],
+            ['name' => 'Delete Notifications', 'slug' => 'notifications.delete', 'description' => 'Remove notifications', 'module' => 'notifications', 'action' => 'delete'],
+
+            // Dashboard permissions
+            ['name' => 'View Dashboard', 'slug' => 'dashboard.view', 'description' => 'View dashboard', 'module' => 'dashboard', 'action' => 'view'],
+            ['name' => 'View Dashboard Stats', 'slug' => 'dashboard.stats', 'description' => 'View dashboard statistics', 'module' => 'dashboard', 'action' => 'stats'],
+
+            // Search permissions
+            ['name' => 'Global Search', 'slug' => 'search.global', 'description' => 'Perform global search', 'module' => 'search', 'action' => 'global'],
+            ['name' => 'Search Patients', 'slug' => 'search.patients', 'description' => 'Search patients', 'module' => 'search', 'action' => 'patients'],
+            ['name' => 'Search Doctors', 'slug' => 'search.doctors', 'description' => 'Search doctors', 'module' => 'search', 'action' => 'doctors'],
+
+            // Profile permissions
+            ['name' => 'View Profile', 'slug' => 'profile.view', 'description' => 'View profile information', 'module' => 'profile', 'action' => 'view'],
+
+            // Reports permissions (additional)
+            ['name' => 'Generate Reports', 'slug' => 'reports.generate', 'description' => 'Generate custom reports', 'module' => 'reports', 'action' => 'generate'],
+
+            // Settings permissions (additional)
+            ['name' => 'View Settings', 'slug' => 'settings.view', 'description' => 'View system settings', 'module' => 'settings', 'action' => 'view'],
+
+            // System permissions
+            ['name' => 'System Admin', 'slug' => 'system.admin', 'description' => 'System administration access', 'module' => 'system', 'action' => 'admin'],
+            ['name' => 'System Info', 'slug' => 'system.info', 'description' => 'View system information', 'module' => 'system', 'action' => 'info'],
+            ['name' => 'System Licenses', 'slug' => 'system.licenses', 'description' => 'Manage system licenses', 'module' => 'system', 'action' => 'licenses'],
+
+            // User activation permissions
+            ['name' => 'Activate Users', 'slug' => 'users.activate', 'description' => 'Activate user accounts', 'module' => 'users', 'action' => 'activate'],
+            ['name' => 'Deactivate Users', 'slug' => 'users.deactivate', 'description' => 'Deactivate user accounts', 'module' => 'users', 'action' => 'deactivate'],
+
+            // Permission management
+            ['name' => 'Manage Permissions', 'slug' => 'permissions.manage', 'description' => 'Full control over permissions', 'module' => 'permissions', 'action' => 'manage'],
+            ['name' => 'View Permissions', 'slug' => 'permissions.view', 'description' => 'View permissions', 'module' => 'permissions', 'action' => 'view'],
+            ['name' => 'Create Permissions', 'slug' => 'permissions.create', 'description' => 'Create new permissions', 'module' => 'permissions', 'action' => 'create'],
+            ['name' => 'Edit Permissions', 'slug' => 'permissions.edit', 'description' => 'Edit permissions', 'module' => 'permissions', 'action' => 'edit'],
+            ['name' => 'Delete Permissions', 'slug' => 'permissions.delete', 'description' => 'Delete permissions', 'module' => 'permissions', 'action' => 'delete'],
+
+            // Encounter permissions
+            ['name' => 'Manage Encounters', 'slug' => 'encounters.manage', 'description' => 'Full control over encounters', 'module' => 'encounters', 'action' => 'manage'],
+            ['name' => 'View Encounters', 'slug' => 'encounters.view', 'description' => 'View encounter information', 'module' => 'encounters', 'action' => 'view'],
+            ['name' => 'Create Encounters', 'slug' => 'encounters.create', 'description' => 'Create new encounters', 'module' => 'encounters', 'action' => 'create'],
+            ['name' => 'Edit Encounters', 'slug' => 'encounters.edit', 'description' => 'Edit encounter information', 'module' => 'encounters', 'action' => 'edit'],
+            ['name' => 'Delete Encounters', 'slug' => 'encounters.delete', 'description' => 'Delete encounters', 'module' => 'encounters', 'action' => 'delete'],
+            ['name' => 'Complete Encounters', 'slug' => 'encounters.complete', 'description' => 'Complete encounters', 'module' => 'encounters', 'action' => 'complete'],
+
+            // Lab Results permissions
+            ['name' => 'Manage Lab Results', 'slug' => 'lab_results.manage', 'description' => 'Full control over lab results', 'module' => 'lab_results', 'action' => 'manage'],
+            ['name' => 'View Lab Results', 'slug' => 'lab_results.view', 'description' => 'View lab results', 'module' => 'lab_results', 'action' => 'view'],
+            ['name' => 'Create Lab Results', 'slug' => 'lab_results.create', 'description' => 'Create new lab results', 'module' => 'lab_results', 'action' => 'create'],
+            ['name' => 'Edit Lab Results', 'slug' => 'lab_results.edit', 'description' => 'Edit lab results', 'module' => 'lab_results', 'action' => 'edit'],
+            ['name' => 'Delete Lab Results', 'slug' => 'lab_results.delete', 'description' => 'Delete lab results', 'module' => 'lab_results', 'action' => 'delete'],
+
+            // Insurance permissions
+            ['name' => 'Manage Insurance', 'slug' => 'insurance.manage', 'description' => 'Full control over insurance', 'module' => 'insurance', 'action' => 'manage'],
+            ['name' => 'View Insurance', 'slug' => 'insurance.view', 'description' => 'View insurance information', 'module' => 'insurance', 'action' => 'view'],
+            ['name' => 'Create Insurance', 'slug' => 'insurance.create', 'description' => 'Create new insurance records', 'module' => 'insurance', 'action' => 'create'],
+            ['name' => 'Edit Insurance', 'slug' => 'insurance.edit', 'description' => 'Edit insurance information', 'module' => 'insurance', 'action' => 'edit'],
+            ['name' => 'Delete Insurance', 'slug' => 'insurance.delete', 'description' => 'Delete insurance records', 'module' => 'insurance', 'action' => 'delete'],
+
+            // Product permissions (additional)
+            ['name' => 'Delete Products', 'slug' => 'products.delete', 'description' => 'Delete products', 'module' => 'products', 'action' => 'delete'],
+
+            // Meeting permissions (additional)
+            ['name' => 'Manage Meetings', 'slug' => 'meetings.manage', 'description' => 'Full control over meetings', 'module' => 'meetings', 'action' => 'manage'],
+
+            // Interaction permissions (additional)
+            ['name' => 'Manage Interactions', 'slug' => 'interactions.manage', 'description' => 'Full control over interactions', 'module' => 'interactions', 'action' => 'manage'],
+            ['name' => 'Delete Interactions', 'slug' => 'interactions.delete', 'description' => 'Delete interactions', 'module' => 'interactions', 'action' => 'delete'],
+
+            // Medical Representative Visit permissions
+            ['name' => 'Manage Medrep Visits', 'slug' => 'medrep_visits.manage', 'description' => 'Full control over medrep visits', 'module' => 'medrep_visits', 'action' => 'manage'],
+            ['name' => 'View Medrep Visits', 'slug' => 'medrep_visits.view', 'description' => 'View medrep visits', 'module' => 'medrep_visits', 'action' => 'view'],
+            ['name' => 'Create Medrep Visits', 'slug' => 'medrep_visits.create', 'description' => 'Create new medrep visits', 'module' => 'medrep_visits', 'action' => 'create'],
+            ['name' => 'Edit Medrep Visits', 'slug' => 'medrep_visits.edit', 'description' => 'Edit medrep visits', 'module' => 'medrep_visits', 'action' => 'edit'],
+            ['name' => 'Delete Medrep Visits', 'slug' => 'medrep_visits.delete', 'description' => 'Delete medrep visits', 'module' => 'medrep_visits', 'action' => 'delete'],
         ];
 
         foreach ($permissions as $permissionData) {
@@ -145,48 +253,315 @@ class InitialSeeder extends Seeder
             'superadmin' => [
                 'description' => 'Full system access and management. Can manage all clinics, users, and system settings.',
                 'is_system_role' => true,
-                'permissions' => ['clinics.manage', 'doctors.manage', 'patients.manage', 'appointments.manage',
-                                'prescriptions.manage', 'users.manage', 'roles.manage', 'billing.manage',
-                                'reports.view', 'reports.export', 'settings.manage']
+                'permissions' => [
+                    // System Management
+                    'system.admin', 'system.info', 'system.licenses',
+                    
+                    // Clinic Management
+                    'clinics.manage', 'clinics.view', 'clinics.create', 'clinics.edit', 'clinics.delete',
+                    
+                    // User & Staff Management
+                    'users.manage', 'users.view', 'users.create', 'users.edit', 'users.delete',
+                    'users.activate', 'users.deactivate',
+                    
+                    // Role & Permission Management
+                    'roles.manage', 'roles.view', 'roles.create', 'roles.edit', 'roles.delete',
+                    'permissions.manage', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete',
+                    
+                    // Doctor Management
+                    'doctors.manage', 'doctors.view', 'doctors.create', 'doctors.edit', 'doctors.delete',
+                    
+                    // Patient Management
+                    'patients.manage', 'patients.view', 'patients.create', 'patients.edit', 'patients.delete',
+                    
+                    // Appointment Management
+                    'appointments.manage', 'appointments.view', 'appointments.create', 'appointments.edit', 
+                    'appointments.cancel', 'appointments.delete', 'appointments.checkin',
+                    
+                    // Prescription Management
+                    'prescriptions.manage', 'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 
+                    'prescriptions.delete', 'prescriptions.download',
+                    
+                    // Medical Records
+                    'medical_records.manage', 'medical_records.view', 'medical_records.create', 
+                    'medical_records.edit', 'medical_records.delete',
+                    
+                    // Encounters
+                    'encounters.manage', 'encounters.view', 'encounters.create', 'encounters.edit', 
+                    'encounters.delete', 'encounters.complete',
+                    
+                    // Lab Results
+                    'lab_results.manage', 'lab_results.view', 'lab_results.create', 'lab_results.edit', 'lab_results.delete',
+                    
+                    // Queue Management
+                    'queue.manage', 'queue.view', 'queue.add', 'queue.remove', 'queue.process',
+                    
+                    // Room Management
+                    'rooms.manage', 'rooms.view', 'rooms.create', 'rooms.edit', 'rooms.delete',
+                    
+                    // Schedule Management
+                    'schedule.manage', 'schedule.view',
+                    
+                    // Billing & Financial
+                    'billing.manage', 'billing.view', 'billing.create', 'billing.edit', 'billing.delete',
+                    
+                    // Reports & Analytics
+                    'reports.view', 'reports.export', 'reports.generate',
+                    'activity_logs.view', 'activity_logs.export',
+                    
+                    // File Management
+                    'file_assets.manage', 'file_assets.view', 'file_assets.upload', 
+                    'file_assets.download', 'file_assets.delete',
+                    
+                    // Insurance
+                    'insurance.manage', 'insurance.view', 'insurance.create', 'insurance.edit', 'insurance.delete',
+                    
+                    // Notifications
+                    'notifications.manage', 'notifications.view', 'notifications.create', 
+                    'notifications.edit', 'notifications.delete',
+                    
+                    // Settings
+                    'settings.manage', 'settings.view',
+                    
+                    // Dashboard & Search
+                    'dashboard.view', 'dashboard.stats',
+                    'search.global', 'search.patients', 'search.doctors',
+                    
+                    // Profile
+                    'profile.view', 'profile.edit',
+                    
+                    // Medical Representative Features
+                    'products.manage', 'products.view', 'products.create', 'products.edit', 'products.delete',
+                    'meetings.manage', 'meetings.view', 'meetings.create', 'meetings.edit', 'meetings.delete',
+                    'interactions.manage', 'interactions.view', 'interactions.create', 'interactions.edit', 'interactions.delete',
+                    'medrep_visits.manage', 'medrep_visits.view', 'medrep_visits.create', 'medrep_visits.edit', 'medrep_visits.delete',
+                ]
             ],
             'admin' => [
                 'description' => 'Full clinic access and management. Can manage clinic operations, staff, and patients.',
                 'is_system_role' => false,
-                'permissions' => ['clinics.manage', 'doctors.manage', 'patients.manage', 'appointments.manage',
-                                'prescriptions.manage', 'users.manage', 'billing.manage', 'reports.view',
-                                'reports.export']
+                'permissions' => [
+                    // Clinic Management
+                    'clinics.manage', 'clinics.view', 'clinics.create', 'clinics.edit', 'clinics.delete',
+                    
+                    // User & Staff Management
+                    'users.manage', 'users.view', 'users.create', 'users.edit', 'users.delete',
+                    'users.activate', 'users.deactivate',
+                    
+                    // Doctor Management
+                    'doctors.manage', 'doctors.view', 'doctors.create', 'doctors.edit', 'doctors.delete',
+                    
+                    // Patient Management
+                    'patients.manage', 'patients.view', 'patients.create', 'patients.edit', 'patients.delete',
+                    
+                    // Appointment Management
+                    'appointments.manage', 'appointments.view', 'appointments.create', 'appointments.edit', 
+                    'appointments.cancel', 'appointments.delete', 'appointments.checkin',
+                    
+                    // Prescription Management
+                    'prescriptions.manage', 'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 
+                    'prescriptions.delete', 'prescriptions.download',
+                    
+                    // Medical Records
+                    'medical_records.manage', 'medical_records.view', 'medical_records.create', 
+                    'medical_records.edit', 'medical_records.delete',
+                    
+                    // Encounters
+                    'encounters.manage', 'encounters.view', 'encounters.create', 'encounters.edit', 
+                    'encounters.delete', 'encounters.complete',
+                    
+                    // Lab Results
+                    'lab_results.manage', 'lab_results.view', 'lab_results.create', 'lab_results.edit', 'lab_results.delete',
+                    
+                    // Queue Management
+                    'queue.manage', 'queue.view', 'queue.add', 'queue.remove', 'queue.process',
+                    
+                    // Room Management
+                    'rooms.manage', 'rooms.view', 'rooms.create', 'rooms.edit', 'rooms.delete',
+                    
+                    // Schedule Management
+                    'schedule.manage', 'schedule.view',
+                    
+                    // Billing & Financial
+                    'billing.manage', 'billing.view', 'billing.create', 'billing.edit', 'billing.delete',
+                    
+                    // Reports & Analytics
+                    'reports.view', 'reports.export', 'reports.generate',
+                    'activity_logs.view', 'activity_logs.export',
+                    
+                    // File Management
+                    'file_assets.manage', 'file_assets.view', 'file_assets.upload', 
+                    'file_assets.download', 'file_assets.delete',
+                    
+                    // Insurance
+                    'insurance.manage', 'insurance.view', 'insurance.create', 'insurance.edit', 'insurance.delete',
+                    
+                    // Notifications
+                    'notifications.manage', 'notifications.view', 'notifications.create', 
+                    'notifications.edit', 'notifications.delete',
+                    
+                    // Settings
+                    'settings.manage', 'settings.view',
+                    
+                    // Dashboard & Search
+                    'dashboard.view', 'dashboard.stats',
+                    'search.global', 'search.patients', 'search.doctors',
+                    
+                    // Profile
+                    'profile.view', 'profile.edit'
+                ]
             ],
             'doctor' => [
                 'description' => 'Medical professional who can manage appointments, medical records, and prescriptions.',
                 'is_system_role' => false,
-                'permissions' => ['clinics.view', 'doctors.view', 'patients.view', 'patients.edit',
-                                'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel',
-                                'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 'prescriptions.delete',
-                                'medical_records.view', 'medical_records.create', 'medical_records.edit',
-                                'schedule.view', 'schedule.manage', 'reports.view']
+                'permissions' => [
+                    // Clinic & Doctor Info
+                    'clinics.view', 'doctors.view',
+                    
+                    // Patient Management
+                    'patients.view', 'patients.edit',
+                    
+                    // Appointment Management
+                    'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel',
+                    
+                    // Prescription Management
+                    'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 'prescriptions.delete', 'prescriptions.download',
+                    
+                    // Medical Records
+                    'medical_records.view', 'medical_records.create', 'medical_records.edit',
+                    
+                    // Encounters
+                    'encounters.view', 'encounters.create', 'encounters.edit', 'encounters.complete',
+                    
+                    // Lab Results
+                    'lab_results.view', 'lab_results.create', 'lab_results.edit',
+                    
+                    // Schedule Management
+                    'schedule.view', 'schedule.manage',
+                    
+                    // Queue Management
+                    'queue.view', 'queue.process',
+                    
+                    // Reports & Analytics
+                    'reports.view',
+                    
+                    // File Management
+                    'file_assets.view', 'file_assets.upload', 'file_assets.download',
+                    
+                    // Dashboard & Search
+                    'dashboard.view', 'search.patients',
+                    
+                    // Profile
+                    'profile.view', 'profile.edit'
+                ]
             ],
             'receptionist' => [
                 'description' => 'Front desk staff who can schedule appointments, manage patient check-ins, and handle billing support.',
                 'is_system_role' => false,
-                'permissions' => ['clinics.view', 'doctors.view', 'patients.view', 'patients.create', 'patients.edit',
-                                'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel',
-                                'appointments.checkin', 'billing.view', 'billing.create', 'billing.edit',
-                                'schedule.view', 'reports.view']
+                'permissions' => [
+                    // Clinic & Doctor Info
+                    'clinics.view', 'doctors.view',
+                    
+                    // Patient Management
+                    'patients.view', 'patients.create', 'patients.edit',
+                    
+                    // Appointment Management
+                    'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel', 'appointments.checkin',
+                    
+                    // Billing Management
+                    'billing.view', 'billing.create', 'billing.edit',
+                    
+                    // Schedule Management
+                    'schedule.view',
+                    
+                    // Queue Management
+                    'queue.view', 'queue.add', 'queue.remove', 'queue.process',
+                    
+                    // Reports
+                    'reports.view',
+                    
+                    // File Management
+                    'file_assets.view', 'file_assets.upload', 'file_assets.download',
+                    
+                    // Insurance
+                    'insurance.view', 'insurance.create', 'insurance.edit',
+                    
+                    // Dashboard & Search
+                    'dashboard.view', 'search.patients', 'search.doctors',
+                    
+                    // Profile
+                    'profile.view', 'profile.edit'
+                ]
             ],
             'patient' => [
                 'description' => 'Patient who can book appointments, view records, and download prescriptions.',
                 'is_system_role' => false,
-                'permissions' => ['clinics.view', 'doctors.view', 'appointments.view', 'appointments.create',
-                                'appointments.cancel', 'prescriptions.view', 'prescriptions.download',
-                                'medical_records.view', 'profile.edit']
+                'permissions' => [
+                    // Clinic & Doctor Info
+                    'clinics.view', 'doctors.view',
+                    
+                    // Appointment Management
+                    'appointments.view', 'appointments.create', 'appointments.cancel',
+                    
+                    // Prescription Management
+                    'prescriptions.view', 'prescriptions.download',
+                    
+                    // Medical Records
+                    'medical_records.view',
+                    
+                    // Lab Results
+                    'lab_results.view',
+                    
+                    // Billing
+                    'billing.view',
+                    
+                    // File Management
+                    'file_assets.view', 'file_assets.download',
+                    
+                    // Insurance
+                    'insurance.view',
+                    
+                    // Notifications
+                    'notifications.view',
+                    
+                    // Profile
+                    'profile.view', 'profile.edit'
+                ]
             ],
             'medrep' => [
                 'description' => 'Medical representative who can manage product details, schedule doctor meetings, and track interactions.',
                 'is_system_role' => false,
-                'permissions' => ['clinics.view', 'doctors.view', 'products.view', 'products.create', 'products.edit',
-                                'meetings.view', 'meetings.create', 'meetings.edit', 'meetings.delete',
-                                'interactions.view', 'interactions.create', 'interactions.edit',
-                                'schedule.view', 'reports.view']
+                'permissions' => [
+                    // Clinic & Doctor Info
+                    'clinics.view', 'doctors.view',
+                    
+                    // Product Management
+                    'products.view', 'products.create', 'products.edit',
+                    
+                    // Meeting Management
+                    'meetings.view', 'meetings.create', 'meetings.edit', 'meetings.delete',
+                    
+                    // Interaction Management
+                    'interactions.view', 'interactions.create', 'interactions.edit',
+                    
+                    // Medical Representative Visits
+                    'medrep_visits.view', 'medrep_visits.create', 'medrep_visits.edit',
+                    
+                    // Schedule Management
+                    'schedule.view',
+                    
+                    // Reports
+                    'reports.view',
+                    
+                    // File Management
+                    'file_assets.view', 'file_assets.upload', 'file_assets.download',
+                    
+                    // Dashboard & Search
+                    'dashboard.view', 'search.doctors',
+                    
+                    // Profile
+                    'profile.view', 'profile.edit'
+                ]
             ]
         ];
 

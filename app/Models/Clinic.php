@@ -69,6 +69,16 @@ class Clinic extends Model
     }
 
     /**
+     * Get the roles associated with this clinic
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'user_clinic_roles')
+                    ->withPivot('user_id')
+                    ->withTimestamps();
+    }
+
+    /**
      * Get the doctors in this clinic
      */
     public function doctors(): HasMany
@@ -252,7 +262,7 @@ class Clinic extends Model
     public function isOpen(string $day, string $time = null): bool
     {
         $workingHours = $this->working_hours;
-        
+
         if (!isset($workingHours[strtolower($day)]) || $workingHours[strtolower($day)] === 'closed') {
             return false;
         }

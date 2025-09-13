@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Services\SettingsService;
 class Bill extends Model
 {
     use HasFactory;
@@ -52,6 +53,7 @@ class Bill extends Model
         'paid_amount' => 0.00,
         'balance_amount' => 0.00,
     ];
+
 
     // Relationships
     public function patient(): BelongsTo
@@ -127,6 +129,14 @@ class Bill extends Model
     public function calculateTotal(): void
     {
         $this->subtotal = $this->items()->sum('total');
+
+        // Apply default tax rate from settings if not set
+        if ($this->tax_amount == 0) {
+            $settingsService = app(SettingsService::class);
+            $taxRate = $settingsService->get('billing.tax_rate', 12.0, $this->clinic_id);
+            $this->tax_amount = $this->subtotal * ($taxRate / 100);
+        }
+
         $this->total_amount = $this->subtotal + $this->tax_amount - $this->discount_amount;
         $this->balance_amount = $this->total_amount - $this->paid_amount;
         $this->save();
@@ -136,19 +146,19 @@ class Bill extends Model
     {
         $this->paid_amount += $amount;
         $this->balance_amount = $this->total_amount - $this->paid_amount;
-        
+
         if ($method) {
             $this->payment_method = $method;
         }
-        
+
         if ($reference) {
             $this->payment_reference = $reference;
         }
-        
+
         if ($this->balance_amount <= 0) {
             $this->status = 'paid';
         }
-        
+
         $this->save();
     }
 
@@ -157,27 +167,34 @@ class Bill extends Model
         $prefix = 'BILL';
         $year = now()->year;
         $month = now()->format('m');
-        
+
         $lastBill = static::whereYear('created_at', $year)
                          ->whereMonth('created_at', $month)
                          ->orderBy('id', 'desc')
                          ->first();
-        
+
         $sequence = $lastBill ? (int) substr($lastBill->bill_number, -4) + 1 : 1;
-        
+
         return $prefix . $year . $month . str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($bill) {
             if (empty($bill->uuid)) {
                 $bill->uuid = (string) \Illuminate\Support\Str::uuid();
             }
             if (empty($bill->bill_number)) {
                 $bill->bill_number = $bill->generateBillNumber();
+            }
+
+            // Set default due date from settings
+            if (empty($bill->due_date)) {
+                $settingsService = app(SettingsService::class);
+                $paymentTermsDays = $settingsService->get('billing.payment_terms_days', 30, $bill->clinic_id);
+                $bill->due_date = now()->addDays($paymentTermsDays);
             }
         });
     }

@@ -7,6 +7,7 @@ use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\Patient;
 use App\Models\Doctor;
+use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -316,6 +317,11 @@ class PrescriptionController extends BaseController
                 return $this->errorResponse('No clinic access', null, 403);
             }
 
+            // Get settings for validation
+            $settingsService = app(SettingsService::class);
+            $maxRefills = $settingsService->get('prescriptions.max_refills', 12, $currentClinic->id);
+            $medicationForms = $settingsService->get('prescriptions.medication_forms', [], $currentClinic->id);
+
             $validator = Validator::make($request->all(), [
                 'patient_id' => 'required|integer|exists:patients,id',
                 'doctor_id' => 'required|integer|exists:doctors,id',
@@ -324,7 +330,7 @@ class PrescriptionController extends BaseController
                 'diagnosis' => 'nullable|string|max:1000',
                 'instructions' => 'nullable|string|max:1000',
                 'dispense_quantity' => 'nullable|integer|min:1',
-                'refills_allowed' => 'nullable|integer|min:0|max:12',
+                'refills_allowed' => "nullable|integer|min:0|max:{$maxRefills}",
                 'expiry_date' => 'nullable|date|after:today',
                 'pharmacy_notes' => 'nullable|string|max:500',
                 'patient_instructions' => 'nullable|string|max:1000',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseController;
 use App\Models\User;
 use App\Models\Clinic;
+use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -75,9 +76,13 @@ class AuthController extends BaseController
     public function login(Request $request): JsonResponse
     {
         try {
+            // Get security settings for validation
+            $settingsService = app(SettingsService::class);
+            $minPasswordLength = $settingsService->get('security.password_min_length', 8);
+
             $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
-                'password' => 'required|string|min:6',
+                'password' => "required|string|min:{$minPasswordLength}",
                 'clinic_id' => 'nullable|integer|exists:clinics,id',
                 'remember' => 'boolean',
             ]);
@@ -107,8 +112,9 @@ class AuthController extends BaseController
                 }
             }
 
-            // Create token
-            $token = $user->createToken('api-token', ['*'], now()->addDays(30))->plainTextToken;
+            // Create token with session timeout from settings
+            $sessionTimeoutMinutes = $settingsService->get('security.session_timeout', 480); // 8 hours default
+            $token = $user->createToken('api-token', ['*'], now()->addMinutes($sessionTimeoutMinutes))->plainTextToken;
 
             // Get user's clinics and roles
             $user->load(['clinics', 'roles']);
@@ -117,7 +123,7 @@ class AuthController extends BaseController
                 'user' => $user,
                 'token' => $token,
                 'token_type' => 'Bearer',
-                'expires_at' => now()->addDays(30)->toISOString(),
+                'expires_at' => now()->addMinutes($sessionTimeoutMinutes)->toISOString(),
                 'clinic_access' => $user->clinics->map(function ($clinic) {
                     return [
                         'id' => $clinic->id,
@@ -483,9 +489,13 @@ class AuthController extends BaseController
     public function updatePassword(Request $request): JsonResponse
     {
         try {
+            // Get security settings for validation
+            $settingsService = app(SettingsService::class);
+            $minPasswordLength = $settingsService->get('security.password_min_length', 8);
+
             $validator = Validator::make($request->all(), [
                 'current_password' => 'required|string',
-                'password' => 'required|string|min:8|confirmed',
+                'password' => "required|string|min:{$minPasswordLength}|confirmed",
             ]);
 
             if ($validator->fails()) {

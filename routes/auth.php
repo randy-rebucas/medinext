@@ -57,4 +57,16 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    // Onboarding routes
+    Route::prefix('onboarding')->name('onboarding.')->group(function () {
+        Route::get('/welcome', [App\Http\Controllers\OnboardingController::class, 'welcome'])->name('welcome');
+        Route::get('/license', [App\Http\Controllers\OnboardingController::class, 'license'])->name('license');
+        Route::post('/license', [App\Http\Controllers\OnboardingController::class, 'activateLicense'])->name('activate-license');
+        Route::get('/clinic-setup', [App\Http\Controllers\OnboardingController::class, 'clinicSetup'])->name('clinic-setup');
+        Route::post('/clinic-setup', [App\Http\Controllers\OnboardingController::class, 'updateClinic'])->name('update-clinic');
+        Route::get('/team-setup', [App\Http\Controllers\OnboardingController::class, 'teamSetup'])->name('team-setup');
+        Route::get('/complete', [App\Http\Controllers\OnboardingController::class, 'complete'])->name('complete');
+        Route::post('/finish', [App\Http\Controllers\OnboardingController::class, 'finish'])->name('finish');
+    });
 });

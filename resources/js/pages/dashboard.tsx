@@ -291,7 +291,7 @@ function AdminDashboard({ stats, permissions }: { stats: DashboardStats; permiss
                             </Link>
                         )}
                         {hasPermission('manage_settings') && (
-                            <Link href="/admin/settings">
+                            <Link href="/admin/clinic-settings">
                                 <Button variant="outline" className="w-full justify-start h-12 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200 group">
                                     <div className="p-1 bg-slate-100 dark:bg-slate-700 rounded-md mr-3 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
                                         <Settings className="h-4 w-4 text-slate-600 dark:text-slate-400" />

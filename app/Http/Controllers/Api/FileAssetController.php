@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseController;
 use App\Models\FileAsset;
+use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -250,8 +251,15 @@ class FileAssetController extends BaseController
                 return $this->errorResponse('No clinic access', null, 403);
             }
 
+            // Get file settings for validation
+            $settingsService = app(SettingsService::class);
+            $maxUploadSizeMB = $settingsService->get('files.max_upload_size_mb', 10, $currentClinic->id);
+            $allowedTypes = $settingsService->get('files.allowed_types', ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'], $currentClinic->id);
+
+            $maxUploadSizeKB = $maxUploadSizeMB * 1024; // Convert MB to KB
+
             $validator = Validator::make($request->all(), [
-                'file' => 'required|file|max:10240', // 10MB max
+                'file' => "required|file|max:{$maxUploadSizeKB}|mimes:" . implode(',', $allowedTypes),
                 'category' => 'required|string|max:255',
                 'description' => 'nullable|string|max:500',
                 'owner_type' => 'required|string|in:App\Models\Patient,App\Models\Encounter,App\Models\LabResult,App\Models\Prescription',
@@ -488,10 +496,10 @@ class FileAssetController extends BaseController
                 return $this->notFoundResponse('File not found');
             }
 
-            $downloadUrl = Storage::disk('private')->temporaryUrl(
-                $fileAsset->url,
-                now()->addMinutes(30)
-            );
+            // Generate temporary URL if supported, otherwise return file path
+            $downloadUrl = method_exists(Storage::disk('private'), 'temporaryUrl')
+                ? Storage::disk('private')->temporaryUrl($fileAsset->url, now()->addMinutes(30))
+                : Storage::disk('private')->url($fileAsset->url);
 
             return $this->successResponse([
                 'download_url' => $downloadUrl,
@@ -569,10 +577,10 @@ class FileAssetController extends BaseController
                 return $this->notFoundResponse('File not found');
             }
 
-            $previewUrl = Storage::disk('private')->temporaryUrl(
-                $fileAsset->url,
-                now()->addMinutes(30)
-            );
+            // Generate temporary URL if supported, otherwise return file path
+            $previewUrl = method_exists(Storage::disk('private'), 'temporaryUrl')
+                ? Storage::disk('private')->temporaryUrl($fileAsset->url, now()->addMinutes(30))
+                : Storage::disk('private')->url($fileAsset->url);
 
             return $this->successResponse([
                 'preview_url' => $previewUrl,
@@ -601,8 +609,15 @@ class FileAssetController extends BaseController
                 return $this->errorResponse('No clinic access', null, 403);
             }
 
+            // Get file settings for validation
+            $settingsService = app(SettingsService::class);
+            $maxUploadSizeMB = $settingsService->get('files.max_upload_size_mb', 10, $currentClinic->id);
+            $allowedTypes = $settingsService->get('files.allowed_types', ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'], $currentClinic->id);
+
+            $maxUploadSizeKB = $maxUploadSizeMB * 1024; // Convert MB to KB
+
             $validator = Validator::make($request->all(), [
-                'file' => 'required|file|max:10240', // 10MB max
+                'file' => "required|file|max:{$maxUploadSizeKB}|mimes:" . implode(',', $allowedTypes),
                 'category' => 'required|string|max:255',
                 'description' => 'nullable|string|max:500',
                 'owner_type' => 'required|string|in:App\Models\Patient,App\Models\Encounter,App\Models\LabResult,App\Models\Prescription',

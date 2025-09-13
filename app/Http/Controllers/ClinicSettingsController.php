@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
 
 class ClinicSettingsController extends Controller
 {
@@ -17,6 +18,14 @@ class ClinicSettingsController extends Controller
     public function __construct(SettingsService $settingsService)
     {
         $this->settingsService = $settingsService;
+    }
+
+    /**
+     * Show the clinic settings page
+     */
+    public function index()
+    {
+        return Inertia::render('admin/clinic-settings');
     }
 
     /**

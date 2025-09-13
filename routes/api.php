@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\IntegrationController;
 use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\DemoController;
+use App\Http\Controllers\Api\MonitoringController;
 
 /*
 |--------------------------------------------------------------------------
@@ -514,6 +515,21 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
         Route::get('/system/logs', [App\Http\Controllers\Api\SystemController::class, 'logs']);
         Route::post('/system/backup', [App\Http\Controllers\Api\SystemController::class, 'backup']);
         Route::post('/system/clear-cache', [App\Http\Controllers\Api\SystemController::class, 'clearCache']);
+    });
+
+    // Enhanced Monitoring Routes
+    Route::middleware(['api.permission:system.monitor'])->group(function () {
+        Route::get('/monitoring/health', [MonitoringController::class, 'health']);
+        Route::get('/monitoring/performance', [MonitoringController::class, 'performance']);
+        Route::get('/monitoring/security', [MonitoringController::class, 'security']);
+        Route::get('/monitoring/business', [MonitoringController::class, 'business']);
+        Route::get('/monitoring/alerts', [MonitoringController::class, 'alerts']);
+        Route::get('/monitoring/cache', [MonitoringController::class, 'cache']);
+        Route::get('/monitoring/dashboard', [MonitoringController::class, 'dashboard']);
+    });
+
+    Route::middleware(['api.permission:system.admin'])->group(function () {
+        Route::post('/monitoring/clear-cache', [MonitoringController::class, 'clearCache']);
     });
 
     // Integration Routes

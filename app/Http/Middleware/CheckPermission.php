@@ -28,15 +28,19 @@ class CheckPermission
 
         // If no clinic context, check if user has permission globally
         if (!$clinicId) {
-            // For system-wide permissions (like settings.manage)
-            if ($permission === 'settings.manage') {
-                if (!$user->hasRoleInClinic('superadmin', 1)) {
+            // For system-wide permissions (like system.admin, settings.manage)
+            if (in_array($permission, ['system.admin', 'settings.manage'])) {
+                if (!$user->hasPermission($permission)) {
                     abort(403, 'Insufficient permissions.');
                 }
                 return $next($request);
             }
 
-            abort(403, 'Clinic context required for this action.');
+            // For web routes without clinic context, check global permission
+            if (!$user->hasPermission($permission)) {
+                abort(403, 'Insufficient permissions for this action.');
+            }
+            return $next($request);
         }
 
         // Check if user has the required permission in the clinic

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
+use App\Services\SettingsService;
 
 class Encounter extends Model
 {
@@ -50,6 +51,20 @@ class Encounter extends Model
         static::creating(function ($encounter) {
             if (empty($encounter->encounter_number)) {
                 $encounter->encounter_number = static::generateEncounterNumber($encounter->clinic_id);
+            }
+
+            // Apply EMR settings
+            $settingsService = app(SettingsService::class);
+
+            // Set default visit type from settings
+            if (empty($encounter->visit_type)) {
+                $visitTypes = $settingsService->get('emr.visit_types', ['consultation', 'follow_up', 'emergency'], $encounter->clinic_id);
+                $encounter->visit_type = $visitTypes[0] ?? 'consultation';
+            }
+
+            // Set default status based on settings
+            if (empty($encounter->status)) {
+                $encounter->status = 'in_progress';
             }
         });
     }

@@ -6,9 +6,15 @@ use App\Http\Controllers\Api\BaseController;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Doctor;
+use App\Services\SettingsService;
+use App\Services\CacheService;
+use App\Services\ErrorHandlingService;
+use App\Services\MonitoringService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use OpenApi\Annotations as OA;
 use Illuminate\Support\Facades\Auth;
 
@@ -108,41 +114,78 @@ class AppointmentController extends BaseController
 
             $currentClinic = $this->getCurrentClinic();
             if (!$currentClinic) {
-                return $this->errorResponse('No clinic access', null, 403);
+                return ErrorHandlingService::handleClinicAccessError();
             }
 
-            $query = Appointment::with(['patient', 'doctor', 'clinic'])
-                ->where('clinic_id', $currentClinic->id);
+            // Create cache key based on request parameters
+            $cacheKey = 'appointments_' . $currentClinic->id . '_' . md5(serialize($request->all()));
 
-            // Apply filters
-            if ($request->has('patient_id')) {
-                $query->where('patient_id', $request->get('patient_id'));
+            // Try to get from cache first
+            $cachedData = CacheService::getCachedAppointmentAvailability($currentClinic->id, $cacheKey);
+            if ($cachedData && !$request->has('force_refresh')) {
+                return ErrorHandlingService::successResponse($cachedData, 'Appointments retrieved successfully');
             }
 
-            if ($request->has('doctor_id')) {
-                $query->where('doctor_id', $request->get('doctor_id'));
+            // Start database transaction for consistency
+            DB::beginTransaction();
+
+            try {
+                $query = Appointment::with(['patient', 'doctor', 'clinic'])
+                    ->where('clinic_id', $currentClinic->id);
+
+                // Apply filters with proper indexing
+                if ($request->has('patient_id')) {
+                    $query->where('patient_id', $request->get('patient_id'));
+                }
+
+                if ($request->has('doctor_id')) {
+                    $query->where('doctor_id', $request->get('doctor_id'));
+                }
+
+                if ($request->has('status')) {
+                    $query->where('status', $request->get('status'));
+                }
+
+                if ($request->has('date_from')) {
+                    $query->where('appointment_date', '>=', $request->get('date_from'));
+                }
+
+                if ($request->has('date_to')) {
+                    $query->where('appointment_date', '<=', $request->get('date_to'));
+                }
+
+                $perPage = min($request->get('per_page', 15), 100); // Limit max per page
+                $appointments = $query->orderBy('appointment_date', 'desc')
+                                     ->orderBy('appointment_time', 'desc')
+                                     ->paginate($perPage);
+
+                // Cache the results
+                CacheService::cacheAppointmentAvailability($currentClinic->id, $cacheKey, $appointments);
+
+                DB::commit();
+
+                // Log successful operation
+                Log::info('Appointments retrieved successfully', [
+                    'clinic_id' => $currentClinic->id,
+                    'user_id' => Auth::id(),
+                    'count' => $appointments->count()
+                ]);
+
+                return ErrorHandlingService::paginatedResponse($appointments, 'Appointments retrieved successfully');
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
             }
 
-            if ($request->has('status')) {
-                $query->where('status', $request->get('status'));
-            }
-
-            if ($request->has('date_from')) {
-                $query->where('appointment_date', '>=', $request->get('date_from'));
-            }
-
-            if ($request->has('date_to')) {
-                $query->where('appointment_date', '<=', $request->get('date_to'));
-            }
-
-            $perPage = $request->get('per_page', 15);
-            $appointments = $query->orderBy('appointment_date', 'desc')
-                                 ->orderBy('appointment_time', 'desc')
-                                 ->paginate($perPage);
-
-            return $this->successResponse($appointments, 'Appointments retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve appointments: ' . $e->getMessage());
+            Log::error('Failed to retrieve appointments', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'request' => $request->all()
+            ]);
+
+            return ErrorHandlingService::handleApiError($e, 'AppointmentController@index');
         }
     }
 
@@ -194,12 +237,28 @@ class AppointmentController extends BaseController
                 return $this->errorResponse('No clinic access', null, 403);
             }
 
+            // Get settings for validation
+            $settingsService = app(SettingsService::class);
+            $maxAdvanceDays = $settingsService->get('appointments.max_advance_days', 90, $currentClinic->id);
+            $minAdvanceHours = $settingsService->get('appointments.min_advance_hours', 2, $currentClinic->id);
+            $maxPerDay = $settingsService->get('appointments.max_per_day', 50, $currentClinic->id);
+            $appointmentTypes = $settingsService->get('appointments.types', [], $currentClinic->id);
+
+            // Check daily appointment limit
+            $todayAppointments = Appointment::where('clinic_id', $currentClinic->id)
+                ->whereDate('start_at', $request->appointment_date)
+                ->count();
+
+            if ($todayAppointments >= $maxPerDay) {
+                return $this->errorResponse("Maximum daily appointments limit reached ({$maxPerDay})", null, 422);
+            }
+
             $validator = Validator::make($request->all(), [
                 'patient_id' => 'required|exists:patients,id',
                 'doctor_id' => 'required|exists:doctors,id',
-                'appointment_date' => 'required|date|after_or_equal:today',
+                'appointment_date' => "required|date|after_or_equal:today|before_or_equal:" . now()->addDays($maxAdvanceDays)->format('Y-m-d'),
                 'appointment_time' => 'required|date_format:H:i:s',
-                'type' => 'nullable|in:consultation,follow_up,emergency,routine',
+                'type' => 'nullable|in:' . implode(',', array_keys($appointmentTypes)),
                 'notes' => 'nullable|string|max:1000',
                 'status' => 'nullable|in:scheduled,confirmed,in_progress,completed,cancelled,no_show'
             ]);
@@ -554,7 +613,7 @@ class AppointmentController extends BaseController
         try {
             $appointment = Appointment::findOrFail($id);
             $appointment->update(['status' => 'checked_in', 'checked_in_at' => now()]);
-            
+
             return $this->successResponse($appointment, 'Appointment checked in successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to check in appointment: ' . $e->getMessage());
@@ -569,7 +628,7 @@ class AppointmentController extends BaseController
         try {
             $appointment = Appointment::findOrFail($id);
             $appointment->update(['status' => 'checked_out', 'checked_out_at' => now()]);
-            
+
             return $this->successResponse($appointment, 'Appointment checked out successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to check out appointment: ' . $e->getMessage());
@@ -584,7 +643,7 @@ class AppointmentController extends BaseController
         try {
             $appointment = Appointment::findOrFail($id);
             $appointment->update(['status' => 'cancelled', 'cancelled_at' => now()]);
-            
+
             return $this->successResponse($appointment, 'Appointment cancelled successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to cancel appointment: ' . $e->getMessage());
@@ -615,7 +674,7 @@ class AppointmentController extends BaseController
                 'rescheduled_at' => now(),
                 'reschedule_reason' => $request->reason
             ]);
-            
+
             return $this->successResponse($appointment, 'Appointment rescheduled successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to reschedule appointment: ' . $e->getMessage());
@@ -629,10 +688,10 @@ class AppointmentController extends BaseController
     {
         try {
             $appointment = Appointment::with(['patient', 'doctor'])->findOrFail($id);
-            
+
             // Implementation for sending reminder would go here
             // This is a placeholder response
-            
+
             return $this->successResponse(null, 'Appointment reminder sent successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to send reminder: ' . $e->getMessage());
@@ -849,7 +908,7 @@ class AppointmentController extends BaseController
                     'id' => $appointment->id,
                     'title' => $appointment->patient->first_name . ' ' . $appointment->patient->last_name,
                     'start' => $appointment->appointment_date . 'T' . $appointment->appointment_time,
-                    'end' => $appointment->appointment_date . 'T' . 
+                    'end' => $appointment->appointment_date . 'T' .
                         date('H:i:s', strtotime($appointment->appointment_time . ' +30 minutes')),
                     'status' => $appointment->status,
                     'doctor' => $appointment->doctor->user->name ?? 'Unknown'
@@ -869,7 +928,7 @@ class AppointmentController extends BaseController
     {
         try {
             $doctors = Doctor::with('user')->get();
-            
+
             return $this->successResponse([
                 'doctors' => $doctors,
                 'current_date' => now()->format('Y-m-d')
