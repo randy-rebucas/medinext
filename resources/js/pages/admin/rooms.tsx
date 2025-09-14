@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminRooms } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -52,22 +52,24 @@ import {
     Syringe
 } from 'lucide-react';
 
+interface Room {
+    id: number;
+    name: string;
+    type: string;
+    capacity: number;
+    status: string;
+    equipment: string[];
+    nextAppointment?: string;
+    doctor?: string;
+}
+
 export default function RoomManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [editingRoom, setEditingRoom] = useState<{
-        id: number;
-        name: string;
-        type: string;
-        capacity: number;
-        status: string;
-        equipment: string[];
-        nextAppointment: string;
-        doctor: string;
-    } | null>(null);
+    const [editingRoom, setEditingRoom] = useState<Room | null>(null);
     const [formData, setFormData] = useState({
         name: '',
         type: '',
@@ -80,48 +82,39 @@ export default function RoomManagement() {
         specialRequirements: ''
     });
 
-    const rooms = [
-        {
-            id: 1,
-            name: 'Room 101',
-            type: 'Consultation',
-            capacity: 1,
-            status: 'Available',
-            equipment: ['Examination Table', 'Computer', 'Printer'],
-            nextAppointment: '2024-01-15 10:00',
-            doctor: 'Dr. Sarah Johnson'
-        },
-        {
-            id: 2,
-            name: 'Room 102',
-            type: 'Examination',
-            capacity: 2,
-            status: 'Occupied',
-            equipment: ['Examination Table', 'Medical Equipment', 'Computer'],
-            nextAppointment: '2024-01-15 11:30',
-            doctor: 'Dr. Michael Brown'
-        },
-        {
-            id: 3,
-            name: 'Room 103',
-            type: 'Procedure',
-            capacity: 1,
-            status: 'Maintenance',
-            equipment: ['Surgical Table', 'Anesthesia Machine', 'Monitor'],
-            nextAppointment: '2024-01-16 09:00',
-            doctor: 'Dr. Emily Davis'
-        },
-        {
-            id: 4,
-            name: 'Room 104',
-            type: 'Consultation',
-            capacity: 1,
-            status: 'Available',
-            equipment: ['Examination Table', 'Computer'],
-            nextAppointment: '2024-01-15 14:00',
-            doctor: 'Dr. James Wilson'
-        }
-    ];
+    const [rooms, setRooms] = useState<Room[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch rooms data from database
+    useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const response = await fetch('/admin/rooms', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setRooms(data.rooms || []);
+                } else {
+                    console.error('Failed to fetch rooms');
+                    setRooms([]);
+                }
+            } catch (error) {
+                console.error('Error fetching rooms:', error);
+                setRooms([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRooms();
+    }, []);
 
 
     const filteredRooms = rooms.filter(room => {
@@ -148,16 +141,7 @@ export default function RoomManagement() {
         });
     };
 
-    const handleEditRoom = (room: {
-        id: number;
-        name: string;
-        type: string;
-        capacity: number;
-        status: string;
-        equipment: string[];
-        nextAppointment: string;
-        doctor: string;
-    }) => {
+    const handleEditRoom = (room: Room) => {
         setEditingRoom(room);
         setFormData({
             name: room.name,
@@ -173,12 +157,49 @@ export default function RoomManagement() {
         setIsEditModalOpen(true);
     };
 
-    const handleSaveRoom = () => {
-        // Here you would typically make an API call to save the room
-        console.log('Saving room:', formData);
-        setIsAddModalOpen(false);
-        setIsEditModalOpen(false);
-        setEditingRoom(null);
+    const handleSaveRoom = async () => {
+        try {
+            const url = editingRoom ? `/admin/rooms/${editingRoom.id}` : '/admin/rooms';
+            const method = editingRoom ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    ...formData,
+                    _method: editingRoom ? 'PUT' : 'POST'
+                }),
+            });
+
+            if (response.ok) {
+                // Refresh rooms data
+                const roomsResponse = await fetch('/admin/rooms', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                
+                if (roomsResponse.ok) {
+                    const data = await roomsResponse.json();
+                    setRooms(data.rooms || []);
+                }
+                
+                setIsAddModalOpen(false);
+                setIsEditModalOpen(false);
+                setEditingRoom(null);
+            } else {
+                console.error('Failed to save room');
+            }
+        } catch (error) {
+            console.error('Error saving room:', error);
+        }
     };
 
     const handleCancel = () => {
@@ -298,7 +319,17 @@ export default function RoomManagement() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredRooms.map((room) => (
+                                        {loading ? (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="text-center py-8">
+                                                    <div className="flex items-center justify-center">
+                                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                                        <span className="ml-2 text-slate-600 dark:text-slate-300">Loading rooms...</span>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            filteredRooms.map((room) => (
                                             <TableRow key={room.id} className="border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200">
                                                 <TableCell>
                                                     <div className="flex items-center space-x-3">
@@ -383,7 +414,8 @@ export default function RoomManagement() {
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        ))
+                                        )}
                                     </TableBody>
                                 </Table>
                             </div>

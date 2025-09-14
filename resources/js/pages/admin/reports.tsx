@@ -125,17 +125,32 @@ export default function Reports({ analytics: initialAnalytics }: ReportsProps) {
         setLoading(true);
         setErrors({});
 
-        router.post('/admin/reports/generate', formData as any, {
-            onSuccess: () => {
+        fetch('/admin/reports/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(formData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
                 toast.success('Report generated successfully!');
                 setIsGenerateModalOpen(false);
                 setLoading(false);
-            },
-            onError: (errors) => {
-                setErrors(errors);
+                window.location.reload();
+            } else {
+                setErrors(data.errors || {});
                 toast.error('Failed to generate report');
                 setLoading(false);
             }
+        })
+        .catch(error => {
+            console.error('Error generating report:', error);
+            toast.error('Failed to generate report');
+            setLoading(false);
         });
     };
 

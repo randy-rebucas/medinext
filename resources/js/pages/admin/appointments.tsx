@@ -141,34 +141,64 @@ export default function AdminAppointments({ appointments: initialAppointments, p
 
         if (isEdit && editingAppointment) {
             // Update existing appointment
-            router.post(`/admin/appointments/${editingAppointment.id}`, {
-                ...appointmentData,
-                _method: 'PUT'
-            } as any, {
-                onSuccess: () => {
+            fetch(`/admin/appointments/${editingAppointment.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    ...appointmentData,
+                    _method: 'PUT'
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     toast.success('Appointment updated successfully!');
                     handleCancel();
                     setLoading(false);
-                },
-                onError: (errors) => {
-                    setErrors(errors);
+                    window.location.reload();
+                } else {
+                    setErrors(data.errors || {});
                     toast.error('Failed to update appointment');
                     setLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error updating appointment:', error);
+                toast.error('Failed to update appointment');
+                setLoading(false);
             });
         } else {
             // Create new appointment
-            router.post('/admin/appointments', appointmentData as any, {
-                onSuccess: () => {
+            fetch('/admin/appointments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(appointmentData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     toast.success('Appointment created successfully!');
                     handleCancel();
                     setLoading(false);
-                },
-                onError: (errors) => {
-                    setErrors(errors);
+                    window.location.reload();
+                } else {
+                    setErrors(data.errors || {});
                     toast.error('Failed to create appointment');
                     setLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error creating appointment:', error);
+                toast.error('Failed to create appointment');
+                setLoading(false);
             });
         }
     };
@@ -178,17 +208,31 @@ export default function AdminAppointments({ appointments: initialAppointments, p
 
         setLoading(true);
         
-        router.delete(`/admin/appointments/${deletingAppointment.id}`, {
-            onSuccess: () => {
+        fetch(`/admin/appointments/${deletingAppointment.id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
                 toast.success('Appointment deleted successfully!');
                 setIsDeleteModalOpen(false);
                 setDeletingAppointment(null);
                 setLoading(false);
-            },
-            onError: (errors) => {
+                window.location.reload();
+            } else {
                 toast.error('Failed to delete appointment');
                 setLoading(false);
             }
+        })
+        .catch(error => {
+            console.error('Error deleting appointment:', error);
+            toast.error('Failed to delete appointment');
+            setLoading(false);
         });
     };
 

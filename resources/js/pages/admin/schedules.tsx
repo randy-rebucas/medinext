@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminSchedules } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -45,52 +45,51 @@ export default function ScheduleManagement() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [dayFilter, setDayFilter] = useState('all');
 
-    const schedules = [
-        {
-            id: 1,
-            doctor: 'Dr. Sarah Johnson',
-            specialty: 'Cardiology',
-            day: 'Monday',
-            startTime: '08:00',
-            endTime: '17:00',
-            room: 'Room 101',
-            status: 'Active',
-            appointments: 8
-        },
-        {
-            id: 2,
-            doctor: 'Dr. Michael Brown',
-            specialty: 'Pediatrics',
-            day: 'Tuesday',
-            startTime: '09:00',
-            endTime: '18:00',
-            room: 'Room 102',
-            status: 'Active',
-            appointments: 12
-        },
-        {
-            id: 3,
-            doctor: 'Dr. Emily Davis',
-            specialty: 'Dermatology',
-            day: 'Wednesday',
-            startTime: '08:30',
-            endTime: '16:30',
-            room: 'Room 103',
-            status: 'On Leave',
-            appointments: 0
-        },
-        {
-            id: 4,
-            doctor: 'Dr. James Wilson',
-            specialty: 'Orthopedics',
-            day: 'Thursday',
-            startTime: '07:30',
-            endTime: '17:30',
-            room: 'Room 104',
-            status: 'Active',
-            appointments: 10
-        }
-    ];
+    interface Schedule {
+        id: number;
+        doctor: string;
+        specialty: string;
+        day: string;
+        startTime: string;
+        endTime: string;
+        room: string;
+        status: string;
+        appointments: number;
+    }
+
+    const [schedules, setSchedules] = useState<Schedule[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch schedules data from database
+    useEffect(() => {
+        const fetchSchedules = async () => {
+            try {
+                const response = await fetch('/admin/schedules', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setSchedules(data.schedules || []);
+                } else {
+                    console.error('Failed to fetch schedules');
+                    setSchedules([]);
+                }
+            } catch (error) {
+                console.error('Error fetching schedules:', error);
+                setSchedules([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSchedules();
+    }, []);
 
     const filteredSchedules = schedules.filter(schedule => {
         const matchesSearch = schedule.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -173,34 +173,64 @@ export default function PatientManagement({ patients: initialPatients }: Patient
 
         if (isEdit && editingPatient) {
             // Update existing patient
-            router.post(`/admin/patients/${editingPatient.id}`, {
-                ...patientData,
-                _method: 'PUT'
-            } as any, {
-                onSuccess: () => {
+            fetch(`/admin/patients/${editingPatient.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    ...patientData,
+                    _method: 'PUT'
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     toast.success('Patient updated successfully!');
                     handleCancel();
                     setLoading(false);
-                },
-                onError: (errors) => {
-                    setErrors(errors);
+                    window.location.reload();
+                } else {
+                    setErrors(data.errors || {});
                     toast.error('Failed to update patient');
                     setLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error updating patient:', error);
+                toast.error('Failed to update patient');
+                setLoading(false);
             });
         } else {
             // Create new patient
-            router.post('/admin/patients', patientData as any, {
-                onSuccess: () => {
+            fetch('/admin/patients', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(patientData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     toast.success('Patient added successfully!');
                     handleCancel();
                     setLoading(false);
-                },
-                onError: (errors) => {
-                    setErrors(errors);
+                    window.location.reload();
+                } else {
+                    setErrors(data.errors || {});
                     toast.error('Failed to add patient');
                     setLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error creating patient:', error);
+                toast.error('Failed to add patient');
+                setLoading(false);
             });
         }
     };
@@ -210,17 +240,31 @@ export default function PatientManagement({ patients: initialPatients }: Patient
 
         setLoading(true);
         
-        router.delete(`/admin/patients/${deletingPatient.id}`, {
-            onSuccess: () => {
+        fetch(`/admin/patients/${deletingPatient.id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
                 toast.success('Patient deleted successfully!');
                 setIsDeleteModalOpen(false);
                 setDeletingPatient(null);
                 setLoading(false);
-            },
-            onError: (errors) => {
+                window.location.reload();
+            } else {
                 toast.error('Failed to delete patient');
                 setLoading(false);
             }
+        })
+        .catch(error => {
+            console.error('Error deleting patient:', error);
+            toast.error('Failed to delete patient');
+            setLoading(false);
         });
     };
 

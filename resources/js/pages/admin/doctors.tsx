@@ -148,34 +148,64 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
 
         if (isEdit && editingDoctor) {
             // Update existing doctor
-            router.post(`/admin/doctors/${editingDoctor.id}`, {
-                ...doctorData,
-                _method: 'PUT'
-            } as any, {
-                onSuccess: () => {
+            fetch(`/admin/doctors/${editingDoctor.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    ...doctorData,
+                    _method: 'PUT'
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     toast.success('Doctor updated successfully!');
                     handleCancel();
                     setLoading(false);
-                },
-                onError: (errors) => {
-                    setErrors(errors);
+                    window.location.reload();
+                } else {
+                    setErrors(data.errors || {});
                     toast.error('Failed to update doctor');
                     setLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error updating doctor:', error);
+                toast.error('Failed to update doctor');
+                setLoading(false);
             });
         } else {
             // Create new doctor
-            router.post('/admin/doctors', doctorData as any, {
-                onSuccess: () => {
+            fetch('/admin/doctors', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(doctorData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     toast.success('Doctor added successfully!');
                     handleCancel();
                     setLoading(false);
-                },
-                onError: (errors) => {
-                    setErrors(errors);
+                    window.location.reload();
+                } else {
+                    setErrors(data.errors || {});
                     toast.error('Failed to add doctor');
                     setLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error creating doctor:', error);
+                toast.error('Failed to add doctor');
+                setLoading(false);
             });
         }
     };
@@ -185,17 +215,31 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
 
         setLoading(true);
         
-        router.delete(`/admin/doctors/${deletingDoctor.id}`, {
-            onSuccess: () => {
+        fetch(`/admin/doctors/${deletingDoctor.id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
                 toast.success('Doctor deleted successfully!');
                 setIsDeleteModalOpen(false);
                 setDeletingDoctor(null);
                 setLoading(false);
-            },
-            onError: (errors) => {
+                window.location.reload();
+            } else {
                 toast.error('Failed to delete doctor');
                 setLoading(false);
             }
+        })
+        .catch(error => {
+            console.error('Error deleting doctor:', error);
+            toast.error('Failed to delete doctor');
+            setLoading(false);
         });
     };
 

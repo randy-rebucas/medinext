@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminAnalytics } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -32,29 +32,51 @@ import {
 
 export default function Analytics() {
 
-    const topPerformers = [
-        {
-            name: 'Dr. Sarah Johnson',
-            specialty: 'Cardiology',
-            patients: 156,
-            rating: 4.9,
-            revenue: '$12,450'
-        },
-        {
-            name: 'Dr. Michael Brown',
-            specialty: 'Pediatrics',
-            patients: 203,
-            rating: 4.8,
-            revenue: '$15,230'
-        },
-        {
-            name: 'Dr. Emily Davis',
-            specialty: 'Dermatology',
-            patients: 89,
-            rating: 4.7,
-            revenue: '$8,920'
-        }
-    ];
+    interface TopPerformer {
+        name: string;
+        specialty: string;
+        patients: number;
+        rating: number;
+        revenue: string;
+    }
+
+    const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
+    const [analyticsData, setAnalyticsData] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    // Fetch analytics data from database
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            try {
+                const response = await fetch('/admin/analytics', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setTopPerformers(data.topPerformers || []);
+                    setAnalyticsData(data.analytics || {});
+                } else {
+                    console.error('Failed to fetch analytics');
+                    setTopPerformers([]);
+                    setAnalyticsData({});
+                }
+            } catch (error) {
+                console.error('Error fetching analytics:', error);
+                setTopPerformers([]);
+                setAnalyticsData({});
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAnalytics();
+    }, []);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -97,7 +119,15 @@ export default function Analytics() {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {topPerformers.map((doctor, index) => (
+                                    {loading ? (
+                                        <div className="text-center py-8">
+                                            <div className="flex items-center justify-center">
+                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                                <span className="ml-2 text-slate-600 dark:text-slate-300">Loading analytics...</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        topPerformers.map((doctor, index) => (
                                         <div key={doctor.name} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200">
                                             <div className="flex items-center space-x-4">
                                                 <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
@@ -126,7 +156,8 @@ export default function Analytics() {
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

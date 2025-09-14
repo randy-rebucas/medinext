@@ -183,11 +183,21 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
 
         if (editingStaff) {
             // Update existing staff member
-            router.post(`/admin/staff/${editingStaff.id}`, {
-                ...formData,
-                _method: 'PUT'
-            } as any, {
-                onSuccess: () => {
+            fetch(`/admin/staff/${editingStaff.id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    ...formData,
+                    _method: 'PUT'
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     // Show success message
                     alert('Staff member updated successfully!');
                     
@@ -208,17 +218,32 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                     setIsEditModalOpen(false);
                     setEditingStaff(null);
                     setIsLoading(false);
-                },
-                onError: (errors) => {
-                    console.error('Error updating staff:', errors);
-                    setFormErrors(errors);
+                    
+                    // Refresh the page to show updated data
+                    window.location.reload();
+                } else {
+                    setFormErrors(data.errors || {});
                     setIsLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error updating staff:', error);
+                setIsLoading(false);
             });
         } else {
             // Create new staff member
-            router.post('/admin/staff', formData as any, {
-                onSuccess: () => {
+            fetch('/admin/staff', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(formData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     // Show success message
                     alert('Staff member added successfully!');
                     
@@ -238,12 +263,17 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                     setFormErrors({});
                     setIsAddModalOpen(false);
                     setIsLoading(false);
-                },
-                onError: (errors) => {
-                    console.error('Error creating staff:', errors);
-                    setFormErrors(errors);
+                    
+                    // Refresh the page to show updated data
+                    window.location.reload();
+                } else {
+                    setFormErrors(data.errors || {});
                     setIsLoading(false);
                 }
+            })
+            .catch(error => {
+                console.error('Error creating staff:', error);
+                setIsLoading(false);
             });
         }
     };
@@ -255,17 +285,32 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
 
         setIsLoading(true);
         
-        router.delete(`/admin/staff/${staffId}`, {
-            onSuccess: () => {
+        fetch(`/admin/staff/${staffId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
                 // Show success message
                 alert(`${staffName} has been deactivated successfully.`);
                 setIsLoading(false);
-            },
-            onError: (errors) => {
-                console.error('Error deleting staff:', errors);
+                
+                // Refresh the page to show updated data
+                window.location.reload();
+            } else {
                 alert(`Failed to deactivate ${staffName}. Please try again.`);
                 setIsLoading(false);
             }
+        })
+        .catch(error => {
+            console.error('Error deleting staff:', error);
+            alert(`Failed to deactivate ${staffName}. Please try again.`);
+            setIsLoading(false);
         });
     };
 

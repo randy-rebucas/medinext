@@ -56,7 +56,7 @@ export default function AdminDashboard({ user, stats }: AdminDashboardProps) {
     };
 
     // Validate stats data
-    const hasValidStats = stats && typeof stats === 'object';
+    const hasValidStats = stats && typeof stats === 'object' && Object.keys(stats).length > 0;
 
     // Create dynamic stats cards from the data
     const statsCards: StatCard[] = hasValidStats ? [
@@ -296,7 +296,7 @@ export default function AdminDashboard({ user, stats }: AdminDashboardProps) {
                                         }
                                     </p>
                                     <p className="text-sm text-muted-foreground mt-2">
-                                        License: {user.clinic.settings?.license_number || 'Not specified'}
+                                        License: {user.clinic.settings?.license_number?.toString() || 'Not specified'}
                                     </p>
                                 </div>
                                 <div className="text-right">

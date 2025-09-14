@@ -126,23 +126,28 @@ export default function ClinicSettings() {
         setErrorMessage('');
 
         try {
-            // Use Inertia's router to submit the form via web route
-            const { router } = await import('@inertiajs/react');
-            
-            router.post('/admin/clinic-settings', formData as Record<string, any>, {
-                onSuccess: () => {
-                    setSaveStatus('success');
-                    setTimeout(() => setSaveStatus('idle'), 3000);
+            const response = await fetch('/admin/clinic-settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
-                onError: (errors) => {
-                    setSaveStatus('error');
-                    const errorMessages = Object.values(errors).flat();
-                    setErrorMessage(errorMessages.join(', ') || 'Failed to save settings');
-                },
-                onFinish: () => {
-                    setIsSaving(false);
-                }
+                body: JSON.stringify(formData),
             });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setSaveStatus('success');
+                setTimeout(() => setSaveStatus('idle'), 3000);
+                setIsSaving(false);
+            } else {
+                setSaveStatus('error');
+                const errorMessages = Object.values(data.errors || {}).flat();
+                setErrorMessage(errorMessages.join(', ') || 'Failed to save settings');
+                setIsSaving(false);
+            }
         } catch (error: unknown) {
             setSaveStatus('error');
             setErrorMessage('Failed to save settings');
