@@ -581,6 +581,8 @@ class BaseSeeder extends Seeder
                     'dashboard.view', 'dashboard.stats',
                     // MedRep permissions
                     'medrep_visits.manage', 'medrep_visits.view', 'interactions.view', 'products.view', 'meetings.create',
+                    // Doctor permissions (required for medrep routes)
+                    'doctors.view',
                     // Reports permissions
                     'reports.view',
                     // Profile permissions
