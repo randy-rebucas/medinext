@@ -42,6 +42,15 @@ interface StaffManagementProps {
 }
 
 export default function StaffManagement({ staff, roles, departments }: StaffManagementProps) {
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: 'Staff Management',
+            href: '/admin/dashboard',
+        },
+    ];
+    
+    try {
+    
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -65,10 +74,15 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         notes: ''
     });
 
-    const filteredStaff = staff.filter(member => {
-        const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            member.department.toLowerCase().includes(searchTerm.toLowerCase());
+    // Ensure staff is an array
+    const staffArray = Array.isArray(staff) ? staff : [];
+
+    const filteredStaff = staffArray.filter(member => {
+        if (!member) return false;
+        
+        const matchesSearch = (member.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (member.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (member.department || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRole = roleFilter === 'all' || member.role === roleFilter;
         const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
 
@@ -288,12 +302,21 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
             notes: ''
         });
     };
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: 'Staff Management',
-            href: '/admin/dashboard',
-        },
-    ];
+
+    // Show loading state if no data
+    if (!staff && !roles && !departments) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Staff Management - Medinext" />
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-4 text-gray-600">Loading staff management...</p>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -946,4 +969,24 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
             </Dialog>
         </AppLayout>
     );
+    } catch (error) {
+        console.error('Error in StaffManagement component:', error);
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Staff Management - Error" />
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Staff Management</h1>
+                        <p className="text-gray-600 mb-4">There was an error loading the staff management page.</p>
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                            Reload Page
+                        </button>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
 }

@@ -29,19 +29,33 @@ class StaffController extends Controller
                 return redirect()->route('login');
             }
 
-            $userClinicRole = $this->getUserClinicRole($request);
-            $clinicId = $userClinicRole->clinic_id;
+            // Get current clinic
+            $currentClinic = $user->getCurrentClinic();
+            if (!$currentClinic) {
+                return redirect()->route('dashboard')->with('error', 'No clinic selected. Please select a clinic first.');
+            }
+            
+            // Get user's role in current clinic
+            $userClinicRole = $user->userClinicRoles()
+                ->where('clinic_id', $currentClinic->id)
+                ->with(['clinic', 'role'])
+                ->first();
+            
+            if (!$userClinicRole) {
+                return redirect()->route('dashboard')->with('error', 'You do not have access to this clinic.');
+            }
+            
+            $clinicId = $currentClinic->id;
 
             $query = User::whereHas('clinics', function ($q) use ($clinicId) {
-                $q->where('clinic_id', $userClinicRole->clinic_id);
+                $q->where('clinic_id', $clinicId);
             })->with(['roles', 'clinics']);
 
             // Apply filters
             if ($request->has('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
-                    $q->where('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
+                    $q->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%");
                 });
             }
@@ -58,15 +72,57 @@ class StaffController extends Controller
 
             $staff = $query->paginate($request->get('per_page', 15));
 
+            // Transform staff data to match frontend expectations
+            $transformedStaff = $staff->getCollection()->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'role' => $user->roles->first()?->name ?? 'No Role',
+                    'department' => $user->userClinicRoles->first()?->department ?? 'General',
+                    'status' => $user->is_active ? 'Active' : 'Inactive',
+                    'join_date' => $user->userClinicRoles->first()?->join_date?->format('Y-m-d') ?? $user->created_at->format('Y-m-d'),
+                    'last_active' => $user->updated_at->format('Y-m-d H:i:s'),
+                    'is_active' => $user->is_active,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ];
+            });
+
+            // Replace the collection in pagination
+            $staff->setCollection($transformedStaff);
+
             // Get roles for the dropdown
             $roles = Role::where('is_system_role', false)->get();
+
+            // Get departments (you can customize this based on your needs)
+            $departments = [
+                'General',
+                'Administration',
+                'Medical',
+                'Nursing',
+                'Reception',
+                'Laboratory',
+                'Pharmacy',
+                'Maintenance',
+                'Security',
+                'IT Support'
+            ];
 
             // Get user permissions
             $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
             return Inertia::render('admin/staff', [
-                'staff' => $staff,
+                'staff' => $transformedStaff->toArray(),
+                'pagination' => [
+                    'current_page' => $staff->currentPage(),
+                    'last_page' => $staff->lastPage(),
+                    'per_page' => $staff->perPage(),
+                    'total' => $staff->total(),
+                ],
                 'roles' => $roles,
+                'departments' => $departments,
                 'permissions' => $permissions,
                 'filters' => [
                     'search' => $request->search,
@@ -90,8 +146,24 @@ class StaffController extends Controller
             $this->logWebRequest('Staff Management Access', ['action' => 'show', 'staff_id' => $id]);
             
             $user = $request->user();
-            $userClinicRole = $this->getUserClinicRole($request);
-            $clinicId = $userClinicRole->clinic_id;
+            
+            // Get current clinic
+            $currentClinic = $user->getCurrentClinic();
+            if (!$currentClinic) {
+                return redirect()->route('dashboard')->with('error', 'No clinic selected. Please select a clinic first.');
+            }
+            
+            // Get user's role in current clinic
+            $userClinicRole = $user->userClinicRoles()
+                ->where('clinic_id', $currentClinic->id)
+                ->with(['clinic', 'role'])
+                ->first();
+            
+            if (!$userClinicRole) {
+                return redirect()->route('dashboard')->with('error', 'You do not have access to this clinic.');
+            }
+            
+            $clinicId = $currentClinic->id;
 
             // Find staff member in current clinic
             $staff = User::whereHas('clinics', function ($q) use ($clinicId) {
@@ -101,13 +173,44 @@ class StaffController extends Controller
             // Get roles for the dropdown
             $roles = Role::where('is_system_role', false)->get();
 
+            // Get departments (you can customize this based on your needs)
+            $departments = [
+                'General',
+                'Administration',
+                'Medical',
+                'Nursing',
+                'Reception',
+                'Laboratory',
+                'Pharmacy',
+                'Maintenance',
+                'Security',
+                'IT Support'
+            ];
+
             // Get user permissions
             $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
+            // Transform staff data to match frontend expectations
+            $transformedStaff = [
+                'id' => $staff->id,
+                'name' => $staff->name,
+                'email' => $staff->email,
+                'phone' => $staff->phone,
+                'role' => $staff->roles->first()?->name ?? 'No Role',
+                'department' => $staff->userClinicRoles->first()?->department ?? 'General',
+                'status' => $staff->is_active ? 'Active' : 'Inactive',
+                'join_date' => $staff->userClinicRoles->first()?->join_date?->format('Y-m-d') ?? $staff->created_at->format('Y-m-d'),
+                'last_active' => $staff->updated_at->format('Y-m-d H:i:s'),
+                'is_active' => $staff->is_active,
+                'created_at' => $staff->created_at,
+                'updated_at' => $staff->updated_at,
+            ];
+
             return Inertia::render('admin/staff', [
-                'staff' => collect([$staff]),
-                'selectedStaff' => $staff,
+                'staff' => [$transformedStaff],
+                'selectedStaff' => $transformedStaff,
                 'roles' => $roles,
+                'departments' => $departments,
                 'permissions' => $permissions,
                 'filters' => [
                     'search' => '',
@@ -129,14 +232,12 @@ class StaffController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
+                'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'phone' => 'nullable|string|max:20',
                 'password' => 'required|string|min:8',
                 'role_id' => 'required|exists:roles,id',
                 'is_active' => 'boolean',
-                'clinic_id' => 'required|exists:clinics,id',
             ]);
 
             if ($validator->fails()) {
@@ -147,21 +248,22 @@ class StaffController extends Controller
                 ], 422);
             }
 
-            $clinicId = $request->clinic_id;
-            $currentUserClinicId = $request->user()->current_clinic_id;
-
-            // Check if user has permission to add staff to this clinic
-            if ($currentUserClinicId !== $clinicId) {
+            $currentUser = $request->user();
+            
+            // Get current clinic
+            $currentClinic = $currentUser->getCurrentClinic();
+            if (!$currentClinic) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You can only add staff to your current clinic'
-                ], 403);
+                    'message' => 'No clinic selected'
+                ], 400);
             }
+            
+            $clinicId = $currentClinic->id;
 
             // Create user
             $user = User::create([
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
+                'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'password' => Hash::make($request->password),
@@ -169,14 +271,10 @@ class StaffController extends Controller
                 'email_verified_at' => now(),
             ]);
 
-            // Assign role
-            $role = Role::findOrFail($request->role_id);
-            $user->assignRole($role);
-
-            // Assign to clinic
+            // Assign to clinic with role
             $user->clinics()->attach($clinicId, [
                 'role_id' => $request->role_id,
-                'assigned_by' => Auth::id(),
+                'assigned_by' => $currentUser->id,
                 'assigned_at' => now(),
             ]);
 
@@ -205,8 +303,7 @@ class StaffController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'first_name' => 'sometimes|string|max:255',
-                'last_name' => 'sometimes|string|max:255',
+                'name' => 'sometimes|string|max:255',
                 'email' => 'sometimes|email|unique:users,email,' . $id,
                 'phone' => 'nullable|string|max:20',
                 'password' => 'sometimes|string|min:8',
@@ -222,15 +319,18 @@ class StaffController extends Controller
                 ], 422);
             }
 
-            $userClinicRole = $this->getUserClinicRole($request);
-            $clinicId = $userClinicRole->clinic_id;
+            $currentUser = $request->user();
             
-            if (!$userClinicRole) {
+            // Get current clinic
+            $currentClinic = $currentUser->getCurrentClinic();
+            if (!$currentClinic) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No clinic selected'
                 ], 400);
             }
+            
+            $clinicId = $currentClinic->id;
 
             // Find user and check if they belong to current clinic
             $user = User::whereHas('clinics', function ($q) use ($clinicId) {
@@ -238,7 +338,7 @@ class StaffController extends Controller
             })->findOrFail($id);
 
             // Update user data
-            $updateData = $request->only(['first_name', 'last_name', 'email', 'phone', 'is_active']);
+            $updateData = $request->only(['name', 'email', 'phone', 'is_active']);
             
             if ($request->has('password')) {
                 $updateData['password'] = Hash::make($request->password);
@@ -248,13 +348,10 @@ class StaffController extends Controller
 
             // Update role if provided
             if ($request->has('role_id')) {
-                $role = Role::findOrFail($request->role_id);
-                $user->syncRoles([$role]);
-                
                 // Update clinic role
                 $user->clinics()->updateExistingPivot($clinicId, [
                     'role_id' => $request->role_id,
-                    'updated_by' => Auth::id(),
+                    'updated_by' => $currentUser->id,
                     'updated_at' => now(),
                 ]);
             }
@@ -283,15 +380,18 @@ class StaffController extends Controller
     public function destroy(Request $request, int $id): JsonResponse
     {
         try {
-            $userClinicRole = $this->getUserClinicRole($request);
-            $clinicId = $userClinicRole->clinic_id;
+            $currentUser = $request->user();
             
-            if (!$userClinicRole) {
+            // Get current clinic
+            $currentClinic = $currentUser->getCurrentClinic();
+            if (!$currentClinic) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No clinic selected'
                 ], 400);
             }
+            
+            $clinicId = $currentClinic->id;
 
             // Find user and check if they belong to current clinic
             $user = User::whereHas('clinics', function ($q) use ($clinicId) {
