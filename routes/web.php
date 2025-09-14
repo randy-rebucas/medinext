@@ -115,7 +115,7 @@ Route::middleware(['auth', 'verified', 'trial.check', 'onboarding.check'])->grou
         });
         
         Route::middleware(['permission:settings.manage'])->group(function () {
-            Route::post('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-settings.update');
+            Route::post('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-settings.store');
             Route::put('clinic-settings/{id}', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-settings.update');
         });
 
