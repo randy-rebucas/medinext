@@ -20,14 +20,14 @@ class ScheduleController extends Controller
             $this->logWebRequest('Schedule Management Access', ['action' => 'index']);
             
             $user = $request->user();
-            $clinicId = $user->current_clinic_id;
-            
-            if (!$clinicId) {
+            $userClinicRole = $this->getUserClinicRole($request);
+            $clinicId = $userClinicRole->clinic_id;
+            if (!$userClinicRole) {
                 return redirect()->route('dashboard')->with('error', 'No clinic selected');
             }
 
             // Get user permissions
-            $permissions = $this->getUserPermissions($user->roles->first()->name ?? 'user');
+            $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
             // For now, return empty data structure - this will be populated when schedule functionality is implemented
             $schedules = collect([]);
@@ -63,14 +63,11 @@ class ScheduleController extends Controller
             $this->logWebRequest('Schedule Management Access', ['action' => 'show', 'schedule_id' => $id]);
             
             $user = $request->user();
-            $clinicId = $user->current_clinic_id;
-            
-            if (!$clinicId) {
-                return redirect()->route('dashboard')->with('error', 'No clinic selected');
-            }
+            $userClinicRole = $this->getUserClinicRole($request);
+            $clinicId = $userClinicRole->clinic_id;
 
             // Get user permissions
-            $permissions = $this->getUserPermissions($user->roles->first()->name ?? 'user');
+            $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
             // For now, return empty data structure - this will be populated when schedule functionality is implemented
             $schedules = collect([]);

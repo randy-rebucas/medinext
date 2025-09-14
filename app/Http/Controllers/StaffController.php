@@ -29,15 +29,11 @@ class StaffController extends Controller
                 return redirect()->route('login');
             }
 
-            $clinicId = $user->current_clinic_id;
-            
-            if (!$clinicId) {
-                $this->logSecurityEvent('No clinic selected', ['user_id' => $user->id]);
-                return redirect()->route('dashboard')->with('error', 'No clinic selected');
-            }
+            $userClinicRole = $this->getUserClinicRole($request);
+            $clinicId = $userClinicRole->clinic_id;
 
             $query = User::whereHas('clinics', function ($q) use ($clinicId) {
-                $q->where('clinic_id', $clinicId);
+                $q->where('clinic_id', $userClinicRole->clinic_id);
             })->with(['roles', 'clinics']);
 
             // Apply filters
@@ -66,7 +62,7 @@ class StaffController extends Controller
             $roles = Role::where('is_system_role', false)->get();
 
             // Get user permissions
-            $permissions = $this->getUserPermissions($user->roles->first()->name ?? 'user');
+            $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
             return Inertia::render('admin/staff', [
                 'staff' => $staff,
@@ -94,11 +90,8 @@ class StaffController extends Controller
             $this->logWebRequest('Staff Management Access', ['action' => 'show', 'staff_id' => $id]);
             
             $user = $request->user();
-            $clinicId = $user->current_clinic_id;
-            
-            if (!$clinicId) {
-                return redirect()->route('dashboard')->with('error', 'No clinic selected');
-            }
+            $userClinicRole = $this->getUserClinicRole($request);
+            $clinicId = $userClinicRole->clinic_id;
 
             // Find staff member in current clinic
             $staff = User::whereHas('clinics', function ($q) use ($clinicId) {
@@ -109,7 +102,7 @@ class StaffController extends Controller
             $roles = Role::where('is_system_role', false)->get();
 
             // Get user permissions
-            $permissions = $this->getUserPermissions($user->roles->first()->name ?? 'user');
+            $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
             return Inertia::render('admin/staff', [
                 'staff' => collect([$staff]),
@@ -229,9 +222,10 @@ class StaffController extends Controller
                 ], 422);
             }
 
-            $clinicId = $request->user()->current_clinic_id;
+            $userClinicRole = $this->getUserClinicRole($request);
+            $clinicId = $userClinicRole->clinic_id;
             
-            if (!$clinicId) {
+            if (!$userClinicRole) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No clinic selected'
@@ -289,9 +283,10 @@ class StaffController extends Controller
     public function destroy(Request $request, int $id): JsonResponse
     {
         try {
-            $clinicId = $request->user()->current_clinic_id;
+            $userClinicRole = $this->getUserClinicRole($request);
+            $clinicId = $userClinicRole->clinic_id;
             
-            if (!$clinicId) {
+            if (!$userClinicRole) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No clinic selected'
