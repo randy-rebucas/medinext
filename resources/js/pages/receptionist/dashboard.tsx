@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { receptionistDashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -123,31 +123,21 @@ export default function ReceptionistDashboard({
     const [isNewPatientDialogOpen, setIsNewPatientDialogOpen] = useState(false);
 
     // Patient search function
-    const handlePatientSearch = async () => {
+    const handlePatientSearch = () => {
         if (!searchQuery.trim()) return;
 
         setIsSearching(true);
-        try {
-            // This would call the API endpoint for patient search
-            const response = await fetch(`/api/v1/patients/search?q=${encodeURIComponent(searchQuery)}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setSearchResults(data.data || []);
-            } else {
+        
+        router.get('/receptionist/patients/search', { q: searchQuery }, {
+            onSuccess: (page) => {
+                setSearchResults(page.props.searchResults || []);
+                setIsSearching(false);
+            },
+            onError: () => {
                 setSearchResults([]);
+                setIsSearching(false);
             }
-        } catch (error) {
-            console.error('Search error:', error);
-            setSearchResults([]);
-        } finally {
-            setIsSearching(false);
-        }
+        });
     };
 
     // Handle patient selection
@@ -752,21 +742,12 @@ function NewPatientForm({ onSuccess }: { onSuccess: () => void }) {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        try {
-            const response = await fetch('/api/v1/patients', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (response.ok) {
+        router.post('/receptionist/patients', formData, {
+            onSuccess: () => {
                 onSuccess();
                 // Reset form
                 setFormData({
@@ -779,12 +760,12 @@ function NewPatientForm({ onSuccess }: { onSuccess: () => void }) {
                     emergency_contact: '',
                     allergies: ''
                 });
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error creating patient:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (
@@ -892,35 +873,25 @@ function NewEncounterForm({
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!patient) return;
 
         setIsSubmitting(true);
 
-        try {
-            const response = await fetch('/api/v1/encounters', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    patient_id: patient.id,
-                    ...formData
-                }),
-            });
-
-            if (response.ok) {
+        router.post('/receptionist/encounters', {
+            patient_id: patient.id,
+            ...formData
+        }, {
+            onSuccess: () => {
                 onSuccess();
                 // Optionally add to queue immediately
-                // await handleAddToQueue(encounter.data.id);
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error creating encounter:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (

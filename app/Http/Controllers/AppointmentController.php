@@ -91,11 +91,7 @@ class AppointmentController extends Controller
         $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return redirect()->back()->withErrors($validator->errors())->withInput();
         }
 
         try {
@@ -106,20 +102,14 @@ class AppointmentController extends Controller
 
             if (!$user) {
                 $this->logSecurityEvent('Unauthenticated appointment creation attempt');
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not authenticated'
-                ], 401);
+                return redirect()->back()->with('error', 'User not authenticated');
             }
 
             $userClinicRole = $this->getUserClinicRole($request);
 
             if (!$userClinicRole) {
                 $this->logSecurityEvent('Unauthorized clinic access attempt', ['user_id' => $user->id]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User does not have clinic access'
-                ], 403);
+                return redirect()->back()->with('error', 'User does not have clinic access');
             }
 
             $clinicId = $userClinicRole->clinic_id;
@@ -139,18 +129,11 @@ class AppointmentController extends Controller
                 'priority' => $request->priority,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Appointment scheduled successfully',
-                'appointment' => $this->getAppointment($appointment->id)
-            ]);
+            return redirect()->route('admin.appointments')->with('success', 'Appointment scheduled successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'AppointmentController::store');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to schedule appointment. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to schedule appointment. Please try again.')->withInput();
         }
     }
 
@@ -173,11 +156,7 @@ class AppointmentController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return redirect()->back()->withErrors($validator->errors())->withInput();
         }
 
         try {
@@ -197,18 +176,11 @@ class AppointmentController extends Controller
                 'priority' => $request->priority,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Appointment updated successfully',
-                'appointment' => $this->getAppointment($appointment->id)
-            ]);
+            return redirect()->route('admin.appointments')->with('success', 'Appointment updated successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'AppointmentController::update');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update appointment. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to update appointment. Please try again.')->withInput();
         }
     }
 
@@ -221,17 +193,11 @@ class AppointmentController extends Controller
             $appointment = Appointment::findOrFail($id);
             $appointment->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Appointment deleted successfully'
-            ]);
+            return redirect()->route('admin.appointments')->with('success', 'Appointment deleted successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'AppointmentController::destroy');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete appointment. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to delete appointment. Please try again.');
         }
     }
 
@@ -275,11 +241,7 @@ class AppointmentController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return redirect()->back()->withErrors($validator->errors())->withInput();
         }
 
         try {

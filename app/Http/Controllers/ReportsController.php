@@ -93,11 +93,7 @@ class ReportsController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return redirect()->back()->withErrors($validator->errors())->withInput();
         }
 
         try {
@@ -105,10 +101,7 @@ class ReportsController extends Controller
             $userClinicRole = $user->userClinicRoles()->with(['clinic'])->first();
 
             if (!$userClinicRole) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No clinic access'
-                ], 403);
+                return redirect()->back()->with('error', 'No clinic access');
             }
 
             // Get reports settings
@@ -118,10 +111,7 @@ class ReportsController extends Controller
 
             // Validate format against allowed formats
             if (!in_array($request->format, $allowedFormats)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Format not allowed. Allowed formats: ' . implode(', ', $allowedFormats)
-                ], 422);
+                return redirect()->back()->with('error', 'Format not allowed. Allowed formats: ' . implode(', ', $allowedFormats))->withInput();
             }
 
             $clinicId = $userClinicRole->clinic_id;
@@ -139,18 +129,10 @@ class ReportsController extends Controller
             // Store report record
             $report = $this->storeReportRecord($reportType, $fileName, $startDate, $endDate, $clinicId);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Report generated successfully',
-                'report' => $report,
-                'download_url' => route('reports.download', $report->id)
-            ]);
+            return redirect()->route('admin.reports')->with('success', 'Report generated successfully')->with('download_url', route('reports.download', $report->id));
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to generate report: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to generate report. Please try again.')->withInput();
         }
     }
 

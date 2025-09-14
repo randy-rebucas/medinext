@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usePage } from '@inertiajs/react';
+import { usePage, router } from '@inertiajs/react';
 
 interface Settings {
     branding: {
@@ -31,19 +31,17 @@ export function useSettings(): UseSettingsReturn {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchSettings = async () => {
-            try {
-                const response = await fetch('/api/v1/settings/clinic');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch settings');
+        const fetchSettings = () => {
+            router.get('/settings/clinic', {}, {
+                onSuccess: (page) => {
+                    setSettings(page.props.settings);
+                    setLoading(false);
+                },
+                onError: (errors) => {
+                    setError('Failed to fetch settings');
+                    setLoading(false);
                 }
-                const data = await response.json();
-                setSettings(data.settings);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Unknown error');
-            } finally {
-                setLoading(false);
-            }
+            });
         };
 
         fetchSettings();

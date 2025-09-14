@@ -99,11 +99,7 @@ class PatientController extends Controller
         try {
             $validatedData = $this->validateAndSanitize($request, $rules, $messages);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
+            return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
         try {
@@ -114,20 +110,14 @@ class PatientController extends Controller
 
             if (!$user) {
                 $this->logSecurityEvent('Unauthenticated patient creation attempt');
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not authenticated'
-                ], 401);
+                return redirect()->back()->with('error', 'User not authenticated');
             }
 
             $userClinicRole = $this->getUserClinicRole($request);
 
             if (!$userClinicRole) {
                 $this->logSecurityEvent('Unauthorized clinic access attempt', ['user_id' => $user->id]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User does not have clinic access'
-                ], 403);
+                return redirect()->back()->with('error', 'User does not have clinic access');
             }
 
             $clinicId = $userClinicRole->clinic_id;
@@ -152,18 +142,11 @@ class PatientController extends Controller
                 'notes' => $validatedData['notes'] ?? null,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Patient created successfully',
-                'patient' => $this->getPatient($patient->id)
-            ]);
+            return redirect()->route('admin.patients')->with('success', 'Patient created successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'PatientController::store');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create patient. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to create patient. Please try again.')->withInput();
         }
     }
 
@@ -199,11 +182,7 @@ class PatientController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return redirect()->back()->withErrors($validator->errors())->withInput();
         }
 
         try {
@@ -224,17 +203,10 @@ class PatientController extends Controller
                 'notes' => $request->notes,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Patient updated successfully',
-                'patient' => $this->getPatient($patient->id)
-            ]);
+            return redirect()->route('admin.patients')->with('success', 'Patient updated successfully');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update patient: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to update patient. Please try again.')->withInput();
         }
     }
 
@@ -247,16 +219,10 @@ class PatientController extends Controller
             $patient = Patient::findOrFail($id);
             $patient->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Patient deleted successfully'
-            ]);
+            return redirect()->route('admin.patients')->with('success', 'Patient deleted successfully');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete patient: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to delete patient. Please try again.');
         }
     }
 

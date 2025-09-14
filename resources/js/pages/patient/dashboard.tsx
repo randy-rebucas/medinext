@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { patientDashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -608,28 +608,19 @@ function AppointmentBookingForm({
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        try {
-            const response = await fetch('/api/v1/appointments', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (response.ok) {
+        router.post('/patient/appointments', formData, {
+            onSuccess: () => {
                 onSuccess();
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error booking appointment:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     const filteredSlots = availableSlots.filter(slot =>

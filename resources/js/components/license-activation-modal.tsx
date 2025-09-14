@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle, Key, Loader2 } from 'lucide-react';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 
 interface LicenseActivationModalProps {
     trigger?: React.ReactNode;
@@ -36,62 +36,36 @@ export function LicenseActivationModal({ trigger, onSuccess }: LicenseActivation
         });
     };
 
-    const handleValidateLicense = async () => {
+    const handleValidateLicense = () => {
         if (!data.license_key.trim()) return;
 
         setIsValidating(true);
-        try {
-            const response = await fetch('/api/v1/license/validate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify({ license_key: data.license_key }),
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                setValidationResult({
-                    valid: true,
-                    message: result.data.message || 'License key is valid and available.',
-                });
-            } else {
-                // Handle different response structures
-                const errorMessage = result.data?.message || result.message || 'License key validation failed.';
-                const errorCode = result.data?.error_code || result.error_code;
-
-                let detailedMessage = errorMessage;
-
-                // The backend now provides detailed messages, so we can use them directly
-                // But we can still add some frontend-specific enhancements
-                if (errorCode === 'LICENSE_ALREADY_IN_USE') {
-                    // Backend already includes the assigned user in the message
-                    detailedMessage = errorMessage;
-                } else if (errorCode === 'LICENSE_EXPIRED') {
-                    // Backend already includes the expiry date in the message
-                    detailedMessage = errorMessage;
-                } else if (errorCode === 'LICENSE_NOT_FOUND') {
-                    // Backend already provides a helpful message
-                    detailedMessage = errorMessage;
-                } else if (errorCode === 'LICENSE_INACTIVE') {
-                    detailedMessage = errorMessage;
+        
+        router.post('/license/validate', { license_key: data.license_key }, {
+            onSuccess: (page) => {
+                const result = page.props.validationResult;
+                if (result && result.valid) {
+                    setValidationResult({
+                        valid: true,
+                        message: result.message || 'License key is valid and available.',
+                    });
+                } else {
+                    setValidationResult({
+                        valid: false,
+                        message: result?.message || 'License key validation failed.',
+                        errorCode: result?.error_code
+                    });
                 }
-
+                setIsValidating(false);
+            },
+            onError: (errors) => {
                 setValidationResult({
                     valid: false,
-                    message: detailedMessage,
+                    message: errors.license_key?.[0] || 'License key validation failed.',
                 });
+                setIsValidating(false);
             }
-        } catch {
-            setValidationResult({
-                valid: false,
-                message: 'Failed to validate license key. Please try again.',
-            });
-        } finally {
-            setIsValidating(false);
-        }
+        });
     };
 
     const handleOpenChange = (newOpen: boolean) => {

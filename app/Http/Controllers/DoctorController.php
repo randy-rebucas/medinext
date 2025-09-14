@@ -90,11 +90,7 @@ class DoctorController extends Controller
         try {
             $validatedData = $this->validateAndSanitize($request, $rules, $messages);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
+            return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
         try {
@@ -105,20 +101,14 @@ class DoctorController extends Controller
 
             if (!$user) {
                 $this->logSecurityEvent('Unauthenticated doctor creation attempt');
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not authenticated'
-                ], 401);
+                return redirect()->back()->with('error', 'User not authenticated');
             }
 
             $userClinicRole = $this->getUserClinicRole($request);
 
             if (!$userClinicRole) {
                 $this->logSecurityEvent('Unauthorized clinic access attempt', ['user_id' => $user->id]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User does not have clinic access'
-                ], 403);
+                return redirect()->back()->with('error', 'User does not have clinic access');
             }
 
             $clinicId = $userClinicRole->clinic_id;
@@ -163,18 +153,11 @@ class DoctorController extends Controller
                 'join_date' => Carbon::now(),
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Doctor added successfully',
-                'doctor' => $this->getDoctor($doctor->id)
-            ]);
+            return redirect()->route('admin.doctors')->with('success', 'Doctor added successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'DoctorController::store');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to add doctor. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to add doctor. Please try again.')->withInput();
         }
     }
 
@@ -213,11 +196,7 @@ class DoctorController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return redirect()->back()->withErrors($validator->errors())->withInput();
         }
 
         try {
@@ -225,10 +204,7 @@ class DoctorController extends Controller
             $user = $doctor->user;
 
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Doctor user not found'
-                ], 404);
+                return redirect()->back()->with('error', 'Doctor user not found');
             }
 
             // Update user
@@ -264,17 +240,10 @@ class DoctorController extends Controller
                 ]);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Doctor updated successfully',
-                'doctor' => $this->getDoctor($doctor->id)
-            ]);
+            return redirect()->route('admin.doctors')->with('success', 'Doctor updated successfully');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update doctor: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to update doctor. Please try again.')->withInput();
         }
     }
 
@@ -288,10 +257,7 @@ class DoctorController extends Controller
             $user = $doctor->user;
 
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Doctor user not found'
-                ], 404);
+                return redirect()->back()->with('error', 'Doctor user not found');
             }
 
             // Soft delete - just deactivate
@@ -304,16 +270,10 @@ class DoctorController extends Controller
                 $userClinicRole->update(['status' => 'Inactive']);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Doctor deactivated successfully'
-            ]);
+            return redirect()->route('admin.doctors')->with('success', 'Doctor deactivated successfully');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to deactivate doctor: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to deactivate doctor. Please try again.');
         }
     }
 

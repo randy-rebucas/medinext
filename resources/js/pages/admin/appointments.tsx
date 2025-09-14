@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminAppointments } from '@/routes';
@@ -134,97 +134,62 @@ export default function AdminAppointments({ appointments: initialAppointments, p
         return matchesSearch && matchesStatus && matchesType && matchesDate;
     });
 
-    // API Functions
-    const fetchAppointments = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/admin/appointments');
-            const data = await response.json();
-            if (data.success) {
-                setAppointments(data.appointments);
-            }
-        } catch {
-            toast.error('Failed to fetch appointments');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Web route functions
+    const saveAppointment = (appointmentData: Record<string, unknown>, isEdit = false) => {
+        setLoading(true);
+        setErrors({});
 
-    const fetchCalendarData = async () => {
-        try {
-            const response = await fetch('/admin/appointments/calendar/data');
-            const data = await response.json();
-            if (data.success) {
-                setCalendarData(data.appointments);
-            }
-        } catch {
-            toast.error('Failed to fetch calendar data');
-        }
-    };
-
-    const saveAppointment = async (appointmentData: Record<string, unknown>, isEdit = false) => {
-        try {
-            setLoading(true);
-            setErrors({});
-
-            const url = isEdit ? `/admin/appointments/${editingAppointment?.id}` : '/admin/appointments';
-            const method = isEdit ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        if (isEdit && editingAppointment) {
+            // Update existing appointment
+            router.post(`/admin/appointments/${editingAppointment.id}`, {
+                ...appointmentData,
+                _method: 'PUT'
+            } as any, {
+                onSuccess: () => {
+                    toast.success('Appointment updated successfully!');
+                    handleCancel();
+                    setLoading(false);
                 },
-                body: JSON.stringify(appointmentData),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(data.message);
-                await fetchAppointments();
-                handleCancel();
-            } else {
-                if (data.errors) {
-                    setErrors(data.errors);
+                onError: (errors) => {
+                    setErrors(errors);
+                    toast.error('Failed to update appointment');
+                    setLoading(false);
                 }
-                toast.error(data.message || 'Failed to save appointment');
-            }
-        } catch {
-            toast.error('Failed to save appointment');
-        } finally {
-            setLoading(false);
+            });
+        } else {
+            // Create new appointment
+            router.post('/admin/appointments', appointmentData as any, {
+                onSuccess: () => {
+                    toast.success('Appointment created successfully!');
+                    handleCancel();
+                    setLoading(false);
+                },
+                onError: (errors) => {
+                    setErrors(errors);
+                    toast.error('Failed to create appointment');
+                    setLoading(false);
+                }
+            });
         }
     };
 
-    const deleteAppointment = async () => {
+    const deleteAppointment = () => {
         if (!deletingAppointment) return;
 
-        try {
-            setLoading(true);
-            const response = await fetch(`/admin/appointments/${deletingAppointment.id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(data.message);
-                await fetchAppointments();
+        setLoading(true);
+        
+        router.delete(`/admin/appointments/${deletingAppointment.id}`, {
+            onSuccess: () => {
+                toast.success('Appointment deleted successfully!');
                 setIsDeleteModalOpen(false);
                 setDeletingAppointment(null);
-            } else {
-                toast.error(data.message || 'Failed to delete appointment');
+                setLoading(false);
+            },
+            onError: (errors) => {
+                toast.error('Failed to delete appointment');
+                setLoading(false);
             }
-        } catch {
-            toast.error('Failed to delete appointment');
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
     // const updateAppointmentStatus = async (appointmentId: number, status: string) => {

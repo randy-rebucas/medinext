@@ -149,7 +149,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         setIsEditModalOpen(true);
     };
 
-    const handleSaveStaff = async () => {
+    const handleSaveStaff = () => {
         // Clear previous errors
         setFormErrors({});
 
@@ -180,106 +180,93 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         }
 
         setIsLoading(true);
-        try {
-            const url = editingStaff ? `/admin/staff/${editingStaff.id}` : '/admin/staff';
-            const method = editingStaff ? 'POST' : 'POST'; // Use POST for both create and update
 
-            const requestData = editingStaff ? { ...formData, _method: 'PUT' } : formData;
-
-            // Create FormData for Laravel compatibility
-            const formDataToSend = new FormData();
-            Object.keys(requestData).forEach(key => {
-                formDataToSend.append(key, String((requestData as Record<string, unknown>)[key]));
-            });
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        if (editingStaff) {
+            // Update existing staff member
+            router.post(`/admin/staff/${editingStaff.id}`, {
+                ...formData,
+                _method: 'PUT'
+            } as any, {
+                onSuccess: () => {
+                    // Show success message
+                    alert('Staff member updated successfully!');
+                    
+                    // Reset form and close modals
+                    setFormData({
+                        name: '',
+                        email: '',
+                        phone: '',
+                        role: '',
+                        department: '',
+                        status: 'Active',
+                        address: '',
+                        emergency_contact: '',
+                        emergency_phone: '',
+                        notes: ''
+                    });
+                    setFormErrors({});
+                    setIsEditModalOpen(false);
+                    setEditingStaff(null);
+                    setIsLoading(false);
                 },
-                body: formDataToSend,
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                // Show success message
-                const action = editingStaff ? 'updated' : 'added';
-                alert(`Staff member ${action} successfully!`);
-
-                // Reset form and close modals
-                setFormData({
-                    name: '',
-                    email: '',
-                    phone: '',
-                    role: '',
-                    department: '',
-                    status: 'Active',
-                    address: '',
-                    emergency_contact: '',
-                    emergency_phone: '',
-                    notes: ''
-                });
-                setFormErrors({});
-                setIsAddModalOpen(false);
-                setIsEditModalOpen(false);
-                setEditingStaff(null);
-
-                // Refresh the page to get updated data
-                router.reload();
-            } else {
-                console.error('Error saving staff:', result.message);
-
-                // Handle validation errors from server
-                if (result.errors) {
-                    setFormErrors(result.errors);
-                } else {
-                    alert(`Failed to save staff member: ${result.message}`);
+                onError: (errors) => {
+                    console.error('Error updating staff:', errors);
+                    setFormErrors(errors);
+                    setIsLoading(false);
                 }
-            }
-        } catch (error) {
-            console.error('Error saving staff:', error);
-            alert('An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
+            });
+        } else {
+            // Create new staff member
+            router.post('/admin/staff', formData as any, {
+                onSuccess: () => {
+                    // Show success message
+                    alert('Staff member added successfully!');
+                    
+                    // Reset form and close modals
+                    setFormData({
+                        name: '',
+                        email: '',
+                        phone: '',
+                        role: '',
+                        department: '',
+                        status: 'Active',
+                        address: '',
+                        emergency_contact: '',
+                        emergency_phone: '',
+                        notes: ''
+                    });
+                    setFormErrors({});
+                    setIsAddModalOpen(false);
+                    setIsLoading(false);
+                },
+                onError: (errors) => {
+                    console.error('Error creating staff:', errors);
+                    setFormErrors(errors);
+                    setIsLoading(false);
+                }
+            });
         }
     };
 
-    const handleDeleteStaff = async (staffId: number, staffName: string) => {
+    const handleDeleteStaff = (staffId: number, staffName: string) => {
         if (!confirm(`Are you sure you want to deactivate ${staffName}? This action can be reversed by editing the staff member.`)) {
             return;
         }
 
         setIsLoading(true);
-        try {
-            const response = await fetch(`/admin/staff/${staffId}`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: (() => {
-                    const formData = new FormData();
-                    formData.append('_method', 'DELETE');
-                    return formData;
-                })(),
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                // Show success message (you could add a toast notification here)
+        
+        router.delete(`/admin/staff/${staffId}`, {
+            onSuccess: () => {
+                // Show success message
                 alert(`${staffName} has been deactivated successfully.`);
-                router.reload();
-            } else {
-                console.error('Error deleting staff:', result.message);
-                alert(`Failed to deactivate ${staffName}: ${result.message}`);
+                setIsLoading(false);
+            },
+            onError: (errors) => {
+                console.error('Error deleting staff:', errors);
+                alert(`Failed to deactivate ${staffName}. Please try again.`);
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error('Error deleting staff:', error);
-            alert(`Failed to deactivate ${staffName}. Please try again.`);
-        } finally {
-            setIsLoading(false);
-        }
+        });
     };
 
     const handleCancel = () => {

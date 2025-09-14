@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminDoctors } from '@/routes';
@@ -141,85 +141,62 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
         return matchesSearch && matchesSpecialization && matchesStatus;
     });
 
-    // API Functions
-    const fetchDoctors = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/admin/doctors');
-            const data = await response.json();
-            if (data.success) {
-                setDoctors(data.doctors);
-            }
-        } catch {
-            toast.error('Failed to fetch doctors');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Web route functions
+    const saveDoctor = (doctorData: typeof formData, isEdit = false) => {
+        setLoading(true);
+        setErrors({});
 
-    const saveDoctor = async (doctorData: typeof formData, isEdit = false) => {
-        try {
-            setLoading(true);
-            setErrors({});
-
-            const url = isEdit ? `/admin/doctors/${editingDoctor?.id}` : '/admin/doctors';
-            const method = isEdit ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        if (isEdit && editingDoctor) {
+            // Update existing doctor
+            router.post(`/admin/doctors/${editingDoctor.id}`, {
+                ...doctorData,
+                _method: 'PUT'
+            } as any, {
+                onSuccess: () => {
+                    toast.success('Doctor updated successfully!');
+                    handleCancel();
+                    setLoading(false);
                 },
-                body: JSON.stringify(doctorData),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(data.message);
-                await fetchDoctors();
-                handleCancel();
-            } else {
-                if (data.errors) {
-                    setErrors(data.errors);
+                onError: (errors) => {
+                    setErrors(errors);
+                    toast.error('Failed to update doctor');
+                    setLoading(false);
                 }
-                toast.error(data.message || 'Failed to save doctor');
-            }
-        } catch {
-            toast.error('Failed to save doctor');
-        } finally {
-            setLoading(false);
+            });
+        } else {
+            // Create new doctor
+            router.post('/admin/doctors', doctorData as any, {
+                onSuccess: () => {
+                    toast.success('Doctor added successfully!');
+                    handleCancel();
+                    setLoading(false);
+                },
+                onError: (errors) => {
+                    setErrors(errors);
+                    toast.error('Failed to add doctor');
+                    setLoading(false);
+                }
+            });
         }
     };
 
-    const deleteDoctor = async () => {
+    const deleteDoctor = () => {
         if (!deletingDoctor) return;
 
-        try {
-            setLoading(true);
-            const response = await fetch(`/admin/doctors/${deletingDoctor.id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(data.message);
-                await fetchDoctors();
+        setLoading(true);
+        
+        router.delete(`/admin/doctors/${deletingDoctor.id}`, {
+            onSuccess: () => {
+                toast.success('Doctor deleted successfully!');
                 setIsDeleteModalOpen(false);
                 setDeletingDoctor(null);
-            } else {
-                toast.error(data.message || 'Failed to delete doctor');
+                setLoading(false);
+            },
+            onError: (errors) => {
+                toast.error('Failed to delete doctor');
+                setLoading(false);
             }
-        } catch {
-            toast.error('Failed to delete doctor');
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
     const getStatusColor = (status: string) => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,32 +65,22 @@ export function PatientSearch({
     }, [searchQuery, autoSearch, searchDelay]);
 
     // Perform patient search
-    const performSearch = async (query: string) => {
+    const performSearch = (query: string) => {
         if (!query.trim()) return;
 
         setIsSearching(true);
         setHasSearched(true);
 
-        try {
-            const response = await fetch(`/api/v1/patients/search?q=${encodeURIComponent(query)}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setSearchResults(data.data || []);
-            } else {
+        router.get('/patients/search', { q: query }, {
+            onSuccess: (page) => {
+                setSearchResults(page.props.searchResults || []);
+                setIsSearching(false);
+            },
+            onError: () => {
                 setSearchResults([]);
+                setIsSearching(false);
             }
-        } catch (error) {
-            console.error('Search error:', error);
-            setSearchResults([]);
-        } finally {
-            setIsSearching(false);
-        }
+        });
     };
 
     // Handle manual search
@@ -453,24 +444,15 @@ function NewPatientForm({ onSuccess }: { onSuccess: () => void }) {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        try {
-            const response = await fetch('/api/v1/patients', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    allergies: formData.allergies ? formData.allergies.split(',').map(a => a.trim()) : []
-                }),
-            });
-
-            if (response.ok) {
+        router.post('/patients', {
+            ...formData,
+            allergies: formData.allergies ? formData.allergies.split(',').map(a => a.trim()) : []
+        }, {
+            onSuccess: () => {
                 onSuccess();
                 // Reset form
                 setFormData({
@@ -483,12 +465,12 @@ function NewPatientForm({ onSuccess }: { onSuccess: () => void }) {
                     emergency_contact: '',
                     allergies: ''
                 });
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error creating patient:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (

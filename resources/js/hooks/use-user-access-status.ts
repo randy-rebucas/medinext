@@ -22,34 +22,34 @@ export function useUserAccessStatus(): UseUserAccessStatusReturn {
     const [error, setError] = useState<string | null>(null);
 
     const fetchAccessStatus = async () => {
-        try {
-            setLoading(true);
-            setError(null);
+        setLoading(true);
+        setError(null);
 
+        try {
             const response = await fetch('/license/user-access-status', {
                 method: 'GET',
                 headers: {
+                    'Accept': 'application/json',
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
                 credentials: 'same-origin',
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || 'Unknown error'}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
-            if (data.success) {
-                setAccessStatus(data.data);
+            const result = await response.json();
+            
+            if (result.success) {
+                setAccessStatus(result.data);
             } else {
-                throw new Error(data.message || 'Failed to fetch access status');
+                setError(result.message || 'Failed to fetch access status');
             }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch access status';
-            setError(errorMessage);
-            console.error('Error fetching user access status:', err);
+            setError('Failed to fetch access status');
+            console.error('Error fetching access status:', err);
         } finally {
             setLoading(false);
         }

@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminReports } from '@/routes';
@@ -120,54 +120,23 @@ export default function Reports({ analytics: initialAnalytics }: ReportsProps) {
         }
     ];
 
-    // API Functions
-    const fetchAnalytics = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/admin/reports/analytics');
-            const data = await response.json();
-            if (data.success) {
-                setAnalytics(data.analytics);
-            }
-        } catch {
-            toast.error('Failed to fetch analytics');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Web route functions
+    const generateReport = () => {
+        setLoading(true);
+        setErrors({});
 
-    const generateReport = async () => {
-        try {
-            setLoading(true);
-            setErrors({});
-
-            const response = await fetch('/admin/reports/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(data.message);
+        router.post('/admin/reports/generate', formData as any, {
+            onSuccess: () => {
+                toast.success('Report generated successfully!');
                 setIsGenerateModalOpen(false);
-                // Refresh recent reports
-                window.location.reload();
-            } else {
-                if (data.errors) {
-                    setErrors(data.errors);
-                }
-                toast.error(data.message || 'Failed to generate report');
+                setLoading(false);
+            },
+            onError: (errors) => {
+                setErrors(errors);
+                toast.error('Failed to generate report');
+                setLoading(false);
             }
-        } catch {
-            toast.error('Failed to generate report');
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
 

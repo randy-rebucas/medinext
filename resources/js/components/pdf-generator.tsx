@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, Printer } from 'lucide-react';
 import { type Prescription, type Encounter, type Patient } from '@/types';
@@ -27,27 +28,16 @@ export function PDFGenerator({ type, data, onDownload }: PDFGeneratorProps) {
                 filename = `medical-report-${(data as Encounter).encounter_number}.pdf`;
             }
 
-            const response = await fetch(endpoint, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Accept': 'application/pdf',
-                },
-            });
+            // For PDF downloads, we'll use a direct link approach
+            const link = document.createElement('a');
+            link.href = endpoint;
+            link.download = filename;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-
-                onDownload?.(url);
-            }
+            onDownload?.(endpoint);
         } catch (error) {
             console.error('Error generating PDF:', error);
         } finally {
@@ -66,23 +56,12 @@ export function PDFGenerator({ type, data, onDownload }: PDFGeneratorProps) {
                 endpoint = `/api/v1/encounters/${(data as Encounter).id}/medical-report`;
             }
 
-            const response = await fetch(endpoint, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Accept': 'application/pdf',
-                },
-            });
-
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const printWindow = window.open(url, '_blank');
-                if (printWindow) {
-                    printWindow.onload = () => {
-                        printWindow.print();
-                    };
-                }
+            // For PDF printing, we'll use a direct link approach
+            const printWindow = window.open(endpoint, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    printWindow.print();
+                };
             }
         } catch (error) {
             console.error('Error printing PDF:', error);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { medrepDashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -516,32 +516,23 @@ function ProductForm({ onSuccess }: { onSuccess: () => void }) {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        try {
-            const response = await fetch('/api/v1/medrep/products', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    indications: formData.indications.split(',').map(ind => ind.trim()).filter(ind => ind),
-                    pricing: parseFloat(formData.pricing)
-                }),
-            });
-
-            if (response.ok) {
+        router.post('/medrep/products', {
+            ...formData,
+            indications: formData.indications.split(',').map(ind => ind.trim()).filter(ind => ind),
+            pricing: parseFloat(formData.pricing)
+        }, {
+            onSuccess: () => {
                 onSuccess();
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error creating product:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (
@@ -643,31 +634,22 @@ function MeetingForm({
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        try {
-            const response = await fetch('/api/v1/medrep/meetings', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    doctor_id: parseInt(formData.doctor_id)
-                }),
-            });
-
-            if (response.ok) {
+        router.post('/medrep/meetings', {
+            ...formData,
+            doctor_id: parseInt(formData.doctor_id)
+        }, {
+            onSuccess: () => {
                 onSuccess();
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error scheduling meeting:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (
@@ -762,33 +744,24 @@ function InteractionForm({
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        try {
-            const response = await fetch('/api/v1/medrep/interactions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    doctor_id: parseInt(formData.doctor_id),
-                    samples_provided: formData.samples_provided.split(',').map(s => s.trim()).filter(s => s),
-                    commitments: formData.commitments.split(',').map(c => c.trim()).filter(c => c)
-                }),
-            });
-
-            if (response.ok) {
+        router.post('/medrep/interactions', {
+            ...formData,
+            doctor_id: parseInt(formData.doctor_id),
+            samples_provided: formData.samples_provided.split(',').map(s => s.trim()).filter(s => s),
+            commitments: formData.commitments.split(',').map(c => c.trim()).filter(c => c)
+        }, {
+            onSuccess: () => {
                 onSuccess();
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error logging interaction:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (

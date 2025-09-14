@@ -74,4 +74,22 @@ class LicenseController extends Controller
             'access_status' => $user->getAccessStatus(), // @phpstan-ignore-line
         ]);
     }
+
+    /**
+     * Validate license key (for frontend forms)
+     */
+    public function validate(Request $request)
+    {
+        $request->validate([
+            'license_key' => 'required|string|max:255',
+        ]);
+
+        $user = Auth::user();
+        $licenseKey = $request->license_key;
+
+        // Validate the license key
+        $validation = $this->licenseService->validateLicense($licenseKey, $user);
+
+        return back()->with('validationResult', $validation);
+    }
 }

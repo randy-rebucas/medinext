@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { doctorQueue } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -127,23 +127,16 @@ export default function DoctorQueue({ user, queueItems = [], completedEncounters
         setIsEncounterDialogOpen(true);
     };
 
-    const handleCompleteEncounter = async (encounterId: number) => {
-        try {
-            const response = await fetch(`/api/v1/encounters/${encounterId}/complete`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
+    const handleCompleteEncounter = (encounterId: number) => {
+        router.post(`/doctor/encounters/${encounterId}/complete`, {}, {
+            onSuccess: () => {
                 // Refresh the page or update state
                 window.location.reload();
+            },
+            onError: () => {
+                console.error('Error completing encounter');
             }
-        } catch (error) {
-            console.error('Error completing encounter:', error);
-        }
+        });
     };
 
     const getStatusColor = (status: string) => {
@@ -590,26 +583,21 @@ function ClinicalDocumentationForm({
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const response = await fetch(`/api/v1/encounters/${patient.encounter_id}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (response.ok) {
+        
+        router.post(`/doctor/encounters/${patient.encounter_id}`, {
+            ...formData,
+            _method: 'PUT'
+        }, {
+            onSuccess: () => {
                 onComplete();
+                setIsSubmitting(false);
+            },
+            onError: () => {
+                setIsSubmitting(false);
             }
-        } catch (error) {
-            console.error('Error updating encounter:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+        });
     };
 
     return (

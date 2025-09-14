@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Clinic;
 use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -74,19 +73,24 @@ class StaffController extends Controller
 
             // Transform staff data to match frontend expectations
             $transformedStaff = $staff->getCollection()->map(function ($user) {
+                $userClinicRole = $user->userClinicRoles->first();
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'role' => $user->roles->first()?->name ?? 'No Role',
-                    'department' => $user->userClinicRoles->first()?->department ?? 'General',
+                    'department' => $userClinicRole?->department ?? 'General',
                     'status' => $user->is_active ? 'Active' : 'Inactive',
-                    'join_date' => $user->userClinicRoles->first()?->join_date?->format('Y-m-d') ?? $user->created_at->format('Y-m-d'),
+                    'join_date' => $userClinicRole?->join_date?->format('Y-m-d') ?? $user->created_at->format('Y-m-d'),
                     'last_active' => $user->updated_at->format('Y-m-d H:i:s'),
                     'is_active' => $user->is_active,
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
+                    'address' => $userClinicRole?->address ?? '',
+                    'emergency_contact' => $userClinicRole?->emergency_contact ?? '',
+                    'emergency_phone' => $userClinicRole?->emergency_phone ?? '',
+                    'notes' => $userClinicRole?->notes ?? '',
                 ];
             });
 
@@ -191,19 +195,24 @@ class StaffController extends Controller
             $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
             // Transform staff data to match frontend expectations
+            $userClinicRole = $staff->userClinicRoles->first();
             $transformedStaff = [
                 'id' => $staff->id,
                 'name' => $staff->name,
                 'email' => $staff->email,
                 'phone' => $staff->phone,
                 'role' => $staff->roles->first()?->name ?? 'No Role',
-                'department' => $staff->userClinicRoles->first()?->department ?? 'General',
+                'department' => $userClinicRole?->department ?? 'General',
                 'status' => $staff->is_active ? 'Active' : 'Inactive',
-                'join_date' => $staff->userClinicRoles->first()?->join_date?->format('Y-m-d') ?? $staff->created_at->format('Y-m-d'),
+                'join_date' => $userClinicRole?->join_date?->format('Y-m-d') ?? $staff->created_at->format('Y-m-d'),
                 'last_active' => $staff->updated_at->format('Y-m-d H:i:s'),
                 'is_active' => $staff->is_active,
                 'created_at' => $staff->created_at,
                 'updated_at' => $staff->updated_at,
+                'address' => $userClinicRole?->address ?? '',
+                'emergency_contact' => $userClinicRole?->emergency_contact ?? '',
+                'emergency_phone' => $userClinicRole?->emergency_phone ?? '',
+                'notes' => $userClinicRole?->notes ?? '',
             ];
 
             return Inertia::render('admin/staff', [
@@ -228,24 +237,24 @@ class StaffController extends Controller
     /**
      * Store a newly created staff member
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'phone' => 'nullable|string|max:20',
-                'password' => 'required|string|min:8',
-                'role_id' => 'required|exists:roles,id',
-                'is_active' => 'boolean',
+                'role' => 'required|string',
+                'department' => 'required|string',
+                'status' => 'required|string|in:Active,On Leave,Inactive',
+                'address' => 'nullable|string',
+                'emergency_contact' => 'nullable|string',
+                'emergency_phone' => 'nullable|string',
+                'notes' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return redirect()->back()->withErrors($validator->errors())->withInput();
             }
 
             $currentUser = $request->user();
@@ -253,70 +262,72 @@ class StaffController extends Controller
             // Get current clinic
             $currentClinic = $currentUser->getCurrentClinic();
             if (!$currentClinic) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No clinic selected'
-                ], 400);
+                return redirect()->back()->with('error', 'No clinic selected');
             }
             
             $clinicId = $currentClinic->id;
+
+            // Find role by name
+            $role = Role::where('name', $request->role)->first();
+            if (!$role) {
+                return redirect()->back()->with('error', 'Invalid role selected')->withInput();
+            }
+
+            // Generate a temporary password
+            $tempPassword = 'TempPass123!';
 
             // Create user
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
-                'password' => Hash::make($request->password),
-                'is_active' => $request->get('is_active', true),
+                'password' => Hash::make($tempPassword),
+                'is_active' => $request->status === 'Active',
                 'email_verified_at' => now(),
             ]);
 
-            // Assign to clinic with role
+            // Assign to clinic with role and additional staff information
             $user->clinics()->attach($clinicId, [
-                'role_id' => $request->role_id,
+                'role_id' => $role->id,
+                'department' => $request->department,
                 'assigned_by' => $currentUser->id,
                 'assigned_at' => now(),
+                'join_date' => now(),
+                'address' => $request->address,
+                'emergency_contact' => $request->emergency_contact,
+                'emergency_phone' => $request->emergency_phone,
+                'notes' => $request->notes,
             ]);
 
-            // Load relationships
-            $user->load(['roles', 'clinics']);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Staff member created successfully',
-                'data' => $user
-            ], 201);
+            return redirect()->route('admin.staff')->with('success', 'Staff member created successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'StaffController::store');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create staff member. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to create staff member. Please try again.')->withInput();
         }
     }
 
     /**
      * Update the specified staff member
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $id)
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'sometimes|string|max:255',
-                'email' => 'sometimes|email|unique:users,email,' . $id,
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email,' . $id,
                 'phone' => 'nullable|string|max:20',
-                'password' => 'sometimes|string|min:8',
-                'role_id' => 'sometimes|exists:roles,id',
-                'is_active' => 'sometimes|boolean',
+                'role' => 'required|string',
+                'department' => 'required|string',
+                'status' => 'required|string|in:Active,On Leave,Inactive',
+                'address' => 'nullable|string',
+                'emergency_contact' => 'nullable|string',
+                'emergency_phone' => 'nullable|string',
+                'notes' => 'nullable|string',
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
+                return redirect()->back()->withErrors($validator->errors())->withInput();
             }
 
             $currentUser = $request->user();
@@ -324,10 +335,7 @@ class StaffController extends Controller
             // Get current clinic
             $currentClinic = $currentUser->getCurrentClinic();
             if (!$currentClinic) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No clinic selected'
-                ], 400);
+                return redirect()->back()->with('error', 'No clinic selected');
             }
             
             $clinicId = $currentClinic->id;
@@ -337,47 +345,44 @@ class StaffController extends Controller
                 $q->where('clinic_id', $clinicId);
             })->findOrFail($id);
 
+            // Find role by name
+            $role = Role::where('name', $request->role)->first();
+            if (!$role) {
+                return redirect()->back()->with('error', 'Invalid role selected')->withInput();
+            }
+
             // Update user data
-            $updateData = $request->only(['name', 'email', 'phone', 'is_active']);
-            
-            if ($request->has('password')) {
-                $updateData['password'] = Hash::make($request->password);
-            }
-
-            $user->update($updateData);
-
-            // Update role if provided
-            if ($request->has('role_id')) {
-                // Update clinic role
-                $user->clinics()->updateExistingPivot($clinicId, [
-                    'role_id' => $request->role_id,
-                    'updated_by' => $currentUser->id,
-                    'updated_at' => now(),
-                ]);
-            }
-
-            // Load relationships
-            $user->load(['roles', 'clinics']);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Staff member updated successfully',
-                'data' => $user
+            $user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'is_active' => $request->status === 'Active',
             ]);
+
+            // Update clinic role, department, and additional staff information
+            $user->clinics()->updateExistingPivot($clinicId, [
+                'role_id' => $role->id,
+                'department' => $request->department,
+                'updated_by' => $currentUser->id,
+                'updated_at' => now(),
+                'address' => $request->address,
+                'emergency_contact' => $request->emergency_contact,
+                'emergency_phone' => $request->emergency_phone,
+                'notes' => $request->notes,
+            ]);
+
+            return redirect()->route('admin.staff')->with('success', 'Staff member updated successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'StaffController::update');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update staff member. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to update staff member. Please try again.')->withInput();
         }
     }
 
     /**
      * Remove the specified staff member from clinic
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $id)
     {
         try {
             $currentUser = $request->user();
@@ -385,10 +390,7 @@ class StaffController extends Controller
             // Get current clinic
             $currentClinic = $currentUser->getCurrentClinic();
             if (!$currentClinic) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No clinic selected'
-                ], 400);
+                return redirect()->back()->with('error', 'No clinic selected');
             }
             
             $clinicId = $currentClinic->id;
@@ -400,10 +402,7 @@ class StaffController extends Controller
 
             // Check if user is trying to remove themselves
             if ($user->id === Auth::id()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You cannot remove yourself from the clinic'
-                ], 403);
+                return redirect()->back()->with('error', 'You cannot remove yourself from the clinic');
             }
 
             // Remove user from clinic
@@ -414,17 +413,11 @@ class StaffController extends Controller
                 $user->update(['is_active' => false]);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Staff member removed from clinic successfully'
-            ]);
+            return redirect()->route('admin.staff')->with('success', 'Staff member removed from clinic successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'StaffController::destroy');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to remove staff member. Please try again.'
-            ], 500);
+            return redirect()->back()->with('error', 'Failed to remove staff member. Please try again.');
         }
     }
 

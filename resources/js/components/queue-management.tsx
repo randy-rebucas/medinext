@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -75,85 +76,62 @@ export function QueueManagement({
     }, [queue, searchQuery, statusFilter, visitTypeFilter]);
 
     // Refresh queue data
-    const refreshQueue = async () => {
+    const refreshQueue = () => {
         setIsRefreshing(true);
-        try {
-            const response = await fetch('/api/v1/queue/active', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setQueue(data.data || []);
-                onQueueUpdate?.(data.data || []);
+        
+        router.get('/queue/active', {}, {
+            onSuccess: (page) => {
+                const queueData = page.props.queue || [];
+                setQueue(queueData);
+                onQueueUpdate?.(queueData);
+                setIsRefreshing(false);
+            },
+            onError: () => {
+                setIsRefreshing(false);
             }
-        } catch (error) {
-            console.error('Error refreshing queue:', error);
-        } finally {
-            setIsRefreshing(false);
-        }
+        });
     };
 
     // Move patient up in queue
-    const movePatientUp = async (queueItemId: number) => {
-        try {
-            const response = await fetch(`/api/v1/queue/${queueItemId}/position`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ direction: 'up' }),
-            });
-
-            if (response.ok) {
+    const movePatientUp = (queueItemId: number) => {
+        router.post(`/queue/${queueItemId}/position`, {
+            direction: 'up',
+            _method: 'PUT'
+        }, {
+            onSuccess: () => {
                 refreshQueue();
+            },
+            onError: () => {
+                console.error('Error moving patient up');
             }
-        } catch (error) {
-            console.error('Error moving patient up:', error);
-        }
+        });
     };
 
     // Move patient down in queue
-    const movePatientDown = async (queueItemId: number) => {
-        try {
-            const response = await fetch(`/api/v1/queue/${queueItemId}/position`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ direction: 'down' }),
-            });
-
-            if (response.ok) {
+    const movePatientDown = (queueItemId: number) => {
+        router.post(`/queue/${queueItemId}/position`, {
+            direction: 'down',
+            _method: 'PUT'
+        }, {
+            onSuccess: () => {
                 refreshQueue();
+            },
+            onError: () => {
+                console.error('Error moving patient down');
             }
-        } catch (error) {
-            console.error('Error moving patient down:', error);
-        }
+        });
     };
 
     // Remove patient from queue
-    const removeFromQueue = async (queueItemId: number) => {
-        try {
-            const response = await fetch(`/api/v1/queue/${queueItemId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
+    const removeFromQueue = (queueItemId: number) => {
+        router.delete(`/queue/${queueItemId}`, {
+            onSuccess: () => {
                 refreshQueue();
+            },
+            onError: () => {
+                console.error('Error removing patient from queue');
             }
-        } catch (error) {
-            console.error('Error removing patient from queue:', error);
-        }
+        });
     };
 
     // Handle patient selection
@@ -164,23 +142,16 @@ export function QueueManagement({
     };
 
     // Complete encounter
-    const handleCompleteEncounter = async (encounterId: number) => {
-        try {
-            const response = await fetch(`/api/v1/encounters/${encounterId}/complete`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
+    const handleCompleteEncounter = (encounterId: number) => {
+        router.post(`/encounters/${encounterId}/complete`, {}, {
+            onSuccess: () => {
                 onEncounterComplete?.(encounterId);
                 refreshQueue();
+            },
+            onError: () => {
+                console.error('Error completing encounter');
             }
-        } catch (error) {
-            console.error('Error completing encounter:', error);
-        }
+        });
     };
 
     const getStatusColor = (status: string) => {

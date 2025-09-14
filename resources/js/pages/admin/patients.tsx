@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminPatients } from '@/routes';
@@ -166,97 +166,62 @@ export default function PatientManagement({ patients: initialPatients }: Patient
         notes: ''
     });
 
-    // API Functions
-    const fetchPatients = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/admin/patients');
-            const data = await response.json();
-            if (data.success) {
-                setPatients(data.patients);
-            }
-        } catch {
-            toast.error('Failed to fetch patients');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Web route functions
+    const savePatient = (patientData: typeof formData, isEdit = false) => {
+        setLoading(true);
+        setErrors({});
 
-    const fetchHealthRecords = async (patientId: number) => {
-        try {
-            const response = await fetch(`/admin/patients/${patientId}/health-records`);
-            const data = await response.json();
-            if (data.success) {
-                setHealthRecordsData(data);
-            }
-        } catch {
-            toast.error('Failed to fetch health records');
-        }
-    };
-
-    const savePatient = async (patientData: typeof formData, isEdit = false) => {
-        try {
-            setLoading(true);
-            setErrors({});
-
-            const url = isEdit ? `/admin/patients/${editingPatient?.id}` : '/admin/patients';
-            const method = isEdit ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        if (isEdit && editingPatient) {
+            // Update existing patient
+            router.post(`/admin/patients/${editingPatient.id}`, {
+                ...patientData,
+                _method: 'PUT'
+            } as any, {
+                onSuccess: () => {
+                    toast.success('Patient updated successfully!');
+                    handleCancel();
+                    setLoading(false);
                 },
-                body: JSON.stringify(patientData),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(data.message);
-                await fetchPatients();
-                handleCancel();
-            } else {
-                if (data.errors) {
-                    setErrors(data.errors);
+                onError: (errors) => {
+                    setErrors(errors);
+                    toast.error('Failed to update patient');
+                    setLoading(false);
                 }
-                toast.error(data.message || 'Failed to save patient');
-            }
-        } catch {
-            toast.error('Failed to save patient');
-        } finally {
-            setLoading(false);
+            });
+        } else {
+            // Create new patient
+            router.post('/admin/patients', patientData as any, {
+                onSuccess: () => {
+                    toast.success('Patient added successfully!');
+                    handleCancel();
+                    setLoading(false);
+                },
+                onError: (errors) => {
+                    setErrors(errors);
+                    toast.error('Failed to add patient');
+                    setLoading(false);
+                }
+            });
         }
     };
 
-    const deletePatient = async () => {
+    const deletePatient = () => {
         if (!deletingPatient) return;
 
-        try {
-            setLoading(true);
-            const response = await fetch(`/admin/patients/${deletingPatient.id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(data.message);
-                await fetchPatients();
+        setLoading(true);
+        
+        router.delete(`/admin/patients/${deletingPatient.id}`, {
+            onSuccess: () => {
+                toast.success('Patient deleted successfully!');
                 setIsDeleteModalOpen(false);
                 setDeletingPatient(null);
-            } else {
-                toast.error(data.message || 'Failed to delete patient');
+                setLoading(false);
+            },
+            onError: (errors) => {
+                toast.error('Failed to delete patient');
+                setLoading(false);
             }
-        } catch {
-            toast.error('Failed to delete patient');
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
     const filteredPatients = patients.filter(patient => {
