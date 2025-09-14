@@ -366,8 +366,13 @@ class User extends Authenticatable
      */
     public function getCurrentClinic(): ?Clinic
     {
-        // This should be implemented based on your session/request logic
-        return session('current_clinic_id') ? Clinic::find(session('current_clinic_id')) : null;
+        // Try to get from session first
+        if (session('current_clinic_id')) {
+            return Clinic::find(session('current_clinic_id'));
+        }
+
+        // Fallback to user's first clinic
+        return $this->clinics()->first();
     }
 
     /**

@@ -246,7 +246,7 @@ class UserController extends BaseController
             return $this->successResponse($users, 'Users retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -345,7 +345,7 @@ class UserController extends BaseController
             return $this->successResponse(['user' => $user], 'User created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -407,7 +407,7 @@ class UserController extends BaseController
             return $this->successResponse(['user' => $user], 'User retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -488,7 +488,7 @@ class UserController extends BaseController
             return $this->successResponse(['user' => $user], 'User updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -537,7 +537,7 @@ class UserController extends BaseController
             return $this->successResponse(null, 'User deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -600,7 +600,7 @@ class UserController extends BaseController
             return $this->successResponse(['permissions' => $permissions], 'User permissions retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -664,7 +664,7 @@ class UserController extends BaseController
             return $this->successResponse(null, 'Permissions assigned successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -710,7 +710,7 @@ class UserController extends BaseController
             return $this->successResponse(['roles' => $roles], 'User roles retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -769,7 +769,7 @@ class UserController extends BaseController
             return $this->successResponse(null, 'Roles assigned successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -833,7 +833,7 @@ class UserController extends BaseController
             return $this->successResponse($activity, 'User activity retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -870,7 +870,7 @@ class UserController extends BaseController
             return $this->successResponse(null, 'User activated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -907,7 +907,7 @@ class UserController extends BaseController
             return $this->successResponse(null, 'User deactivated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -968,7 +968,7 @@ class UserController extends BaseController
             return $this->successResponse(null, 'Password reset successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1030,7 +1030,7 @@ class UserController extends BaseController
             return $this->successResponse(['users' => $users], 'Search results retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

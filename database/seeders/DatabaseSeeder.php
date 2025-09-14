@@ -9,54 +9,20 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      *
-     * For production deployment, use: php artisan db:seed --class=InitialSeeder
-     * For development with demo data, use: php artisan db:seed
+     * This seeder now uses the unified BaseSeeder which consolidates all seeding functionality
+     * into a single, organized, and efficient seeder.
+     *
+     * Usage:
+     * - php artisan db:seed (runs BaseSeeder with full demo data)
+     * - php artisan db:seed --class=BaseSeeder (explicit BaseSeeder call)
      */
     public function run(): void
     {
-        // Check if this is a fresh installation (no users exist)
-        $hasUsers = \App\Models\User::count() > 0;
+        $this->command->info('🚀 Starting unified database seeding...');
+        $this->command->info('Using BaseSeeder - consolidated and optimized seeding');
+        $this->command->info('');
 
-        if (!$hasUsers) {
-            $this->command->info('Fresh installation detected. Running initial seeder...');
-            $this->call(InitialSeeder::class);
-            return;
-        }
-
-        $this->command->info('Existing data detected. Running full development seeders...');
-
-        $this->call([
-            // Core system seeders (no dependencies)
-            ClinicSeeder::class,
-            PermissionSeeder::class,
-            UserRoleSeeder::class,
-            NovaUserSeeder::class,
-            SettingsSeeder::class,
-
-            // User and role seeders
-            DoctorSeeder::class,
-            MedrepSeeder::class,
-
-            // Patient and encounter seeders
-            PatientSeeder::class,
-            EncounterSeeder::class,
-
-            // Infrastructure seeders
-            RoomSeeder::class,
-
-            // Business logic seeders
-            AppointmentSeeder::class,
-            PrescriptionSeeder::class,
-            PrescriptionItemSeeder::class,
-            LabResultSeeder::class,
-            FileAssetSeeder::class,
-            MedrepVisitSeeder::class,
-
-            // EMR data seeding (comprehensive data)
-            EMRSeeder::class,
-
-            // Activity logging (depends on all other entities)
-            ActivityLogSeeder::class,
-        ]);
+        // Use the unified BaseSeeder
+        $this->call(BaseSeeder::class);
     }
 }

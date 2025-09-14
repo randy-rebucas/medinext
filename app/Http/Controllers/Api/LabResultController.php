@@ -179,7 +179,7 @@ class LabResultController extends BaseController
             return $this->paginatedResponse($labResults, 'Lab results retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -309,7 +309,7 @@ class LabResultController extends BaseController
             ], 'Lab result created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -404,7 +404,7 @@ class LabResultController extends BaseController
             ], 'Lab result retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -446,7 +446,7 @@ class LabResultController extends BaseController
             ], 'Lab result updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -472,7 +472,7 @@ class LabResultController extends BaseController
             return $this->successResponse(null, 'Lab result deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -573,7 +573,7 @@ class LabResultController extends BaseController
             return $this->paginatedResponse($fileAssets, 'Lab result files retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -689,7 +689,7 @@ class LabResultController extends BaseController
             ], 'File uploaded successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -789,7 +789,7 @@ class LabResultController extends BaseController
             ], 'Lab result reviewed successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -895,7 +895,7 @@ class LabResultController extends BaseController
             return $this->paginatedResponse($labResults, 'Pending lab results retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1016,7 +1016,7 @@ class LabResultController extends BaseController
             return $this->paginatedResponse($labResults, 'Abnormal lab results retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1148,7 +1148,7 @@ class LabResultController extends BaseController
             ], 'Lab result reports retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1195,7 +1195,7 @@ class LabResultController extends BaseController
             ], 'Webhook processed successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1287,7 +1287,7 @@ class LabResultController extends BaseController
             return $this->successResponse($pdfData, 'Lab result PDF generated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

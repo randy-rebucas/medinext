@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/clinic-setup', [App\Http\Controllers\OnboardingController::class, 'clinicSetup'])->name('clinic-setup');
         Route::post('/clinic-setup', [App\Http\Controllers\OnboardingController::class, 'updateClinic'])->name('update-clinic');
         Route::get('/team-setup', [App\Http\Controllers\OnboardingController::class, 'teamSetup'])->name('team-setup');
+        Route::post('/team-setup', [App\Http\Controllers\OnboardingController::class, 'updateTeam'])->name('update-team');
         Route::get('/complete', [App\Http\Controllers\OnboardingController::class, 'complete'])->name('complete');
         Route::post('/finish', [App\Http\Controllers\OnboardingController::class, 'finish'])->name('finish');
     });

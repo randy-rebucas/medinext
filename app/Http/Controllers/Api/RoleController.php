@@ -106,7 +106,7 @@ class RoleController extends BaseController
             return $this->successResponse($roles, 'Roles retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -194,7 +194,7 @@ class RoleController extends BaseController
             return $this->successResponse(['role' => $role], 'Role created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -242,7 +242,7 @@ class RoleController extends BaseController
             return $this->successResponse(['role' => $role], 'Role retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -335,7 +335,7 @@ class RoleController extends BaseController
             return $this->successResponse(['role' => $role], 'Role updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -392,7 +392,7 @@ class RoleController extends BaseController
             return $this->successResponse(null, 'Role deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -437,7 +437,7 @@ class RoleController extends BaseController
             return $this->successResponse(['permissions' => $role->permissions], 'Role permissions retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -505,7 +505,7 @@ class RoleController extends BaseController
             return $this->successResponse(null, 'Permissions assigned successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -569,7 +569,7 @@ class RoleController extends BaseController
             return $this->successResponse($users, 'Role users retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

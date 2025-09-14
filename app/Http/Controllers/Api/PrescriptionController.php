@@ -227,7 +227,7 @@ class PrescriptionController extends BaseController
             return $this->paginatedResponse($prescriptions, 'Prescriptions retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -380,7 +380,7 @@ class PrescriptionController extends BaseController
             ], 'Prescription created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -483,7 +483,7 @@ class PrescriptionController extends BaseController
             ], 'Prescription retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -526,7 +526,7 @@ class PrescriptionController extends BaseController
             ], 'Prescription updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -550,7 +550,7 @@ class PrescriptionController extends BaseController
             return $this->successResponse(null, 'Prescription deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -642,7 +642,7 @@ class PrescriptionController extends BaseController
             ], 'Prescription items retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -747,7 +747,7 @@ class PrescriptionController extends BaseController
             ], 'Item added to prescription successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -785,7 +785,7 @@ class PrescriptionController extends BaseController
             ], 'Item updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -808,7 +808,7 @@ class PrescriptionController extends BaseController
             return $this->successResponse(null, 'Item removed from prescription successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -900,7 +900,7 @@ class PrescriptionController extends BaseController
             ], 'Prescription verification updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -989,7 +989,7 @@ class PrescriptionController extends BaseController
             ], 'Prescription marked as dispensed successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1093,7 +1093,7 @@ class PrescriptionController extends BaseController
             ], 'Refill processed successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1172,7 +1172,7 @@ class PrescriptionController extends BaseController
             ], 'PDF download URL generated');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1251,7 +1251,7 @@ class PrescriptionController extends BaseController
             ], 'QR code data retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1358,7 +1358,7 @@ class PrescriptionController extends BaseController
             return $this->paginatedResponse($prescriptions, 'Active prescriptions retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1466,7 +1466,7 @@ class PrescriptionController extends BaseController
             return $this->paginatedResponse($prescriptions, 'Expired prescriptions retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1583,7 +1583,7 @@ class PrescriptionController extends BaseController
             return $this->paginatedResponse($prescriptions, 'Prescriptions needing refill retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1630,7 +1630,7 @@ class PrescriptionController extends BaseController
             ], 'Search results retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1668,7 +1668,7 @@ class PrescriptionController extends BaseController
             ], 'Prescription reports retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1694,7 +1694,7 @@ class PrescriptionController extends BaseController
             ], 'Export data prepared');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

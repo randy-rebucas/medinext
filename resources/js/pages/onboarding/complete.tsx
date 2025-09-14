@@ -13,7 +13,14 @@ interface CompleteProps {
     clinic: {
         id: number;
         name: string;
-        address: string;
+        address: {
+            street?: string;
+            city?: string;
+            state?: string;
+            postal_code?: string;
+            country?: string;
+        };
+        formatted_address?: string;
     } | null;
     trial_status: {
         type: string;
@@ -28,6 +35,25 @@ export default function Complete({ user, clinic, trial_status }: CompleteProps) 
     const { post: postWithRedirect, processing: processingRedirect } = useForm({
         redirect_to: '/admin/clinic-settings'
     });
+
+    // Helper function to format address
+    const formatAddress = (address: { street?: string; city?: string; state?: string; postal_code?: string; country?: string; } | null) => {
+        if (!address) return 'Address not specified';
+        
+        // If formatted_address is available, use it
+        if (clinic?.formatted_address) {
+            return clinic.formatted_address;
+        }
+        
+        // Otherwise, format the address object
+        const parts = [];
+        if (address.street) parts.push(address.street);
+        if (address.city) parts.push(address.city);
+        if (address.state) parts.push(address.state);
+        if (address.country) parts.push(address.country);
+        
+        return parts.length > 0 ? parts.join(', ') : 'Address not specified';
+    };
 
     const handleFinish = () => {
         post('/onboarding/finish');
@@ -139,7 +165,7 @@ export default function Complete({ user, clinic, trial_status }: CompleteProps) 
                                             <div>
                                                 <h4 className="font-medium text-slate-900 dark:text-white">Clinic Setup</h4>
                                                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                                                    {clinic.name} - {clinic.address}
+                                                    {clinic.name} - {formatAddress(clinic.address)}
                                                 </p>
                                             </div>
                                         </div>

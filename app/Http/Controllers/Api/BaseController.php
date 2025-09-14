@@ -413,17 +413,50 @@ class BaseController extends Controller
     }
 
     /**
+     * Get user's clinic and role information
+     */
+    protected function getUserClinicRole(Request $request)
+    {
+        $user = $this->getAuthenticatedUser();
+        
+        if (!$user) {
+            return null;
+        }
+
+        return $user->userClinicRoles()->with(['clinic', 'role'])->first();
+    }
+
+    /**
      * Check if user has permission in a specific clinic
      */
-    protected function hasPermissionInClinic(string $permission, int $clinicId): bool
+    protected function hasPermissionInClinic(Request $request, string $permission, ?int $clinicId = null): bool
     {
         $user = $this->getAuthenticatedUser();
         if (!$user) {
             return false;
         }
 
+        // If no clinic ID provided, get from user's current clinic
+        if (!$clinicId) {
+            $userClinicRole = $this->getUserClinicRole($request);
+            if (!$userClinicRole) {
+                return false;
+            }
+            $clinicId = $userClinicRole->clinic_id;
+        }
+
         /** @var \App\Models\User $user */
         return $user->hasPermissionInClinic($permission, $clinicId);
+    }
+
+    /**
+     * Require permission in clinic or throw exception
+     */
+    protected function requirePermissionInClinic(Request $request, string $permission, ?int $clinicId = null): void
+    {
+        if (!$this->hasPermissionInClinic($request, $permission, $clinicId)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException("Insufficient permissions. Required: {$permission}");
+        }
     }
 
     /**
@@ -497,15 +530,35 @@ class BaseController extends Controller
     }
 
     /**
-     * Handle exceptions and return appropriate error response
+     * Handle exceptions with proper logging (inherited from base Controller)
      */
-    protected function handleException(\Exception $e): JsonResponse
+    protected function handleException(\Exception $e, string $context = 'API Controller'): void
     {
-        // Log the exception
-    Log::error('API Exception: ' . $e->getMessage(), [
+        Log::error("{$context} Exception: " . $e->getMessage(), [
             'file' => $e->getFile(),
             'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
+            'user_id' => $this->getAuthenticatedUser()?->id,
+            'request_url' => request()->fullUrl(),
+            'request_method' => request()->method(),
+            'request_data' => request()->except(['password', 'password_confirmation', 'token'])
+        ]);
+    }
+
+    /**
+     * Handle API exceptions and return appropriate error response
+     */
+    protected function handleApiException(\Exception $e, string $context = 'API Controller'): JsonResponse
+    {
+        // Log the exception with more context
+        Log::error("{$context} Exception: " . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+            'user_id' => auth()->id(),
+            'request_url' => request()->fullUrl(),
+            'request_method' => request()->method(),
+            'request_data' => request()->except(['password', 'password_confirmation', 'token'])
         ]);
 
         // Return appropriate error response based on exception type
@@ -521,8 +574,29 @@ class BaseController extends Controller
             return $this->forbiddenResponse('Access denied');
         }
 
-        // For other exceptions, return a generic error
-        return $this->errorResponse('An error occurred while processing your request', null, 500);
+        if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return $this->notFoundResponse('Resource not found');
+        }
+
+        if ($e instanceof \Illuminate\Database\QueryException) {
+            // Don't expose database errors in production
+            if (config('app.debug')) {
+                return $this->errorResponse('Database error: ' . $e->getMessage(), null, 500);
+            }
+            return $this->errorResponse('Database operation failed', null, 500);
+        }
+
+        if ($e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+            return $this->notFoundResponse('Endpoint not found');
+        }
+
+        if ($e instanceof \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException) {
+            return $this->errorResponse('Method not allowed', null, 405);
+        }
+
+        // For other exceptions, return generic error
+        $message = config('app.debug') ? $e->getMessage() : 'An error occurred while processing your request';
+        return $this->errorResponse($message, null, 500);
     }
 
     /**
@@ -548,5 +622,174 @@ class BaseController extends Controller
     protected function notFoundResponse(string $message = 'Resource not found'): JsonResponse
     {
         return $this->errorResponse($message, null, 404);
+    }
+
+    /**
+     * Validate clinic access with detailed error handling
+     */
+    protected function validateClinicAccess(?int $clinicId = null): bool
+    {
+        $user = $this->getAuthenticatedUser();
+        
+        if (!$user instanceof User) {
+            return false;
+        }
+
+        $targetClinicId = $clinicId ?? $user->current_clinic_id;
+        
+        if (!$targetClinicId) {
+            return false;
+        }
+
+        return $user->clinics()->where('clinic_id', $targetClinicId)->exists();
+    }
+
+    /**
+     * Get validated clinic with error handling
+     */
+    protected function getValidatedClinic(?int $clinicId = null): ?Clinic
+    {
+        $user = $this->getAuthenticatedUser();
+        
+        if (!$user instanceof User) {
+            return null;
+        }
+
+        $targetClinicId = $clinicId ?? $user->current_clinic_id;
+        
+        if (!$targetClinicId) {
+            return null;
+        }
+
+        return $user->clinics()->where('clinic_id', $targetClinicId)->first();
+    }
+
+    /**
+     * Sanitize input data to prevent XSS and other attacks
+     */
+    protected function sanitizeInput(array $data): array
+    {
+        $sanitized = [];
+        
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                // Remove potentially dangerous characters and HTML tags
+                $sanitized[$key] = strip_tags(trim($value));
+            } elseif (is_array($value)) {
+                $sanitized[$key] = $this->sanitizeInput($value);
+            } else {
+                $sanitized[$key] = $value;
+            }
+        }
+        
+        return $sanitized;
+    }
+
+    /**
+     * Validate and sanitize request data
+     */
+    protected function validateAndSanitize(Request $request, array $rules, array $messages = []): array
+    {
+        $validator = Validator::make($request->all(), $rules, $messages);
+        
+        if ($validator->fails()) {
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
+        
+        $validated = $validator->validated();
+        return $this->sanitizeInput($validated);
+    }
+
+    /**
+     * Cache data with a key and TTL
+     */
+    protected function cacheData(string $key, $data, int $ttlMinutes = 60): void
+    {
+        Cache::put($key, $data, now()->addMinutes($ttlMinutes));
+    }
+
+    /**
+     * Get cached data or execute callback and cache result
+     */
+    protected function remember(string $key, int $ttlMinutes, callable $callback)
+    {
+        return Cache::remember($key, now()->addMinutes($ttlMinutes), $callback);
+    }
+
+    /**
+     * Generate cache key for user-specific data
+     */
+    protected function getUserCacheKey(string $prefix, ?int $userId = null): string
+    {
+        $userId = $userId ?? auth()->id();
+        return "{$prefix}_user_{$userId}";
+    }
+
+    /**
+     * Generate cache key for clinic-specific data
+     */
+    protected function getClinicCacheKey(string $prefix, ?int $clinicId = null): string
+    {
+        $clinicId = $clinicId ?? auth()->user()?->current_clinic_id;
+        return "{$prefix}_clinic_{$clinicId}";
+    }
+
+    /**
+     * Log API request with context
+     */
+    protected function logApiRequest(string $action, array $context = []): void
+    {
+        Log::info("API Request: {$action}", array_merge([
+            'user_id' => auth()->id(),
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'endpoint' => request()->path(),
+            'method' => request()->method(),
+            'timestamp' => now()->toISOString(),
+        ], $context));
+    }
+
+    /**
+     * Log API response with context
+     */
+    protected function logApiResponse(string $action, int $statusCode, array $context = []): void
+    {
+        Log::info("API Response: {$action}", array_merge([
+            'user_id' => auth()->id(),
+            'status_code' => $statusCode,
+            'endpoint' => request()->path(),
+            'method' => request()->method(),
+            'timestamp' => now()->toISOString(),
+        ], $context));
+    }
+
+    /**
+     * Log web request with context
+     */
+    protected function logWebRequest(string $action, array $context = []): void
+    {
+        Log::info("Web Request: {$action}", array_merge([
+            'user_id' => $this->getAuthenticatedUser()?->id,
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'endpoint' => request()->path(),
+            'method' => request()->method(),
+            'timestamp' => now()->toISOString(),
+        ], $context));
+    }
+
+    /**
+     * Log security event
+     */
+    protected function logSecurityEvent(string $event, array $context = []): void
+    {
+        Log::warning("Security Event: {$event}", array_merge([
+            'user_id' => auth()->id(),
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'endpoint' => request()->path(),
+            'method' => request()->method(),
+            'timestamp' => now()->toISOString(),
+        ], $context));
     }
 }

@@ -113,7 +113,7 @@ class NotificationController extends BaseController
             return $this->successResponse($notifications, 'Notifications retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -160,7 +160,7 @@ class NotificationController extends BaseController
             return $this->successResponse(['notification' => $notification], 'Notification retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -229,7 +229,7 @@ class NotificationController extends BaseController
             return $this->successResponse(['notification' => $notification], 'Notification created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -298,7 +298,7 @@ class NotificationController extends BaseController
             return $this->successResponse(['notification' => $notification], 'Notification updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -341,7 +341,7 @@ class NotificationController extends BaseController
             return $this->successResponse(null, 'Notification deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -392,7 +392,7 @@ class NotificationController extends BaseController
             return $this->successResponse(null, 'Notification marked as read successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -427,7 +427,7 @@ class NotificationController extends BaseController
             return $this->successResponse(['updated_count' => $updatedCount], 'All notifications marked as read successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -485,7 +485,7 @@ class NotificationController extends BaseController
             ], 'Unread notifications retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -567,7 +567,7 @@ class NotificationController extends BaseController
             return $this->successResponse(['sent_count' => count($notifications)], 'Notifications sent successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

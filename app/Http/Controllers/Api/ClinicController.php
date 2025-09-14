@@ -64,7 +64,7 @@ class ClinicController extends BaseController
             ], 'Public clinics retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -115,7 +115,7 @@ class ClinicController extends BaseController
             ], 'Clinic details retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -214,7 +214,7 @@ class ClinicController extends BaseController
             return $this->paginatedResponse($clinics, 'Clinics retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -309,7 +309,7 @@ class ClinicController extends BaseController
             ], 'Clinic created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -457,7 +457,7 @@ class ClinicController extends BaseController
             ], 'Clinic retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -626,7 +626,7 @@ class ClinicController extends BaseController
             ], 'Clinic updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -734,7 +734,7 @@ class ClinicController extends BaseController
             return $this->successResponse(null, 'Clinic deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -861,7 +861,7 @@ class ClinicController extends BaseController
             return $this->paginatedResponse($users, 'Clinic users retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -990,7 +990,7 @@ class ClinicController extends BaseController
             return $this->paginatedResponse($doctors, 'Clinic doctors retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1138,7 +1138,7 @@ class ClinicController extends BaseController
             return $this->paginatedResponse($patients, 'Clinic patients retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1294,7 +1294,7 @@ class ClinicController extends BaseController
             return $this->paginatedResponse($appointments, 'Clinic appointments retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1532,7 +1532,7 @@ class ClinicController extends BaseController
             ], 'Clinic statistics retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

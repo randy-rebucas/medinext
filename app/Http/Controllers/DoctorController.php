@@ -22,10 +22,10 @@ class DoctorController extends Controller
      */
     public function index(Request $request): Response
     {
+        $this->logWebRequest('Doctor Management Access', ['action' => 'index']);
+        
         $user = $request->user();
-
-        // Get user's clinic
-        $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
+        $userClinicRole = $this->getUserClinicRole($request);
 
         // Get available specializations
         $specializations = $this->getSpecializations();
@@ -58,46 +58,63 @@ class DoctorController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'phone' => 'required|string|max:20',
-            'specialization' => 'required|string|max:255',
-            'license' => 'required|string|max:255|unique:doctors,license_number',
+        $rules = [
+            'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'email' => 'required|string|email:rfc,dns|max:255|unique:users',
+            'phone' => 'required|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+            'specialization' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'license' => 'required|string|max:255|unique:doctors,license_number|alpha_num',
             'status' => 'required|string|in:Active,On Leave,Inactive',
             'experience' => 'required|string|max:255',
             'education' => 'nullable|string|max:1000',
             'certifications' => 'nullable|string|max:1000',
             'address' => 'nullable|string|max:500',
-            'emergency_contact' => 'nullable|string|max:255',
-            'emergency_phone' => 'nullable|string|max:20',
+            'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
             'notes' => 'nullable|string|max:1000',
-            'consultation_fee' => 'nullable|numeric|min:0',
+            'consultation_fee' => 'nullable|numeric|min:0|max:999999.99',
             'availability' => 'nullable|array',
-        ]);
+        ];
 
-        if ($validator->fails()) {
+        $messages = [
+            'name.regex' => 'Name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'email.email' => 'Please provide a valid email address.',
+            'phone.regex' => 'Phone number format is invalid.',
+            'specialization.regex' => 'Specialization can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'license.alpha_num' => 'License number can only contain letters and numbers.',
+            'consultation_fee.max' => 'Consultation fee cannot exceed 999,999.99.',
+            'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'emergency_phone.regex' => 'Emergency contact phone format is invalid.',
+        ];
+
+        try {
+            $validatedData = $this->validateAndSanitize($request, $rules, $messages);
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $e->errors()
             ], 422);
         }
 
         try {
+            $this->logWebRequest('Create Doctor', ['action' => 'store']);
+            
             // Get user from request
             $user = $request->user();
 
             if (!$user) {
+                $this->logSecurityEvent('Unauthenticated doctor creation attempt');
                 return response()->json([
                     'success' => false,
                     'message' => 'User not authenticated'
                 ], 401);
             }
 
-            $userClinicRole = $user->userClinicRoles()->with(['clinic'])->first();
+            $userClinicRole = $this->getUserClinicRole($request);
 
             if (!$userClinicRole) {
+                $this->logSecurityEvent('Unauthorized clinic access attempt', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'User does not have clinic access'
@@ -153,9 +170,10 @@ class DoctorController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'DoctorController::store');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to add doctor: ' . $e->getMessage()
+                'message' => 'Failed to add doctor. Please try again.'
             ], 500);
         }
     }
@@ -329,38 +347,42 @@ class DoctorController extends Controller
     }
 
     /**
-     * Get doctors for a clinic
+     * Get doctors for a clinic with caching
      */
     private function getDoctors($clinicId)
     {
-        return Doctor::where('clinic_id', $clinicId)
-            ->with(['user', 'clinic'])
-            ->get()
-            ->map(function ($doctor) {
-                return [
-                    'id' => $doctor->id,
-                    'name' => $doctor->user->name,
-                    'email' => $doctor->user->email,
-                    'phone' => $doctor->user->phone,
-                    'specialization' => $doctor->specialization,
-                    'license' => $doctor->license_number,
-                    'status' => $doctor->is_active ? 'Active' : 'Inactive',
-                    'experience' => $doctor->experience,
-                    'education' => $doctor->education,
-                    'certifications' => $doctor->certifications,
-                    'address' => $doctor->address,
-                    'emergency_contact' => $doctor->emergency_contact,
-                    'emergency_phone' => $doctor->emergency_phone,
-                    'notes' => $doctor->notes,
-                    'consultation_fee' => $doctor->consultation_fee,
-                    'availability' => $doctor->availability,
-                    'patients' => 0, // TODO: Calculate from appointments
-                    'next_appointment' => null, // TODO: Get from appointments
-                    'rating' => 4.5, // TODO: Calculate from reviews
-                    'created_at' => $doctor->created_at->format('Y-m-d H:i:s'),
-                    'updated_at' => $doctor->updated_at->format('Y-m-d H:i:s'),
-                ];
-            });
+        $cacheKey = $this->getClinicCacheKey('doctors', $clinicId);
+        
+        return $this->remember($cacheKey, 30, function () use ($clinicId) {
+            return Doctor::where('clinic_id', $clinicId)
+                ->with(['user:id,name,email,phone', 'clinic:id,name'])
+                ->get()
+                ->map(function ($doctor) {
+                    return [
+                        'id' => $doctor->id,
+                        'name' => $doctor->user->name,
+                        'email' => $doctor->user->email,
+                        'phone' => $doctor->user->phone,
+                        'specialization' => $doctor->specialization,
+                        'license' => $doctor->license_number,
+                        'status' => $doctor->is_active ? 'Active' : 'Inactive',
+                        'experience' => $doctor->experience,
+                        'education' => $doctor->education,
+                        'certifications' => $doctor->certifications,
+                        'address' => $doctor->address,
+                        'emergency_contact' => $doctor->emergency_contact,
+                        'emergency_phone' => $doctor->emergency_phone,
+                        'notes' => $doctor->notes,
+                        'consultation_fee' => $doctor->consultation_fee,
+                        'availability' => $doctor->availability,
+                        'patients' => 0, // TODO: Calculate from appointments
+                        'next_appointment' => null, // TODO: Get from appointments
+                        'rating' => 4.5, // TODO: Calculate from reviews
+                        'created_at' => $doctor->created_at->format('Y-m-d H:i:s'),
+                        'updated_at' => $doctor->updated_at->format('Y-m-d H:i:s'),
+                    ];
+                });
+        });
     }
 
     /**

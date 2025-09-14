@@ -102,7 +102,7 @@ class SystemController extends BaseController
             return $this->successResponse($healthData, 'System health retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -154,7 +154,7 @@ class SystemController extends BaseController
             return $this->successResponse($statusData, 'System status retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -250,7 +250,7 @@ class SystemController extends BaseController
             ], 'System logs retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -307,7 +307,7 @@ class SystemController extends BaseController
             ], 'Backup created successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -387,7 +387,7 @@ class SystemController extends BaseController
             return $this->successResponse(['cleared_caches' => $clearedCaches], 'Cache cleared successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -469,7 +469,7 @@ class SystemController extends BaseController
             return $this->successResponse($usageData, 'System usage retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 

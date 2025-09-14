@@ -124,7 +124,7 @@ class RoomController extends BaseController
             return $this->successResponse($rooms, 'Rooms retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -211,7 +211,7 @@ class RoomController extends BaseController
             return $this->successResponse(['room' => $room], 'Room created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -257,7 +257,7 @@ class RoomController extends BaseController
             return $this->successResponse(['room' => $room], 'Room retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -341,7 +341,7 @@ class RoomController extends BaseController
             return $this->successResponse(['room' => $room], 'Room updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -388,7 +388,7 @@ class RoomController extends BaseController
             return $this->successResponse(null, 'Room deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -476,7 +476,7 @@ class RoomController extends BaseController
             ], 'Room availability retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -560,7 +560,7 @@ class RoomController extends BaseController
             ], 'Room booked successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -621,7 +621,7 @@ class RoomController extends BaseController
             return $this->successResponse(null, 'Room booking released successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -721,7 +721,7 @@ class RoomController extends BaseController
             ], 'Available rooms retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

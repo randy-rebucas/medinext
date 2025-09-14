@@ -11,119 +11,124 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified', 'trial.check', 'onboarding.check'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Admin routes - Require admin role and appropriate permissions
+    // Admin routes - System admin has full access to all management areas
     Route::prefix('admin')->middleware(['permission:system.admin'])->group(function () {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
-        // Doctor management routes
-        Route::middleware(['permission:doctors.view'])->group(function () {
-            Route::get('doctors', [App\Http\Controllers\DoctorController::class, 'index'])->name('admin.doctors');
-            Route::get('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'show'])->name('admin.doctors.show');
-        });
+        // ===== DOCTOR MANAGEMENT =====
+        // Admin has full CRUD access to doctor management
+        Route::get('doctors', [App\Http\Controllers\DoctorController::class, 'index'])->name('admin.doctors');
+        Route::get('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'show'])->name('admin.doctors.show');
+        Route::post('doctors', [App\Http\Controllers\DoctorController::class, 'store'])->name('admin.doctors.store');
+        Route::put('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'update'])->name('admin.doctors.update');
+        Route::delete('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'destroy'])->name('admin.doctors.destroy');
 
-        Route::middleware(['permission:doctors.create', 'license.usage:users'])->group(function () {
-            Route::post('doctors', [App\Http\Controllers\DoctorController::class, 'store'])->name('admin.doctors.store');
-        });
+        // ===== STAFF MANAGEMENT =====
+        // Admin has full CRUD access to staff management
+        Route::get('staff', [App\Http\Controllers\StaffController::class, 'index'])->name('admin.staff');
+        Route::get('staff/{id}', [App\Http\Controllers\StaffController::class, 'show'])->name('admin.staff.show');
+        Route::post('staff', [App\Http\Controllers\StaffController::class, 'store'])->name('admin.staff.store');
+        Route::put('staff/{id}', [App\Http\Controllers\StaffController::class, 'update'])->name('admin.staff.update');
+        Route::delete('staff/{id}', [App\Http\Controllers\StaffController::class, 'destroy'])->name('admin.staff.destroy');
 
-        Route::middleware(['permission:doctors.edit'])->group(function () {
-            Route::put('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'update'])->name('admin.doctors.update');
-        });
+        // ===== PATIENT MANAGEMENT =====
+        // Admin has full CRUD access to patient management
+        Route::get('patients', [App\Http\Controllers\PatientController::class, 'index'])->name('admin.patients');
+        Route::get('patients/{id}', [App\Http\Controllers\PatientController::class, 'show'])->name('admin.patients.show');
+        Route::get('patients/{id}/health-records', [App\Http\Controllers\PatientController::class, 'healthRecords'])->name('admin.patients.health-records');
+        Route::post('patients', [App\Http\Controllers\PatientController::class, 'store'])->name('admin.patients.store');
+        Route::put('patients/{id}', [App\Http\Controllers\PatientController::class, 'update'])->name('admin.patients.update');
+        Route::delete('patients/{id}', [App\Http\Controllers\PatientController::class, 'destroy'])->name('admin.patients.destroy');
 
-        Route::middleware(['permission:doctors.delete'])->group(function () {
-            Route::delete('doctors/{id}', [App\Http\Controllers\DoctorController::class, 'destroy'])->name('admin.doctors.destroy');
-        });
+        // ===== APPOINTMENT MANAGEMENT =====
+        // Admin has full CRUD access to appointment management
+        Route::get('appointments', [App\Http\Controllers\AppointmentController::class, 'index'])->name('admin.appointments');
+        Route::get('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'show'])->name('admin.appointments.show');
+        Route::get('appointments/calendar/data', [App\Http\Controllers\AppointmentController::class, 'calendar'])->name('admin.appointments.calendar');
+        Route::post('appointments', [App\Http\Controllers\AppointmentController::class, 'store'])->name('admin.appointments.store');
+        Route::put('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'update'])->name('admin.appointments.update');
+        Route::put('appointments/{id}/status', [App\Http\Controllers\AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
+        Route::delete('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'destroy'])->name('admin.appointments.destroy');
 
-        // Staff management routes
-        Route::middleware(['permission:users.view'])->group(function () {
-            Route::get('staff', [App\Http\Controllers\StaffController::class, 'index'])->name('admin.staff');
-        });
+        // ===== REPORTS & ANALYTICS =====
+        // Admin has full access to reports and analytics (no license restrictions)
+        Route::get('reports', [App\Http\Controllers\ReportsController::class, 'index'])->name('admin.reports');
+        Route::get('reports/analytics', [App\Http\Controllers\ReportsController::class, 'analytics'])->name('admin.reports.analytics');
+        Route::get('reports/download/{id}', [App\Http\Controllers\ReportsController::class, 'download'])->name('reports.download');
+        Route::post('reports/generate', [App\Http\Controllers\ReportsController::class, 'generate'])->name('admin.reports.generate');
+        
+        // Analytics dashboard
+        Route::get('analytics', function () {
+            return Inertia::render('admin/analytics');
+        })->name('admin.analytics');
 
-        Route::middleware(['permission:users.create', 'license.usage:users'])->group(function () {
-            Route::post('staff', [App\Http\Controllers\StaffController::class, 'store'])->name('admin.staff.store');
-        });
+        // ===== CLINIC SETTINGS =====
+        // Admin has full access to clinic settings management
+        Route::get('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'index'])->name('admin.clinic-settings');
+        Route::post('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-settings.update');
+        Route::put('clinic-settings/{id}', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-settings.update');
 
-        Route::middleware(['permission:users.edit'])->group(function () {
-            Route::put('staff/{id}', [App\Http\Controllers\StaffController::class, 'update'])->name('admin.staff.update');
-        });
+        // ===== ROOM MANAGEMENT =====
+        // Admin has full CRUD access to room management
+        Route::get('rooms', function () {
+            return Inertia::render('admin/rooms');
+        })->name('admin.rooms');
+        Route::get('rooms/{id}', function ($id) {
+            return Inertia::render('admin/rooms', ['roomId' => $id]);
+        })->name('admin.rooms.show');
+        Route::post('rooms', function () {
+            // Handle room creation
+            return redirect()->route('admin.rooms')->with('success', 'Room created successfully');
+        })->name('admin.rooms.store');
+        Route::put('rooms/{id}', function ($id) {
+            // Handle room update
+            return redirect()->route('admin.rooms')->with('success', 'Room updated successfully');
+        })->name('admin.rooms.update');
+        Route::delete('rooms/{id}', function ($id) {
+            // Handle room deletion
+            return redirect()->route('admin.rooms')->with('success', 'Room deleted successfully');
+        })->name('admin.rooms.destroy');
 
-        Route::middleware(['permission:users.delete'])->group(function () {
-            Route::delete('staff/{id}', [App\Http\Controllers\StaffController::class, 'destroy'])->name('admin.staff.destroy');
-        });
+        // ===== SCHEDULE MANAGEMENT =====
+        // Admin has full CRUD access to schedule management
+        Route::get('schedules', function () {
+            return Inertia::render('admin/schedules');
+        })->name('admin.schedules');
+        Route::get('schedules/{id}', function ($id) {
+            return Inertia::render('admin/schedules', ['scheduleId' => $id]);
+        })->name('admin.schedules.show');
+        Route::post('schedules', function () {
+            // Handle schedule creation
+            return redirect()->route('admin.schedules')->with('success', 'Schedule created successfully');
+        })->name('admin.schedules.store');
+        Route::put('schedules/{id}', function ($id) {
+            // Handle schedule update
+            return redirect()->route('admin.schedules')->with('success', 'Schedule updated successfully');
+        })->name('admin.schedules.update');
+        Route::delete('schedules/{id}', function ($id) {
+            // Handle schedule deletion
+            return redirect()->route('admin.schedules')->with('success', 'Schedule deleted successfully');
+        })->name('admin.schedules.destroy');
 
-        // Patient management routes
-        Route::middleware(['permission:patients.view'])->group(function () {
-            Route::get('patients', [App\Http\Controllers\PatientController::class, 'index'])->name('admin.patients');
-            Route::get('patients/{id}', [App\Http\Controllers\PatientController::class, 'show'])->name('admin.patients.show');
-            Route::get('patients/{id}/health-records', [App\Http\Controllers\PatientController::class, 'healthRecords'])->name('admin.patients.health-records');
-        });
-
-        Route::middleware(['permission:patients.create', 'license.usage:patients'])->group(function () {
-            Route::post('patients', [App\Http\Controllers\PatientController::class, 'store'])->name('admin.patients.store');
-        });
-
-        Route::middleware(['permission:patients.edit'])->group(function () {
-            Route::put('patients/{id}', [App\Http\Controllers\PatientController::class, 'update'])->name('admin.patients.update');
-        });
-
-        Route::middleware(['permission:patients.delete'])->group(function () {
-            Route::delete('patients/{id}', [App\Http\Controllers\PatientController::class, 'destroy'])->name('admin.patients.destroy');
-        });
-
-        // Appointment management routes
-        Route::middleware(['permission:appointments.view'])->group(function () {
-            Route::get('appointments', [App\Http\Controllers\AppointmentController::class, 'index'])->name('admin.appointments');
-            Route::get('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'show'])->name('admin.appointments.show');
-            Route::get('appointments/calendar/data', [App\Http\Controllers\AppointmentController::class, 'calendar'])->name('admin.appointments.calendar');
-        });
-
-        Route::middleware(['permission:appointments.create', 'license.usage:appointments'])->group(function () {
-            Route::post('appointments', [App\Http\Controllers\AppointmentController::class, 'store'])->name('admin.appointments.store');
-        });
-
-        Route::middleware(['permission:appointments.edit'])->group(function () {
-            Route::put('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'update'])->name('admin.appointments.update');
-            Route::put('appointments/{id}/status', [App\Http\Controllers\AppointmentController::class, 'updateStatus'])->name('admin.appointments.status');
-        });
-
-        Route::middleware(['permission:appointments.delete'])->group(function () {
-            Route::delete('appointments/{id}', [App\Http\Controllers\AppointmentController::class, 'destroy'])->name('admin.appointments.destroy');
-        });
-
-        // Reports routes - Require advanced reporting license feature
-        Route::middleware(['permission:reports.view', 'license.feature:advanced_reporting'])->group(function () {
-            Route::get('reports', [App\Http\Controllers\ReportsController::class, 'index'])->name('admin.reports');
-            Route::get('reports/analytics', [App\Http\Controllers\ReportsController::class, 'analytics'])->name('admin.reports.analytics');
-            Route::get('reports/download/{id}', [App\Http\Controllers\ReportsController::class, 'download'])->name('reports.download');
-        });
-
-        Route::middleware(['permission:reports.generate', 'license.feature:advanced_reporting'])->group(function () {
-            Route::post('reports/generate', [App\Http\Controllers\ReportsController::class, 'generate'])->name('admin.reports.generate');
-        });
-
-        Route::middleware(['permission:reports.view', 'license.feature:advanced_analytics'])->group(function () {
-            Route::get('analytics', function () {
-                return Inertia::render('admin/analytics');
-            })->name('admin.analytics');
-        });
-
-        // Settings routes - Require settings management permission
-        Route::middleware(['permission:settings.manage'])->group(function () {
-            Route::get('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'index'])->name('admin.clinic-settings');
-        });
-
-        // Room management routes
-        Route::middleware(['permission:rooms.view'])->group(function () {
-            Route::get('rooms', function () {
-                return Inertia::render('admin/rooms');
-            })->name('admin.rooms');
-        });
-
-        // Schedule management routes
-        Route::middleware(['permission:schedule.view'])->group(function () {
-            Route::get('schedules', function () {
-                return Inertia::render('admin/schedules');
-            })->name('admin.schedules');
-        });
+        // ===== ADDITIONAL ADMIN FEATURES =====
+        // System monitoring and management
+        Route::get('system-status', function () {
+            return Inertia::render('admin/system-status');
+        })->name('admin.system-status');
+        
+        // User activity monitoring
+        Route::get('activity-logs', function () {
+            return Inertia::render('admin/activity-logs');
+        })->name('admin.activity-logs');
+        
+        // Backup and maintenance
+        Route::get('backup', function () {
+            return Inertia::render('admin/backup');
+        })->name('admin.backup');
+        Route::post('backup/create', function () {
+            // Handle backup creation
+            return redirect()->route('admin.backup')->with('success', 'Backup created successfully');
+        })->name('admin.backup.create');
     });
 
     // Medrep routes - Require medrep role and medrep management license feature

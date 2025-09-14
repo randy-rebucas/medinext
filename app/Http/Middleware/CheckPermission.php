@@ -18,36 +18,89 @@ class CheckPermission
         $user = $request->user();
 
         if (!$user) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'error' => 'Authentication required',
+                    'message' => 'You must be logged in to access this resource.'
+                ], 401);
+            }
             return redirect()->route('login');
         }
 
-        // Get clinic ID from route or request
-        $clinicId = $request->route('clinic') ??
-                    $request->route('doctor') ? $request->route('doctor')->clinic_id : null ??
-                    $request->input('clinic_id');
+        // Skip permission check for onboarding routes
+        $currentRoute = $request->route()?->getName();
+        if ($currentRoute && str_starts_with($currentRoute, 'onboarding.')) {
+            return $next($request);
+        }
+
+        // Get clinic ID from various sources
+        $clinicId = $this->getClinicIdFromRequest($request);
+
+        // For system-wide permissions (like system.admin, settings.manage)
+        if (in_array($permission, ['system.admin', 'settings.manage', 'permissions.view'])) {
+            if (!$user->hasPermission($permission)) {
+                return $this->handlePermissionDenied($request, $permission);
+            }
+            return $next($request);
+        }
 
         // If no clinic context, check if user has permission globally
         if (!$clinicId) {
-            // For system-wide permissions (like system.admin, settings.manage)
-            if (in_array($permission, ['system.admin', 'settings.manage'])) {
-                if (!$user->hasPermission($permission)) {
-                    abort(403, 'Insufficient permissions.');
-                }
-                return $next($request);
-            }
-
-            // For web routes without clinic context, check global permission
             if (!$user->hasPermission($permission)) {
-                abort(403, 'Insufficient permissions for this action.');
+                return $this->handlePermissionDenied($request, $permission);
             }
             return $next($request);
         }
 
         // Check if user has the required permission in the clinic
         if (!$user->hasPermissionInClinic($permission, $clinicId)) {
-            abort(403, 'Insufficient permissions for this action.');
+            return $this->handlePermissionDenied($request, $permission);
         }
 
         return $next($request);
+    }
+
+    /**
+     * Get clinic ID from request
+     */
+    protected function getClinicIdFromRequest(Request $request): ?int
+    {
+        // Try to get from route parameters
+        if ($clinic = $request->route('clinic')) {
+            return is_object($clinic) ? $clinic->id : (int) $clinic;
+        }
+
+        if ($doctor = $request->route('doctor')) {
+            return is_object($doctor) ? $doctor->clinic_id : null;
+        }
+
+        // Try to get from request input
+        if ($clinicId = $request->input('clinic_id')) {
+            return (int) $clinicId;
+        }
+
+        // Try to get from user's first clinic (fallback)
+        $user = $request->user();
+        if ($user && $user->clinics()->exists()) {
+            return $user->clinics()->first()?->id;
+        }
+
+        return null;
+    }
+
+    /**
+     * Handle permission denied response
+     */
+    protected function handlePermissionDenied(Request $request, string $permission): Response
+    {
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'error' => 'Permission denied',
+                'message' => 'You do not have permission to perform this action.',
+                'permission' => $permission
+            ], 403);
+        }
+
+        abort(403, 'Insufficient permissions for this action.');
     }
 }

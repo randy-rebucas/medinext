@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Building2, ArrowRight, ArrowLeft, MapPin, Phone, Mail, Globe, FileText } from 'lucide-react';
+import { Building2, ArrowRight, ArrowLeft, MapPin, Phone, Mail, Globe, FileText, GlobeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,13 @@ interface ClinicSetupProps {
     clinic: {
         id: number;
         name: string;
-        address: string;
+        address: {
+            street: string;
+            city: string;
+            state: string;
+            postal_code: string;
+            country: string;
+        };
         phone: string;
         email: string;
         website?: string;
@@ -28,7 +34,11 @@ interface ClinicSetupProps {
 export default function ClinicSetup({ user, clinic }: ClinicSetupProps) {
     const { data, setData, post, processing, errors } = useForm({
         name: clinic?.name || '',
-        address: clinic?.address || '',
+        address: clinic?.address?.street || '',
+        city: clinic?.address?.city || '',
+        state: clinic?.address?.state || '',
+        postal_code: clinic?.address?.postal_code || '',
+        country: clinic?.address?.country || '',
         phone: clinic?.phone || '',
         email: clinic?.email || '',
         website: clinic?.website || '',
@@ -127,6 +137,93 @@ export default function ClinicSetup({ user, clinic }: ClinicSetupProps) {
                                             />
                                         </div>
                                         <InputError message={errors.address} />
+                                    </div>
+
+                                    {/* City, State, Postal Code, Country */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="city" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                City *
+                                            </Label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <MapPin className="h-5 w-5 text-slate-400" />
+                                                </div>
+                                                <Input
+                                                    id="city"
+                                                    type="text"
+                                                    required
+                                                    value={data.city}
+                                                    onChange={(e) => setData('city', e.target.value)}
+                                                    placeholder="Enter your clinic city"
+                                                    className="pl-10 h-12 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <InputError message={errors.city} />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="state" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                State *
+                                            </Label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <MapPin className="h-5 w-5 text-slate-400" />
+                                                </div>
+                                                <Input
+                                                    id="state"
+                                                    type="text"
+                                                    required
+                                                    value={data.state}
+                                                    onChange={(e) => setData('state', e.target.value)}
+                                                    placeholder="Enter your clinic state"
+                                                    className="pl-10 h-12 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <InputError message={errors.state} />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="postal_code" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                Postal Code *
+                                            </Label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <MapPin className="h-5 w-5 text-slate-400" />
+                                                </div>
+                                                <Input
+                                                    id="postal_code"
+                                                    type="text"
+                                                    required
+                                                    value={data.postal_code}
+                                                    onChange={(e) => setData('postal_code', e.target.value)}
+                                                    placeholder="Enter your clinic postal code"
+                                                    className="pl-10 h-12 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <InputError message={errors.postal_code} />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="country" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                Country *
+                                            </Label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <MapPin className="h-5 w-5 text-slate-400" />
+                                                </div>
+                                                <Input
+                                                    id="country"
+                                                    type="text"
+                                                    required
+                                                    value={data.country}
+                                                    onChange={(e) => setData('country', e.target.value)}
+                                                    placeholder="Enter your clinic country"
+                                                    className="pl-10 h-12 border-slate-300 dark:border-slate-600 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <InputError message={errors.country} />
+                                        </div>
                                     </div>
 
                                     {/* Phone and Email */}
@@ -284,13 +381,12 @@ export default function ClinicSetup({ user, clinic }: ClinicSetupProps) {
                             </Button>
                             
                             <Button 
-                                asChild
+                                type="submit"
+                                disabled={processing}
                                 className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                             >
-                                <Link href="/onboarding/complete">
-                                    Continue to Team Setup
-                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                </Link>
+                                {processing ? 'Saving Clinic Info...' : 'Save & Continue'}
+                                <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
                     </div>

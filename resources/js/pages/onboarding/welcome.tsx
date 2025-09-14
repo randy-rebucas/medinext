@@ -218,7 +218,7 @@ export default function Welcome({ user, clinic, trial_status }: WelcomeProps) {
                             className="flex-1 h-12"
                         >
                             <Link href="/onboarding/clinic-setup">
-                                Skip & Continue Setup
+                                Continue Setup
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>

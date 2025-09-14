@@ -15,6 +15,8 @@ class RoleController extends Controller
      */
     public function index()
     {
+        $this->logWebRequest('Role Management Access', ['action' => 'index']);
+        
         $roles = Role::with('permissions')
             ->withCount('userClinicRoles')
             ->get();
@@ -27,6 +29,8 @@ class RoleController extends Controller
      */
     public function create()
     {
+        $this->logWebRequest('Role Creation Access', ['action' => 'create']);
+        
         $permissions = Permission::orderBy('module')
             ->orderBy('action')
             ->get()

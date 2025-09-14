@@ -22,10 +22,12 @@ class AppointmentController extends Controller
      */
     public function index(Request $request): Response
     {
+        $this->logWebRequest('Appointment Management Access', ['action' => 'index']);
+        
         $user = $request->user();
 
         // Get user's clinic
-        $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
+        $userClinicRole = $this->getUserClinicRole($request);
 
         if (!$userClinicRole) {
             return Inertia::render('admin/appointments', [
@@ -64,18 +66,29 @@ class AppointmentController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
             'start_at' => 'required|date|after:now',
             'end_at' => 'required|date|after:start_at',
-            'type' => 'required|string|max:255',
+            'type' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
             'status' => 'required|string|in:Scheduled,Confirmed,In Progress,Completed,Cancelled',
             'room_id' => 'nullable|exists:rooms,id',
             'reason' => 'nullable|string|max:500',
             'notes' => 'nullable|string|max:1000',
             'priority' => 'required|string|in:Low,Normal,High,Urgent',
-        ]);
+        ];
+
+        $messages = [
+            'patient_id.exists' => 'Selected patient does not exist.',
+            'doctor_id.exists' => 'Selected doctor does not exist.',
+            'start_at.after' => 'Appointment start time must be in the future.',
+            'end_at.after' => 'Appointment end time must be after start time.',
+            'type.regex' => 'Appointment type can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'room_id.exists' => 'Selected room does not exist.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
             return response()->json([
@@ -86,19 +99,23 @@ class AppointmentController extends Controller
         }
 
         try {
+            $this->logWebRequest('Create Appointment', ['action' => 'store']);
+            
             // Get user from request
             $user = $request->user();
 
             if (!$user) {
+                $this->logSecurityEvent('Unauthenticated appointment creation attempt');
                 return response()->json([
                     'success' => false,
                     'message' => 'User not authenticated'
                 ], 401);
             }
 
-            $userClinicRole = $user->userClinicRoles()->with(['clinic'])->first();
+            $userClinicRole = $this->getUserClinicRole($request);
 
             if (!$userClinicRole) {
+                $this->logSecurityEvent('Unauthorized clinic access attempt', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'User does not have clinic access'
@@ -129,9 +146,10 @@ class AppointmentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'AppointmentController::store');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to schedule appointment: ' . $e->getMessage()
+                'message' => 'Failed to schedule appointment. Please try again.'
             ], 500);
         }
     }
@@ -186,9 +204,10 @@ class AppointmentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'AppointmentController::update');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update appointment: ' . $e->getMessage()
+                'message' => 'Failed to update appointment. Please try again.'
             ], 500);
         }
     }
@@ -208,9 +227,10 @@ class AppointmentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'AppointmentController::destroy');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete appointment: ' . $e->getMessage()
+                'message' => 'Failed to delete appointment. Please try again.'
             ], 500);
         }
     }
@@ -237,9 +257,10 @@ class AppointmentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'AppointmentController::show');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve appointment: ' . $e->getMessage()
+                'message' => 'Failed to retrieve appointment. Please try again.'
             ], 500);
         }
     }
@@ -272,9 +293,10 @@ class AppointmentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'AppointmentController::updateStatus');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update appointment status: ' . $e->getMessage()
+                'message' => 'Failed to update appointment status. Please try again.'
             ], 500);
         }
     }
@@ -325,9 +347,10 @@ class AppointmentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'AppointmentController::calendar');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch calendar data: ' . $e->getMessage()
+                'message' => 'Failed to fetch calendar data. Please try again.'
             ], 500);
         }
     }

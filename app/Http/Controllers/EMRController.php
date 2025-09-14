@@ -17,14 +17,16 @@ class EMRController extends Controller
      */
     public function medicalRecord(Patient $patient): View
     {
+        $this->logWebRequest('EMR Access', ['action' => 'medicalRecord', 'patient_id' => $patient->id]);
+        
         $patient->load([
-            'clinic',
-            'encounters.doctor',
+            'clinic:id,name',
+            'encounters.doctor.user:id,name',
             'encounters.prescriptions',
-            'labResults.orderedByDoctor',
-            'labResults.encounter',
+            'labResults.orderedByDoctor:id,name',
+            'labResults.encounter:id,date',
             'fileAssets',
-            'appointments.doctor'
+            'appointments.doctor.user:id,name'
         ]);
 
         // Group lab results by type
@@ -41,8 +43,10 @@ class EMRController extends Controller
      */
     public function labResults(Patient $patient): View
     {
+        $this->logWebRequest('Lab Results Access', ['action' => 'labResults', 'patient_id' => $patient->id]);
+        
         $labResults = $patient->labResults()
-            ->with(['encounter.doctor', 'orderedByDoctor', 'reviewedByDoctor'])
+            ->with(['encounter.doctor.user:id,name', 'orderedByDoctor:id,name', 'reviewedByDoctor:id,name'])
             ->orderBy('ordered_at', 'desc')
             ->paginate(15);
 

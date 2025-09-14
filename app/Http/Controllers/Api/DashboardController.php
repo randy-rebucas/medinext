@@ -134,9 +134,9 @@ class DashboardController extends BaseController
             ];
 
             return $this->successResponse($stats, 'Dashboard statistics retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve dashboard statistics: ' . $e->getMessage());
-        }
+           } catch (\Exception $e) {
+               return $this->handleApiException($e);
+           }
     }
 
     /**
@@ -189,7 +189,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($appointments, 'Recent appointments retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve recent appointments: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -246,7 +246,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($appointments, 'Today\'s appointments retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve today\'s appointments: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -307,7 +307,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($patients, 'New patients retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve new patients: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -378,7 +378,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($chartData, 'Revenue chart data retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve revenue chart data: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -450,7 +450,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($chartData, 'Appointment chart data retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve appointment chart data: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -484,7 +484,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($dashboardData, 'Dashboard data retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve dashboard data: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -506,7 +506,7 @@ class DashboardController extends BaseController
             $notifications = $this->getNotifications($user->id);
             return $this->successResponse($notifications, 'Notifications retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve notifications: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -535,7 +535,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($mobileData, 'Mobile dashboard data retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve mobile dashboard data: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -566,7 +566,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($webData, 'Web dashboard data retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve web dashboard data: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -590,7 +590,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($analytics, 'Analytics data retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve analytics data: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -625,7 +625,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse(null, 'Notification marked as read');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to mark notification as read: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -660,7 +660,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($tasks, 'Pending tasks retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve pending tasks: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 
@@ -684,7 +684,7 @@ class DashboardController extends BaseController
 
             return $this->successResponse($actions, 'Quick actions retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve quick actions: ' . $e->getMessage());
+            return $this->handleApiException($e);
         }
     }
 

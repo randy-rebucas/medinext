@@ -139,7 +139,7 @@ class EncounterController extends BaseController
             ]);
 
             $query = Encounter::where('clinic_id', $currentClinic->id)
-                ->with(['patient', 'doctor.user', 'clinic']);
+                ->with(['patient:id,first_name,last_name', 'doctor.user:id,name', 'clinic:id,name']);
 
             // Filter by status
             if ($request->has('status')) {
@@ -177,7 +177,7 @@ class EncounterController extends BaseController
             return $this->paginatedResponse($encounters, 'Encounters retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -269,7 +269,7 @@ class EncounterController extends BaseController
             $validator = Validator::make($request->all(), [
                 'patient_id' => 'required|integer|exists:patients,id',
                 'doctor_id' => 'required|integer|exists:doctors,id',
-                'date' => 'required|date',
+                'date' => 'required|date|before_or_equal:today',
                 'type' => 'required|string|in:consultation,follow_up,emergency,routine_checkup,specialist_consultation,procedure,surgery,lab_test,imaging,physical_therapy',
                 'status' => 'nullable|string|in:scheduled,in_progress,completed,cancelled,no_show',
                 'chief_complaint' => 'nullable|string|max:1000',
@@ -282,6 +282,10 @@ class EncounterController extends BaseController
                 'diagnosis' => 'nullable|array',
                 'treatment_plan' => 'nullable|array',
                 'follow_up_instructions' => 'nullable|string|max:1000',
+            ], [
+                'date.before_or_equal' => 'Encounter date cannot be in the future.',
+                'patient_id.exists' => 'Selected patient does not exist.',
+                'doctor_id.exists' => 'Selected doctor does not exist.',
             ]);
 
             if ($validator->fails()) {
@@ -312,7 +316,7 @@ class EncounterController extends BaseController
             ], 'Encounter created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -400,9 +404,9 @@ class EncounterController extends BaseController
             }
 
             $encounter->load([
-                'patient',
-                'doctor.user',
-                'clinic',
+                'patient:id,first_name,last_name',
+                'doctor.user:id,name',
+                'clinic:id,name',
                 'prescriptions',
                 'labResults',
                 'fileAssets'
@@ -414,7 +418,7 @@ class EncounterController extends BaseController
             ], 'Encounter retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -458,7 +462,7 @@ class EncounterController extends BaseController
             ], 'Encounter updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -486,7 +490,7 @@ class EncounterController extends BaseController
             return $this->successResponse(null, 'Encounter deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -589,7 +593,7 @@ class EncounterController extends BaseController
             return $this->paginatedResponse($prescriptions, 'Encounter prescriptions retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -701,7 +705,7 @@ class EncounterController extends BaseController
             return $this->paginatedResponse($labResults, 'Encounter lab results retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -809,7 +813,7 @@ class EncounterController extends BaseController
             return $this->paginatedResponse($fileAssets, 'Encounter files retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -925,7 +929,7 @@ class EncounterController extends BaseController
             ], 'File uploaded successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1044,7 +1048,7 @@ class EncounterController extends BaseController
             ], 'SOAP notes updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1150,7 +1154,7 @@ class EncounterController extends BaseController
             ], 'Encounter completed successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

@@ -25,8 +25,10 @@ class ReportsController extends Controller
      */
     public function index(Request $request): Response
     {
+        $this->logWebRequest('Reports Access', ['action' => 'index']);
+        
         $user = $request->user();
-        $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
+        $userClinicRole = $this->getUserClinicRole($request);
 
         if (!$userClinicRole) {
             return Inertia::render('admin/reports', [

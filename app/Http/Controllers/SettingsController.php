@@ -19,14 +19,36 @@ class SettingsController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        $user = $request->user();
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-        ]);
+        try {
+            $this->logWebRequest('Update Profile', ['action' => 'updateProfile']);
+            
+            $user = $request->user();
+            
+            if (!$user) {
+                $this->logSecurityEvent('Unauthenticated profile update attempt');
+                return back()->with('error', 'User not authenticated.');
+            }
 
-        $user->update($validated);
+            $rules = [
+                'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+                'email' => 'required|email:rfc,dns|unique:users,email,' . $user->id,
+            ];
 
-        return back()->with('success', 'Profile updated successfully.');
+            $messages = [
+                'name.regex' => 'Name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+                'email.email' => 'Please provide a valid email address.',
+            ];
+
+            $validated = $this->validateAndSanitize($request, $rules, $messages);
+
+            $user->update($validated);
+
+            $this->logWebRequest('Profile Updated Successfully', ['user_id' => $user->id]);
+            return back()->with('success', 'Profile updated successfully.');
+
+        } catch (\Exception $e) {
+            $this->handleException($e, 'SettingsController::updateProfile');
+            return back()->with('error', 'Failed to update profile. Please try again.');
+        }
     }
 }

@@ -7,14 +7,15 @@ use App\Models\License;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
-class GenerateLicenseKeys extends Command
+class MediNextLicense extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'license:generate-keys 
+    protected $signature = 'medinext:license
+                            {action : Action to perform (generate, validate, status)}
                             {--count=1 : Number of license keys to generate}
                             {--strategy=standard : Generation strategy (standard, compact, segmented, custom)}
                             {--prefix=MEDI : License key prefix}
@@ -31,12 +32,30 @@ class GenerateLicenseKeys extends Command
      *
      * @var string
      */
-    protected $description = 'Generate unique license keys using various strategies';
+    protected $description = 'Manage MediNext EMR license keys and validation';
 
     /**
      * Execute the console command.
      */
     public function handle()
+    {
+        $action = $this->argument('action');
+
+        switch ($action) {
+            case 'generate':
+                return $this->generateLicenseKeys();
+            case 'validate':
+                return $this->validateLicenseKeys();
+            case 'status':
+                return $this->showStatus();
+            default:
+                $this->error("Invalid action: {$action}");
+                $this->info('Valid actions: generate, validate, status');
+                return Command::FAILURE;
+        }
+    }
+
+    private function generateLicenseKeys(): int
     {
         $count = (int) $this->option('count');
         $strategy = $this->option('strategy');
@@ -55,7 +74,7 @@ class GenerateLicenseKeys extends Command
         if (!in_array($strategy, $validStrategies)) {
             $this->error("Invalid strategy: {$strategy}");
             $this->info("Valid strategies: " . implode(', ', $validStrategies));
-            return 1;
+            return Command::FAILURE;
         }
 
         // Build options
@@ -64,10 +83,10 @@ class GenerateLicenseKeys extends Command
         if ($dryRun) {
             $this->info("DRY RUN - Would generate {$count} license key(s) with strategy: {$strategy}");
             $this->displayOptions($options);
-            return 0;
+            return Command::SUCCESS;
         }
 
-        $this->info("Generating {$count} license key(s) with strategy: {$strategy}");
+        $this->info("🔑 Generating {$count} MediNext EMR license key(s) with strategy: {$strategy}");
 
         try {
             $startTime = microtime(true);
@@ -81,7 +100,7 @@ class GenerateLicenseKeys extends Command
             $endTime = microtime(true);
             $duration = round($endTime - $startTime, 2);
 
-            $this->info("Successfully generated " . count($keys) . " license key(s) in {$duration} seconds");
+            $this->info("✅ Successfully generated " . count($keys) . " license key(s) in {$duration} seconds");
 
             // Display generated keys
             $this->displayGeneratedKeys($keys);
@@ -97,7 +116,7 @@ class GenerateLicenseKeys extends Command
             }
 
             // Log the generation
-            Log::info('License keys generated via console command', [
+            Log::info('MediNext EMR license keys generated via console command', [
                 'count' => count($keys),
                 'strategy' => $strategy,
                 'options' => $options,
@@ -105,17 +124,114 @@ class GenerateLicenseKeys extends Command
                 'user' => 'console'
             ]);
 
-            return 0;
+            return Command::SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error("Failed to generate license keys: " . $e->getMessage());
-            Log::error('Failed to generate license keys via console command', [
+            $this->error("❌ Failed to generate license keys: " . $e->getMessage());
+            Log::error('Failed to generate MediNext EMR license keys via console command', [
                 'error' => $e->getMessage(),
                 'count' => $count,
                 'strategy' => $strategy,
                 'options' => $options
             ]);
-            return 1;
+            return Command::FAILURE;
+        }
+    }
+
+    private function validateLicenseKeys(): int
+    {
+        $this->info('🔍 Validating MediNext EMR License Keys...');
+        $this->newLine();
+
+        try {
+            // Get all licenses from database
+            $licenses = License::all();
+            
+            if ($licenses->isEmpty()) {
+                $this->info('No license keys found in database.');
+                return Command::SUCCESS;
+            }
+
+            $validCount = 0;
+            $invalidCount = 0;
+            $expiredCount = 0;
+            $activeCount = 0;
+
+            $this->info('Validating ' . $licenses->count() . ' license key(s)...');
+            $this->newLine();
+
+            foreach ($licenses as $license) {
+                $isValid = LicenseKeyGenerator::validateFormat($license->license_key, 'standard');
+                $isExpired = $license->expires_at && $license->expires_at->isPast();
+                $isActive = $license->is_active;
+
+                if ($isValid) {
+                    $validCount++;
+                    $status = $isExpired ? 'EXPIRED' : ($isActive ? 'ACTIVE' : 'INACTIVE');
+                    $this->line("✅ {$license->license_key} - {$status}");
+                } else {
+                    $invalidCount++;
+                    $this->line("❌ {$license->license_key} - INVALID FORMAT");
+                }
+
+                if ($isExpired) {
+                    $expiredCount++;
+                } elseif ($isActive) {
+                    $activeCount++;
+                }
+            }
+
+            $this->newLine();
+            $this->info('📊 Validation Summary:');
+            $this->line("  • Valid Keys: {$validCount}");
+            $this->line("  • Invalid Keys: {$invalidCount}");
+            $this->line("  • Active Keys: {$activeCount}");
+            $this->line("  • Expired Keys: {$expiredCount}");
+
+            return $invalidCount > 0 ? Command::FAILURE : Command::SUCCESS;
+
+        } catch (\Exception $e) {
+            $this->error('❌ Failed to validate license keys: ' . $e->getMessage());
+            return Command::FAILURE;
+        }
+    }
+
+    private function showStatus(): int
+    {
+        $this->info('📊 MediNext EMR License Status');
+        $this->info('==============================');
+        $this->newLine();
+
+        try {
+            $totalLicenses = License::count();
+            $activeLicenses = License::where('is_active', true)->count();
+            $expiredLicenses = License::where('expires_at', '<', now())->count();
+            $trialLicenses = License::where('type', 'trial')->count();
+            $fullLicenses = License::where('type', 'full')->count();
+
+            $this->info("🔑 Total Licenses: {$totalLicenses}");
+            $this->info("✅ Active Licenses: {$activeLicenses}");
+            $this->info("⏰ Expired Licenses: {$expiredLicenses}");
+            $this->info("🧪 Trial Licenses: {$trialLicenses}");
+            $this->info("💎 Full Licenses: {$fullLicenses}");
+            $this->newLine();
+
+            if ($totalLicenses > 0) {
+                $this->info('📋 License Details:');
+                $licenses = License::with('clinic')->get();
+                foreach ($licenses as $license) {
+                    $clinicName = $license->clinic ? $license->clinic->name : 'Unassigned';
+                    $status = $license->is_active ? 'ACTIVE' : 'INACTIVE';
+                    $expiry = $license->expires_at ? $license->expires_at->format('Y-m-d') : 'Never';
+                    $this->line("   • {$license->license_key} - {$clinicName} - {$status} - Expires: {$expiry}");
+                }
+            }
+
+            return Command::SUCCESS;
+
+        } catch (\Exception $e) {
+            $this->error('❌ Failed to get license status: ' . $e->getMessage());
+            return Command::FAILURE;
         }
     }
 
@@ -171,7 +287,7 @@ class GenerateLicenseKeys extends Command
      */
     protected function displayGeneratedKeys(array $keys): void
     {
-        $this->info("\nGenerated License Keys:");
+        $this->info("\n🔑 Generated MediNext EMR License Keys:");
         $this->line(str_repeat('-', 50));
 
         foreach ($keys as $index => $key) {
@@ -186,7 +302,7 @@ class GenerateLicenseKeys extends Command
      */
     protected function validateKeys(array $keys, string $strategy): void
     {
-        $this->info("\nValidating generated keys...");
+        $this->info("\n🔍 Validating generated keys...");
         
         $validCount = 0;
         $invalidKeys = [];
@@ -215,7 +331,7 @@ class GenerateLicenseKeys extends Command
     protected function saveToFile(array $keys, string $outputFile): void
     {
         try {
-            $content = "# Generated License Keys\n";
+            $content = "# MediNext EMR Generated License Keys\n";
             $content .= "# Generated at: " . now()->toDateTimeString() . "\n";
             $content .= "# Count: " . count($keys) . "\n\n";
 
@@ -226,7 +342,7 @@ class GenerateLicenseKeys extends Command
             file_put_contents($outputFile, $content);
             $this->info("✅ License keys saved to: {$outputFile}");
         } catch (\Exception $e) {
-            $this->error("Failed to save keys to file: " . $e->getMessage());
+            $this->error("❌ Failed to save keys to file: " . $e->getMessage());
         }
     }
 }

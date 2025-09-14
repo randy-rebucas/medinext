@@ -20,10 +20,12 @@ class DashboardController extends Controller
      */
     public function index(Request $request): Response
     {
+        $this->logWebRequest('Dashboard Access', ['action' => 'index']);
+        
         $user = $request->user();
 
         // Get user's clinic and role from the pivot table
-        $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
+        $userClinicRole = $this->getUserClinicRole($request);
 
         if (!$userClinicRole) {
             // If no clinic/role found, return with default data
@@ -68,17 +70,20 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get dashboard statistics based on user role and clinic
+     * Get dashboard statistics based on user role and clinic with caching
      */
     private function getDashboardStats($clinicId, $role)
     {
-        $today = Carbon::today();
-        $yesterday = Carbon::yesterday();
-        $thisMonth = Carbon::now()->startOfMonth();
-        $lastMonth = Carbon::now()->subMonth()->startOfMonth();
-        $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
+        $cacheKey = "dashboard_stats_clinic_{$clinicId}_role_{$role}";
+        
+        return $this->remember($cacheKey, 15, function () use ($clinicId, $role) {
+            $today = Carbon::today();
+            $yesterday = Carbon::yesterday();
+            $thisMonth = Carbon::now()->startOfMonth();
+            $lastMonth = Carbon::now()->subMonth()->startOfMonth();
+            $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
 
-        try {
+            try {
             // Base statistics that apply to all roles
             $stats = [
                 'totalUsers' => 0,
@@ -154,7 +159,8 @@ class DashboardController extends Controller
                 break;
         }
 
-        return $stats;
+            return $stats;
+        });
     }
 
     /**

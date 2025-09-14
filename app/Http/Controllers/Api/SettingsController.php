@@ -76,7 +76,7 @@ class SettingsController extends BaseController
             ], 'Settings retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -175,7 +175,7 @@ class SettingsController extends BaseController
             ], 'Settings updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -242,7 +242,7 @@ class SettingsController extends BaseController
             return $this->successResponse($clinicSettings, 'Clinic settings retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -336,7 +336,7 @@ class SettingsController extends BaseController
             ], 'Clinic settings updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -408,7 +408,7 @@ class SettingsController extends BaseController
             return $this->successResponse($userSettings, 'User settings retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -509,7 +509,7 @@ class SettingsController extends BaseController
             ], 'User settings updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -573,7 +573,7 @@ class SettingsController extends BaseController
             return $this->successResponse($backupSettings, 'Backup settings retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -654,7 +654,7 @@ class SettingsController extends BaseController
             return $this->successResponse($backupData, 'Backup created successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -741,7 +741,7 @@ class SettingsController extends BaseController
             return $this->successResponse($exportData, 'Settings exported successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

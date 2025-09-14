@@ -22,6 +22,8 @@ class LicenseController extends Controller
      */
     public function showActivation(): Response
     {
+        $this->logWebRequest('License Activation Access', ['action' => 'showActivation']);
+        
         $user = Auth::user();
 
         return Inertia::render('license/activate', [

@@ -135,7 +135,7 @@ class AuthController extends BaseController
             ], 'Login successful');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -233,7 +233,7 @@ class AuthController extends BaseController
             ], 'Registration successful', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -268,7 +268,7 @@ class AuthController extends BaseController
 
             return $this->successResponse(null, 'Logout successful');
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -319,7 +319,7 @@ class AuthController extends BaseController
             ], 'Token refreshed successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -379,7 +379,7 @@ class AuthController extends BaseController
             ], 'User information retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -445,7 +445,7 @@ class AuthController extends BaseController
             ], 'Profile updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -515,7 +515,7 @@ class AuthController extends BaseController
             return $this->successResponse(null, 'Password updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -573,7 +573,7 @@ class AuthController extends BaseController
             return $this->errorResponse('Unable to send reset link', null, 500);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -646,7 +646,7 @@ class AuthController extends BaseController
             return $this->errorResponse('Unable to reset password', null, 500);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -712,7 +712,7 @@ class AuthController extends BaseController
             return $this->successResponse(null, 'Email verified successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

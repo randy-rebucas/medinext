@@ -105,7 +105,7 @@ class DoctorController extends BaseController
                 return $this->errorResponse('No clinic access', null, 403);
             }
 
-            $query = Doctor::with(['user', 'clinic'])
+            $query = Doctor::with(['user:id,name,email', 'clinic:id,name'])
                 ->where('clinic_id', $currentClinic->id);
 
             // Apply filters
@@ -184,15 +184,19 @@ class DoctorController extends BaseController
         try {
             $validator = Validator::make($request->all(), [
                 'user_id' => 'required|exists:users,id',
-                'specialization' => 'required|string|max:255',
-                'license_number' => 'required|string|max:100|unique:doctors,license_number',
+                'specialization' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+                'license_number' => 'required|string|max:100|unique:doctors,license_number|alpha_num',
                 'experience_years' => 'nullable|integer|min:0|max:50',
-                'consultation_fee' => 'nullable|numeric|min:0',
+                'consultation_fee' => 'nullable|numeric|min:0|max:999999.99',
                 'is_available' => 'nullable|boolean'
+            ], [
+                'specialization.regex' => 'Specialization can only contain letters, spaces, hyphens, apostrophes, and periods.',
+                'license_number.alpha_num' => 'License number can only contain letters and numbers.',
+                'consultation_fee.max' => 'Consultation fee cannot exceed 999,999.99.',
             ]);
 
             if ($validator->fails()) {
-                return $this->errorResponse('Validation failed', $validator->errors(), 422);
+                return $this->validationErrorResponse($validator->errors());
             }
 
             $doctorData = $request->all();
@@ -241,7 +245,7 @@ class DoctorController extends BaseController
     public function show($id): JsonResponse
     {
         try {
-            $doctor = Doctor::with(['user', 'clinic'])->findOrFail($id);
+            $doctor = Doctor::with(['user:id,name,email', 'clinic:id,name'])->findOrFail($id);
             return $this->successResponse($doctor, 'Doctor retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Doctor not found', null, 404);
@@ -308,7 +312,7 @@ class DoctorController extends BaseController
             ]);
 
             if ($validator->fails()) {
-                return $this->errorResponse('Validation failed', $validator->errors(), 422);
+                return $this->validationErrorResponse($validator->errors());
             }
 
             $doctor->update($request->all());
@@ -456,7 +460,7 @@ class DoctorController extends BaseController
                 return $this->errorResponse('Search query is required', null, 400);
             }
 
-            $doctors = Doctor::with(['user', 'clinic'])
+            $doctors = Doctor::with(['user:id,name,email', 'clinic:id,name'])
                 ->where('specialization', 'like', "%{$query}%")
                 ->orWhere('license_number', 'like', "%{$query}%")
                 ->orWhereHas('user', function ($q) use ($query) {
@@ -547,7 +551,7 @@ class DoctorController extends BaseController
             ]);
 
             if ($validator->fails()) {
-                return $this->errorResponse('Validation failed', $validator->errors(), 422);
+                return $this->validationErrorResponse($validator->errors());
             }
 
             $doctor = Doctor::findOrFail($id);

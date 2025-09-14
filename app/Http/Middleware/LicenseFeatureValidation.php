@@ -74,6 +74,7 @@ class LicenseFeatureValidation
             'sanctum/*',
             'health',
             'version',
+            'onboarding.*',
         ];
 
         $currentRoute = $request->route()?->getName() ?? $request->path();

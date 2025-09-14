@@ -97,7 +97,7 @@ class PermissionController extends BaseController
             return $this->successResponse($permissions, 'Permissions retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -175,7 +175,7 @@ class PermissionController extends BaseController
             return $this->successResponse(['permission' => $permission], 'Permission created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -221,7 +221,7 @@ class PermissionController extends BaseController
             return $this->successResponse(['permission' => $permission], 'Permission retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -294,7 +294,7 @@ class PermissionController extends BaseController
             return $this->successResponse(['permission' => $permission], 'Permission updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -341,7 +341,7 @@ class PermissionController extends BaseController
             return $this->successResponse(null, 'Permission deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -401,7 +401,7 @@ class PermissionController extends BaseController
             return $this->successResponse(['modules' => $modules], 'Permission modules retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

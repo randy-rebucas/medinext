@@ -145,7 +145,7 @@ class MedrepController extends BaseController
             return $this->paginatedResponse($medreps, 'Medreps retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -248,7 +248,7 @@ class MedrepController extends BaseController
             ], 'Medrep created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -332,7 +332,7 @@ class MedrepController extends BaseController
             ], 'Medrep retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -368,7 +368,7 @@ class MedrepController extends BaseController
             ], 'Medrep updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -392,7 +392,7 @@ class MedrepController extends BaseController
             return $this->successResponse(null, 'Medrep deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -503,7 +503,7 @@ class MedrepController extends BaseController
             return $this->paginatedResponse($visits, 'Medrep visits retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -548,7 +548,7 @@ class MedrepController extends BaseController
             ], 'Medrep visit scheduled successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -588,7 +588,7 @@ class MedrepController extends BaseController
             ], 'Medrep visit updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -622,7 +622,7 @@ class MedrepController extends BaseController
             ], 'Medrep visit cancelled successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -648,7 +648,7 @@ class MedrepController extends BaseController
             return $this->paginatedResponse($visits, 'All medrep visits retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -676,7 +676,7 @@ class MedrepController extends BaseController
             ], 'Upcoming medrep visits retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -786,7 +786,7 @@ class MedrepController extends BaseController
             return $this->successResponse($statistics, 'Medical representative statistics retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -911,7 +911,7 @@ class MedrepController extends BaseController
             return $this->successResponse($searchResults, 'Search results retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1028,7 +1028,7 @@ class MedrepController extends BaseController
             return $this->successResponse($companies, 'Companies list retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

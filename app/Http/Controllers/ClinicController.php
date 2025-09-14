@@ -16,10 +16,13 @@ class ClinicController extends Controller
      */
     public function index(Request $request)
     {
+        $this->logWebRequest('Clinic Management Access', ['action' => 'index']);
+        
         $user = $request->user();
 
         // Check if user has permission to view clinics
         if (!$user->hasAnyPermissionInClinic(['clinics.view', 'clinics.manage'], 1)) {
+            $this->logSecurityEvent('Unauthorized clinic access attempt', ['user_id' => $user->id]);
             abort(403, 'Insufficient permissions to view clinics.');
         }
 
@@ -34,10 +37,13 @@ class ClinicController extends Controller
      */
     public function create(Request $request)
     {
+        $this->logWebRequest('Clinic Creation Access', ['action' => 'create']);
+        
         $user = $request->user();
 
         // Check if user has permission to create clinics
         if (!$user->hasAnyPermissionInClinic(['clinics.create', 'clinics.manage'], 1)) {
+            $this->logSecurityEvent('Unauthorized clinic creation attempt', ['user_id' => $user->id]);
             abort(403, 'Insufficient permissions to create clinics.');
         }
 

@@ -155,7 +155,7 @@ class ActivityLogController extends BaseController
             return $this->successResponse($activityLogs, 'Activity logs retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -201,7 +201,7 @@ class ActivityLogController extends BaseController
             return $this->successResponse(['activity_log' => $activityLog], 'Activity log retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -289,7 +289,7 @@ class ActivityLogController extends BaseController
             return $this->successResponse($activityLogs, 'User activity logs retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -375,7 +375,7 @@ class ActivityLogController extends BaseController
             return $this->successResponse($activityLogs, 'Module activity logs retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -498,7 +498,7 @@ class ActivityLogController extends BaseController
             ], 'Activity logs exported successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

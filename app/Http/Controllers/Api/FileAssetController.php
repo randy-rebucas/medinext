@@ -172,7 +172,7 @@ class FileAssetController extends BaseController
             return $this->paginatedResponse($fileAssets, 'File assets retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -294,7 +294,7 @@ class FileAssetController extends BaseController
             ], 'File uploaded successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -383,7 +383,7 @@ class FileAssetController extends BaseController
             ], 'File asset retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -414,7 +414,7 @@ class FileAssetController extends BaseController
             ], 'File asset updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -438,7 +438,7 @@ class FileAssetController extends BaseController
             return $this->successResponse(null, 'File asset deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -509,7 +509,7 @@ class FileAssetController extends BaseController
             ], 'Download URL generated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -593,7 +593,7 @@ class FileAssetController extends BaseController
             ], 'Preview URL generated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -652,7 +652,7 @@ class FileAssetController extends BaseController
             ], 'File uploaded successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -680,7 +680,7 @@ class FileAssetController extends BaseController
             ], 'File categories retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -779,7 +779,7 @@ class FileAssetController extends BaseController
             return $this->successResponse($shareData, 'File share created successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -897,7 +897,7 @@ class FileAssetController extends BaseController
             return $this->successResponse($storageUsage, 'Storage usage retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 }

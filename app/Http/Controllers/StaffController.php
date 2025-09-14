@@ -19,9 +19,21 @@ class StaffController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $clinicId = $request->user()->current_clinic_id;
+            $this->logWebRequest('Staff Management Access', ['action' => 'index']);
+            
+            $user = $request->user();
+            if (!$user) {
+                $this->logSecurityEvent('Unauthenticated staff access attempt');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
+            $clinicId = $user->current_clinic_id;
             
             if (!$clinicId) {
+                $this->logSecurityEvent('No clinic selected', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'No clinic selected'
@@ -60,10 +72,10 @@ class StaffController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'StaffController::index');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve staff members',
-                'error' => $e->getMessage()
+                'message' => 'Failed to retrieve staff members. Please try again.'
             ], 500);
         }
     }
@@ -136,10 +148,10 @@ class StaffController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'StaffController::store');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create staff member',
-                'error' => $e->getMessage()
+                'message' => 'Failed to create staff member. Please try again.'
             ], 500);
         }
     }
@@ -214,10 +226,10 @@ class StaffController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'StaffController::update');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update staff member',
-                'error' => $e->getMessage()
+                'message' => 'Failed to update staff member. Please try again.'
             ], 500);
         }
     }
@@ -264,10 +276,10 @@ class StaffController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'StaffController::destroy');
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to remove staff member',
-                'error' => $e->getMessage()
+                'message' => 'Failed to remove staff member. Please try again.'
             ], 500);
         }
     }

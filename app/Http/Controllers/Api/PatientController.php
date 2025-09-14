@@ -131,7 +131,7 @@ class PatientController extends BaseController
             ]);
 
             $query = Patient::where('clinic_id', $currentClinic->id)
-                ->with(['clinic']);
+                ->with(['clinic:id,name']);
 
             // Search functionality
             if ($request->has('search')) {
@@ -178,7 +178,7 @@ class PatientController extends BaseController
             return $this->paginatedResponse($patients, 'Patients retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -243,16 +243,22 @@ class PatientController extends BaseController
             }
 
             $validator = Validator::make($request->all(), [
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
-                'dob' => 'required|date|before:today',
+                'first_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+                'last_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+                'dob' => 'required|date|before:today|after:1900-01-01',
                 'sex' => 'required|in:male,female,other',
                 'contact' => 'nullable|array',
-                'contact.phone' => 'nullable|string|max:20',
-                'contact.email' => 'nullable|email|max:255',
+                'contact.phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                'contact.email' => 'nullable|email:rfc,dns|max:255',
                 'contact.address' => 'nullable|string|max:500',
                 'allergies' => 'nullable|array',
                 'consents' => 'nullable|array',
+            ], [
+                'first_name.regex' => 'First name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+                'last_name.regex' => 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+                'dob.after' => 'Date of birth must be after 1900.',
+                'contact.phone.regex' => 'Phone number format is invalid.',
+                'contact.email.email' => 'Please provide a valid email address.',
             ]);
 
             if ($validator->fails()) {
@@ -271,7 +277,7 @@ class PatientController extends BaseController
             ], 'Patient created successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -359,7 +365,7 @@ class PatientController extends BaseController
             ], 'Patient retrieved successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -457,7 +463,7 @@ class PatientController extends BaseController
             ], 'Patient updated successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -522,7 +528,7 @@ class PatientController extends BaseController
             return $this->successResponse(null, 'Patient deleted successfully');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -620,7 +626,7 @@ class PatientController extends BaseController
             return $this->paginatedResponse($appointments, 'Patient appointments retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -736,7 +742,7 @@ class PatientController extends BaseController
             return $this->paginatedResponse($encounters, 'Patient encounters retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -852,7 +858,7 @@ class PatientController extends BaseController
             return $this->paginatedResponse($prescriptions, 'Patient prescriptions retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1009,7 +1015,7 @@ class PatientController extends BaseController
             return $this->paginatedResponse($labResults, 'Patient lab results retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1124,7 +1130,7 @@ class PatientController extends BaseController
             ], 'Medical history retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1264,7 +1270,7 @@ class PatientController extends BaseController
             return $this->paginatedResponse($fileAssets, 'Patient files retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1384,7 +1390,7 @@ class PatientController extends BaseController
             ], 'File uploaded successfully', 201);
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1481,7 +1487,7 @@ class PatientController extends BaseController
             ], 'Search results retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1589,7 +1595,7 @@ class PatientController extends BaseController
             ], 'Recent patients retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1714,7 +1720,7 @@ class PatientController extends BaseController
             ], 'Export data prepared');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
@@ -1908,7 +1914,7 @@ class PatientController extends BaseController
             ], 'Patient reports retrieved');
 
         } catch (\Exception $e) {
-            return $this->handleException($e);
+            return $this->handleApiException($e);
         }
     }
 
