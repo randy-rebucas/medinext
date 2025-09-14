@@ -129,17 +129,17 @@ class SearchController extends Controller
                 ->where(function ($q) use ($query) {
                     $q->where('first_name', 'like', "%{$query}%")
                       ->orWhere('last_name', 'like', "%{$query}%")
-                      ->orWhere('patient_id', 'like', "%{$query}%")
+                      ->orWhere('code', 'like', "%{$query}%")
                       ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
                 })
-                ->select('id', 'first_name', 'last_name', 'patient_id', 'dob', 'sex')
+                ->select('id', 'first_name', 'last_name', 'code', 'dob', 'sex')
                 ->limit(20)
                 ->get()
                 ->map(function ($patient) {
                     return [
                         'id' => $patient->id,
                         'name' => $patient->first_name . ' ' . $patient->last_name,
-                        'patient_id' => $patient->patient_id,
+                        'patient_id' => $patient->code,
                         'dob' => $patient->dob,
                         'sex' => $patient->sex,
                         'url' => "/patients/{$patient->id}",
@@ -307,9 +307,9 @@ class SearchController extends Controller
                 ->where(function ($q) use ($query) {
                     $q->where('first_name', 'like', "%{$query}%")
                       ->orWhere('last_name', 'like', "%{$query}%")
-                      ->orWhere('patient_id', 'like', "%{$query}%");
+                      ->orWhere('code', 'like', "%{$query}%");
                 })
-                ->select('id', 'first_name', 'last_name', 'patient_id')
+                ->select('id', 'first_name', 'last_name', 'code')
                 ->limit(10)
                 ->get()
                 ->map(function ($patient) {
@@ -317,7 +317,7 @@ class SearchController extends Controller
                         'type' => 'patient',
                         'id' => $patient->id,
                         'title' => $patient->first_name . ' ' . $patient->last_name,
-                        'description' => 'Patient - ' . $patient->patient_id,
+                        'description' => 'Patient - ' . $patient->code,
                         'url' => "/patients/{$patient->id}",
                         'score' => 1.0
                     ];

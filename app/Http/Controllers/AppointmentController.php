@@ -328,13 +328,13 @@ class AppointmentController extends Controller
                 ->map(function ($appointment) {
                     return [
                         'id' => $appointment->id,
-                        'title' => $appointment->patient->name . ' - ' . $appointment->doctor->user->name,
+                        'title' => $appointment->patient->full_name . ' - ' . $appointment->doctor->user->name,
                         'start' => $appointment->start_at,
                         'end' => $appointment->end_at,
                         'status' => $appointment->status,
                         'type' => $appointment->type,
                         'room' => $appointment->room->name ?? 'No Room',
-                        'patient' => $appointment->patient->name,
+                        'patient' => $appointment->patient->full_name,
                         'doctor' => $appointment->doctor->user->name,
                         'reason' => $appointment->reason,
                         'notes' => $appointment->notes,
@@ -367,8 +367,8 @@ class AppointmentController extends Controller
             ->map(function ($appointment) {
                 return [
                     'id' => $appointment->id,
-                    'patient_name' => $appointment->patient->name,
-                    'patient_id' => $appointment->patient->patient_id,
+                    'patient_name' => $appointment->patient->full_name,
+                    'patient_id' => $appointment->patient->code,
                     'patient_email' => $appointment->patient->contact['email'] ?? '',
                     'patient_phone' => $appointment->patient->contact['phone'] ?? '',
                     'doctor_name' => $appointment->doctor->user->name,
@@ -400,8 +400,8 @@ class AppointmentController extends Controller
 
         return [
             'id' => $appointment->id,
-            'patient_name' => $appointment->patient->name,
-            'patient_id' => $appointment->patient->patient_id,
+            'patient_name' => $appointment->patient->full_name,
+            'patient_id' => $appointment->patient->code,
             'patient_email' => $appointment->patient->contact['email'] ?? '',
             'patient_phone' => $appointment->patient->contact['phone'] ?? '',
             'doctor_name' => $appointment->doctor->user->name,
@@ -429,12 +429,12 @@ class AppointmentController extends Controller
     private function getPatients($clinicId)
     {
         return Patient::where('clinic_id', $clinicId)
-            ->get(['id', 'name', 'patient_id', 'contact'])
+            ->get(['id', 'first_name', 'last_name', 'code', 'contact'])
             ->map(function ($patient) {
                 return [
                     'id' => $patient->id,
-                    'name' => $patient->name,
-                    'patient_id' => $patient->patient_id,
+                    'name' => $patient->first_name . ' ' . $patient->last_name,
+                    'patient_id' => $patient->code,
                     'email' => $patient->contact['email'] ?? '',
                     'phone' => $patient->contact['phone'] ?? '',
                 ];
@@ -464,13 +464,13 @@ class AppointmentController extends Controller
     private function getRooms($clinicId)
     {
         return Room::where('clinic_id', $clinicId)
-            ->get(['id', 'name', 'room_number', 'room_type'])
+            ->get(['id', 'name', 'type'])
             ->map(function ($room) {
                 return [
                     'id' => $room->id,
                     'name' => $room->name,
-                    'room_number' => $room->room_number,
-                    'room_type' => $room->room_type,
+                    'room_number' => $room->name, // Use name as room_number since room_number doesn't exist
+                    'room_type' => $room->type,
                 ];
             });
     }

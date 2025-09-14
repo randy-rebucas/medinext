@@ -10,13 +10,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class StaffController extends Controller
 {
     /**
      * Display a listing of staff members
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         try {
             $this->logWebRequest('Staff Management Access', ['action' => 'index']);
@@ -24,20 +26,14 @@ class StaffController extends Controller
             $user = $request->user();
             if (!$user) {
                 $this->logSecurityEvent('Unauthenticated staff access attempt');
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not authenticated'
-                ], 401);
+                return redirect()->route('login');
             }
 
             $clinicId = $user->current_clinic_id;
             
             if (!$clinicId) {
                 $this->logSecurityEvent('No clinic selected', ['user_id' => $user->id]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No clinic selected'
-                ], 400);
+                return redirect()->route('dashboard')->with('error', 'No clinic selected');
             }
 
             $query = User::whereHas('clinics', function ($q) use ($clinicId) {
@@ -66,17 +62,70 @@ class StaffController extends Controller
 
             $staff = $query->paginate($request->get('per_page', 15));
 
-            return response()->json([
-                'success' => true,
-                'data' => $staff
+            // Get roles for the dropdown
+            $roles = Role::where('is_system_role', false)->get();
+
+            // Get user permissions
+            $permissions = $this->getUserPermissions($user->roles->first()->name ?? 'user');
+
+            return Inertia::render('admin/staff', [
+                'staff' => $staff,
+                'roles' => $roles,
+                'permissions' => $permissions,
+                'filters' => [
+                    'search' => $request->search,
+                    'role' => $request->role,
+                    'status' => $request->status,
+                ]
             ]);
 
         } catch (\Exception $e) {
             $this->handleException($e, 'StaffController::index');
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve staff members. Please try again.'
-            ], 500);
+            return redirect()->route('dashboard')->with('error', 'Failed to load staff management. Please try again.');
+        }
+    }
+
+    /**
+     * Display the specified staff member
+     */
+    public function show(Request $request, int $id): Response
+    {
+        try {
+            $this->logWebRequest('Staff Management Access', ['action' => 'show', 'staff_id' => $id]);
+            
+            $user = $request->user();
+            $clinicId = $user->current_clinic_id;
+            
+            if (!$clinicId) {
+                return redirect()->route('dashboard')->with('error', 'No clinic selected');
+            }
+
+            // Find staff member in current clinic
+            $staff = User::whereHas('clinics', function ($q) use ($clinicId) {
+                $q->where('clinic_id', $clinicId);
+            })->with(['roles', 'clinics'])->findOrFail($id);
+
+            // Get roles for the dropdown
+            $roles = Role::where('is_system_role', false)->get();
+
+            // Get user permissions
+            $permissions = $this->getUserPermissions($user->roles->first()->name ?? 'user');
+
+            return Inertia::render('admin/staff', [
+                'staff' => collect([$staff]),
+                'selectedStaff' => $staff,
+                'roles' => $roles,
+                'permissions' => $permissions,
+                'filters' => [
+                    'search' => '',
+                    'role' => '',
+                    'status' => '',
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            $this->handleException($e, 'StaffController::show');
+            return redirect()->route('admin.staff')->with('error', 'Staff member not found.');
         }
     }
 
@@ -282,5 +331,46 @@ class StaffController extends Controller
                 'message' => 'Failed to remove staff member. Please try again.'
             ], 500);
         }
+    }
+
+    /**
+     * Get user permissions based on role
+     */
+    private function getUserPermissions($role)
+    {
+        $permissions = [
+            'superadmin' => [
+                'manage_users', 'manage_clinics', 'manage_licenses', 'view_analytics',
+                'manage_settings', 'view_activity_logs', 'manage_roles', 'manage_permissions',
+                'view_system_health', 'manage_backups', 'view_financial_reports'
+            ],
+            'admin' => [
+                'manage_staff', 'manage_doctors', 'view_appointments', 'view_patients',
+                'view_reports', 'manage_settings', 'view_analytics', 'manage_clinic_settings',
+                'view_financial_reports', 'manage_rooms', 'manage_schedules'
+            ],
+            'doctor' => [
+                'work_on_queue', 'view_appointments', 'manage_prescriptions', 'view_medical_records',
+                'view_patients', 'view_analytics', 'manage_encounters', 'view_lab_results',
+                'manage_treatment_plans', 'view_patient_history', 'manage_soap_notes'
+            ],
+            'receptionist' => [
+                'search_patients', 'manage_appointments', 'manage_queue', 'register_patients',
+                'view_encounters', 'view_reports', 'manage_patient_info', 'view_appointments',
+                'manage_check_in', 'view_patient_history', 'manage_insurance'
+            ],
+            'patient' => [
+                'book_appointments', 'view_medical_records', 'view_prescriptions', 'view_lab_results',
+                'view_appointments', 'update_profile', 'download_documents', 'view_billing',
+                'manage_notifications', 'view_insurance', 'schedule_follow_ups'
+            ],
+            'medrep' => [
+                'manage_products', 'schedule_meetings', 'track_interactions', 'manage_doctors',
+                'view_analytics', 'manage_samples', 'view_meeting_history', 'manage_territory',
+                'view_performance_metrics', 'manage_marketing_materials', 'track_commitments'
+            ]
+        ];
+
+        return $permissions[$role] ?? [];
     }
 }

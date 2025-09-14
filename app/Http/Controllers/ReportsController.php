@@ -216,15 +216,15 @@ class ReportsController extends Controller
             })
             ->count();
 
-        // Revenue analytics (assuming appointments have fees)
+        // Revenue analytics (using total_amount from appointments)
         $revenueThisMonth = Appointment::where('clinic_id', $clinicId)
             ->whereBetween('start_at', [$startOfMonth, $endOfMonth])
             ->where('status', 'completed')
-            ->sum('consultation_fee') ?? 0;
+            ->sum('total_amount') ?? 0;
         $revenueLastMonth = Appointment::where('clinic_id', $clinicId)
             ->whereBetween('start_at', [$startOfLastMonth, $endOfLastMonth])
             ->where('status', 'completed')
-            ->sum('consultation_fee') ?? 0;
+            ->sum('total_amount') ?? 0;
 
         // Appointment status breakdown
         $appointmentStatuses = Appointment::where('clinic_id', $clinicId)
@@ -388,20 +388,20 @@ class ReportsController extends Controller
             ->get();
 
         $completedAppointments = $appointments->where('status', 'completed');
-        $totalRevenue = $completedAppointments->sum('consultation_fee') ?? 0;
+        $totalRevenue = $completedAppointments->sum('total_amount') ?? 0;
 
         $revenueByDoctor = $completedAppointments->groupBy('doctor_id')->map(function($doctorAppointments) {
             return [
                 'doctor_name' => $doctorAppointments->first()->doctor->user->name,
                 'appointments_count' => $doctorAppointments->count(),
-                'total_revenue' => $doctorAppointments->sum('consultation_fee') ?? 0,
+                'total_revenue' => $doctorAppointments->sum('total_amount') ?? 0,
             ];
         })->sortByDesc('total_revenue');
 
         $dailyRevenue = $completedAppointments->groupBy(function($appointment) {
             return $appointment->start_at->format('Y-m-d');
         })->map(function($dayAppointments) {
-            return $dayAppointments->sum('consultation_fee') ?? 0;
+            return $dayAppointments->sum('total_amount') ?? 0;
         });
 
         return [

@@ -98,7 +98,88 @@ class ClinicSettingsController extends Controller
     }
 
     /**
-     * Update clinic settings
+     * Update clinic settings (Web form submission)
+     */
+    public function update(Request $request)
+    {
+        try {
+            $clinicId = $request->user()->current_clinic_id;
+
+            if (!$clinicId) {
+                return redirect()->back()->with('error', 'No clinic selected');
+            }
+
+            $clinic = Clinic::findOrFail($clinicId);
+
+            // Validate the request
+            $validator = Validator::make($request->all(), [
+                'clinic_name' => 'required|string|max:255',
+                'clinic_code' => 'nullable|string|max:50',
+                'description' => 'nullable|string|max:1000',
+                'phone' => 'nullable|string|max:20',
+                'email' => 'nullable|email|max:255',
+                'address' => 'nullable|string|max:500',
+                'website' => 'nullable|url|max:255',
+                'license' => 'nullable|string|max:100',
+                'opening_time' => 'nullable|date_format:H:i',
+                'closing_time' => 'nullable|date_format:H:i',
+                'working_days' => 'nullable|array',
+                'email_notifications' => 'nullable|boolean',
+                'sms_notifications' => 'nullable|boolean',
+                'online_booking' => 'nullable|boolean',
+                'patient_portal' => 'nullable|boolean',
+            ]);
+
+            if ($validator->fails()) {
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->withInput();
+            }
+
+            // Update clinic basic information
+            $clinic->name = $request->clinic_name;
+            $clinic->address = $request->address;
+            $clinic->phone = $request->phone;
+            $clinic->email = $request->email;
+            $clinic->website = $request->website;
+            $clinic->description = $request->description;
+            $clinic->save();
+
+            // Prepare settings data
+            $settings = [
+                'clinic.clinic_code' => $request->clinic_code,
+                'clinic.license' => $request->license,
+                'clinic.opening_time' => $request->opening_time,
+                'clinic.closing_time' => $request->closing_time,
+                'clinic.working_days' => $request->working_days ?? [],
+                'notifications.email_notifications' => $request->boolean('email_notifications'),
+                'notifications.sms_notifications' => $request->boolean('sms_notifications'),
+                'features.online_booking' => $request->boolean('online_booking'),
+                'features.patient_portal' => $request->boolean('patient_portal'),
+            ];
+
+            // Update settings using the service
+            foreach ($settings as $key => $value) {
+                $group = explode('.', $key)[0] ?? 'general';
+                $type = is_array($value) ? 'json' : (is_bool($value) ? 'boolean' : (is_int($value) ? 'integer' : 'string'));
+
+                $this->settingsService->set($key, $value, $clinicId, $type, $group, "Updated via web form");
+            }
+
+            // Clear cache
+            $this->settingsService->clearCache($clinicId);
+
+            return redirect()->back()->with('success', 'Clinic settings updated successfully');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Failed to update clinic settings: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Update clinic settings (API)
      */
     public function updateSettings(Request $request): JsonResponse
     {

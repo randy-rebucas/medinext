@@ -49,21 +49,12 @@ class RoomController extends Controller
     {
         $rules = [
             'name' => 'required|string|max:255|regex:/^[a-zA-Z0-9\s\-\'\.]+$/',
-            'room_number' => 'required|string|max:50|regex:/^[a-zA-Z0-9\s\-\'\.]+$/',
-            'room_type' => 'required|string|in:consultation,examination,procedure,waiting,office',
-            'capacity' => 'required|integer|min:1|max:100',
-            'equipment' => 'nullable|array',
-            'equipment.*' => 'string|max:255',
-            'is_active' => 'nullable|boolean',
+            'type' => 'required|string|in:consultation,examination,procedure,waiting,office',
         ];
 
         $messages = [
             'name.regex' => 'Room name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods.',
-            'room_number.regex' => 'Room number can only contain letters, numbers, spaces, hyphens, apostrophes, and periods.',
-            'room_type.in' => 'Invalid room type.',
-            'capacity.min' => 'Room capacity must be at least 1.',
-            'capacity.max' => 'Room capacity cannot exceed 100.',
-            'equipment.*.string' => 'Equipment items must be strings.',
+            'type.in' => 'Invalid room type.',
         ];
 
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -101,15 +92,15 @@ class RoomController extends Controller
 
             $clinicId = $userClinicRole->clinic_id;
 
-            // Check for duplicate room number in clinic
+            // Check for duplicate room name in clinic
             $existingRoom = Room::where('clinic_id', $clinicId)
-                ->where('room_number', $request->room_number)
+                ->where('name', $request->name)
                 ->first();
 
             if ($existingRoom) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Room number already exists in this clinic'
+                    'message' => 'Room name already exists in this clinic'
                 ], 422);
             }
 
@@ -117,11 +108,7 @@ class RoomController extends Controller
             $room = Room::create([
                 'clinic_id' => $clinicId,
                 'name' => $request->name,
-                'room_number' => $request->room_number,
-                'room_type' => $request->room_type,
-                'capacity' => $request->capacity,
-                'equipment' => $request->equipment ?? [],
-                'is_active' => $request->is_active ?? true,
+                'type' => $request->type,
             ]);
 
             return response()->json([
@@ -146,21 +133,12 @@ class RoomController extends Controller
     {
         $rules = [
             'name' => 'required|string|max:255|regex:/^[a-zA-Z0-9\s\-\'\.]+$/',
-            'room_number' => 'required|string|max:50|regex:/^[a-zA-Z0-9\s\-\'\.]+$/',
-            'room_type' => 'required|string|in:consultation,examination,procedure,waiting,office',
-            'capacity' => 'required|integer|min:1|max:100',
-            'equipment' => 'nullable|array',
-            'equipment.*' => 'string|max:255',
-            'is_active' => 'nullable|boolean',
+            'type' => 'required|string|in:consultation,examination,procedure,waiting,office',
         ];
 
         $messages = [
             'name.regex' => 'Room name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods.',
-            'room_number.regex' => 'Room number can only contain letters, numbers, spaces, hyphens, apostrophes, and periods.',
-            'room_type.in' => 'Invalid room type.',
-            'capacity.min' => 'Room capacity must be at least 1.',
-            'capacity.max' => 'Room capacity cannot exceed 100.',
-            'equipment.*.string' => 'Equipment items must be strings.',
+            'type.in' => 'Invalid room type.',
         ];
 
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -176,27 +154,23 @@ class RoomController extends Controller
         try {
             $room = Room::findOrFail($id);
 
-            // Check for duplicate room number in clinic (excluding current room)
+            // Check for duplicate room name in clinic (excluding current room)
             $existingRoom = Room::where('clinic_id', $room->clinic_id)
-                ->where('room_number', $request->room_number)
+                ->where('name', $request->name)
                 ->where('id', '!=', $id)
                 ->first();
 
             if ($existingRoom) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Room number already exists in this clinic'
+                    'message' => 'Room name already exists in this clinic'
                 ], 422);
             }
 
             // Update room
             $room->update([
                 'name' => $request->name,
-                'room_number' => $request->room_number,
-                'room_type' => $request->room_type,
-                'capacity' => $request->capacity,
-                'equipment' => $request->equipment ?? [],
-                'is_active' => $request->is_active ?? true,
+                'type' => $request->type,
             ]);
 
             return response()->json([
@@ -276,18 +250,18 @@ class RoomController extends Controller
         
         return $this->remember($cacheKey, 60, function () use ($clinicId) {
             return Room::where('clinic_id', $clinicId)
-                ->orderBy('room_number')
+                ->orderBy('name')
                 ->get()
                 ->map(function ($room) {
                     return [
                         'id' => $room->id,
                         'name' => $room->name,
-                        'room_number' => $room->room_number,
-                        'room_type' => $room->room_type,
-                        'capacity' => $room->capacity,
-                        'equipment' => $room->equipment,
-                        'is_active' => $room->is_active,
-                        'status' => $room->is_active ? 'Active' : 'Inactive',
+                        'room_number' => $room->name, // Use name as room_number since room_number doesn't exist
+                        'room_type' => $room->type,
+                        'capacity' => null, // Not available in current schema
+                        'equipment' => [], // Not available in current schema
+                        'is_active' => true, // Default to active since not tracked in current schema
+                        'status' => 'Active', // Default to active since not tracked in current schema
                         'created_at' => $room->created_at->format('Y-m-d H:i:s'),
                         'updated_at' => $room->updated_at->format('Y-m-d H:i:s'),
                     ];
@@ -305,12 +279,12 @@ class RoomController extends Controller
         return [
             'id' => $room->id,
             'name' => $room->name,
-            'room_number' => $room->room_number,
-            'room_type' => $room->room_type,
-            'capacity' => $room->capacity,
-            'equipment' => $room->equipment,
-            'is_active' => $room->is_active,
-            'status' => $room->is_active ? 'Active' : 'Inactive',
+            'room_number' => $room->name, // Use name as room_number since room_number doesn't exist
+            'room_type' => $room->type,
+            'capacity' => null, // Not available in current schema
+            'equipment' => [], // Not available in current schema
+            'is_active' => true, // Default to active since not tracked in current schema
+            'status' => 'Active', // Default to active since not tracked in current schema
             'created_at' => $room->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $room->updated_at->format('Y-m-d H:i:s'),
         ];

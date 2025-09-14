@@ -5,7 +5,6 @@ import { adminClinicSettings } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { useSettings } from '@/hooks/use-settings';
 import { applyBrandingStyles } from '@/lib/branding-utils';
-import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -127,29 +126,26 @@ export default function ClinicSettings() {
         setErrorMessage('');
 
         try {
-            const response = await axios.put('/api/settings/clinic', formData);
-
-            if (response.data.success) {
-                setSaveStatus('success');
-                setTimeout(() => setSaveStatus('idle'), 3000);
-            } else {
-                setSaveStatus('error');
-                setErrorMessage(response.data.message || 'Failed to save settings');
-            }
+            // Use Inertia's router to submit the form via web route
+            const { router } = await import('@inertiajs/react');
+            
+            router.post('/admin/clinic-settings', formData as Record<string, any>, {
+                onSuccess: () => {
+                    setSaveStatus('success');
+                    setTimeout(() => setSaveStatus('idle'), 3000);
+                },
+                onError: (errors) => {
+                    setSaveStatus('error');
+                    const errorMessages = Object.values(errors).flat();
+                    setErrorMessage(errorMessages.join(', ') || 'Failed to save settings');
+                },
+                onFinish: () => {
+                    setIsSaving(false);
+                }
+            });
         } catch (error: unknown) {
             setSaveStatus('error');
-            if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
-                if (axiosError.response?.data?.errors) {
-                    const errors = Object.values(axiosError.response.data.errors).flat();
-                    setErrorMessage(errors.join(', '));
-                } else {
-                    setErrorMessage(axiosError.response?.data?.message || 'Failed to save settings');
-                }
-            } else {
-                setErrorMessage('Failed to save settings');
-            }
-        } finally {
+            setErrorMessage('Failed to save settings');
             setIsSaving(false);
         }
     };

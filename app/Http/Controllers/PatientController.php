@@ -388,7 +388,7 @@ class PatientController extends Controller
 
                     return [
                         'id' => $patient->id,
-                        'patient_id' => $patient->patient_id,
+                        'patient_id' => $patient->code,
                         'name' => $patient->first_name . ' ' . $patient->last_name,
                         'first_name' => $patient->first_name,
                         'last_name' => $patient->last_name,
@@ -438,7 +438,7 @@ class PatientController extends Controller
 
         return [
             'id' => $patient->id,
-            'patient_id' => $patient->patient_id,
+            'patient_id' => $patient->code,
             'name' => $patient->first_name . ' ' . $patient->last_name,
             'first_name' => $patient->first_name,
             'last_name' => $patient->last_name,
