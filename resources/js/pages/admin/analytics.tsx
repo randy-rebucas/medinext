@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminAnalytics } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -30,53 +30,21 @@ import {
     TrendingUp
 } from 'lucide-react';
 
-export default function Analytics() {
+interface TopPerformer {
+    name: string;
+    specialty: string;
+    patients: number;
+    rating: number;
+    revenue: string;
+}
 
-    interface TopPerformer {
-        name: string;
-        specialty: string;
-        patients: number;
-        rating: number;
-        revenue: string;
-    }
+interface AnalyticsProps {
+    topPerformers: TopPerformer[];
+    analytics: any;
+}
 
-    const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
-    const [, setAnalyticsData] = useState({});
-    const [loading, setLoading] = useState(true);
-
-    // Fetch analytics data from database
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            try {
-                const response = await fetch('/admin/analytics', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setTopPerformers(data.topPerformers || []);
-                    setAnalyticsData(data.analytics || {});
-                } else {
-                    console.error('Failed to fetch analytics');
-                    setTopPerformers([]);
-                    setAnalyticsData({});
-                }
-            } catch (error) {
-                console.error('Error fetching analytics:', error);
-                setTopPerformers([]);
-                setAnalyticsData({});
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAnalytics();
-    }, []);
+export default function Analytics({ topPerformers = [], analytics = {} }: AnalyticsProps) {
+    const [loading] = useState(false);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

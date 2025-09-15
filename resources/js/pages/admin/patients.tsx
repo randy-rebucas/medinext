@@ -74,7 +74,7 @@ export default function PatientManagement({ patients: initialPatients }: Patient
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
     const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
     const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
-    const [, setHealthRecordsData] = useState<{
+    const [healthRecordsData, setHealthRecordsData] = useState<{
         patient: Patient;
         appointments: Array<{
             id: number;

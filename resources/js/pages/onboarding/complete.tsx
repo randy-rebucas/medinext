@@ -33,7 +33,7 @@ interface CompleteProps {
 export default function Complete({ user, clinic, trial_status }: CompleteProps) {
     const { post, processing } = useForm();
     const { post: postWithRedirect, processing: processingRedirect } = useForm({
-        redirect_to: '/admin/clinic-settings'
+        redirect_to: '/admin/clinic-management'
     });
 
     // Helper function to format address
@@ -90,7 +90,7 @@ export default function Complete({ user, clinic, trial_status }: CompleteProps) 
             title: 'Customize Settings',
             description: 'Configure clinic preferences and system settings',
             action: 'Open Settings',
-            href: '/admin/clinic-settings'
+            href: '/admin/clinic-management'
         }
     ];
 

@@ -31,16 +31,20 @@ class ClinicSettingsController extends Controller
     /**
      * Get clinic settings
      */
-    public function getSettings(Request $request): JsonResponse
+    public function getSettings(Request $request)
     {
         try {
             $clinicId = $request->user()->current_clinic_id;
 
             if (!$clinicId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No clinic selected'
-                ], 400);
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No clinic selected'
+                    ], 400);
+                }
+                
+                return redirect()->back()->with('error', 'No clinic selected');
             }
 
             $clinic = Clinic::findOrFail($clinicId);
@@ -64,36 +68,49 @@ class ClinicSettingsController extends Controller
             $files = $this->settingsService->getFileSettings($clinicId);
             $reports = $this->settingsService->getReportingSettings($clinicId);
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'clinic' => $clinic,
-                    'settings' => $settings,
-                    'clinic_info' => $clinicInfo,
-                    'working_hours' => $workingHours,
-                    'notifications' => $notifications,
-                    'branding' => $branding,
-                    'system' => $system,
-                    'appointments' => $appointments,
-                    'prescriptions' => $prescriptions,
-                    'billing' => $billing,
-                    'security' => $security,
-                    'integrations' => $integrations,
-                    'queue' => $queue,
-                    'emr' => $emr,
-                    'files' => $files,
-                    'reports' => $reports,
-                    'formatted_working_hours' => $this->settingsService->getFormattedWorkingHours($clinicId),
-                    'is_clinic_open' => $this->settingsService->isClinicOpen($clinicId),
-                ]
+            $data = [
+                'clinic' => $clinic,
+                'settings' => $settings,
+                'clinic_info' => $clinicInfo,
+                'working_hours' => $workingHours,
+                'notifications' => $notifications,
+                'branding' => $branding,
+                'system' => $system,
+                'appointments' => $appointments,
+                'prescriptions' => $prescriptions,
+                'billing' => $billing,
+                'security' => $security,
+                'integrations' => $integrations,
+                'queue' => $queue,
+                'emr' => $emr,
+                'files' => $files,
+                'reports' => $reports,
+                'formatted_working_hours' => $this->settingsService->getFormattedWorkingHours($clinicId),
+                'is_clinic_open' => $this->settingsService->isClinicOpen($clinicId),
+            ];
+
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $data
+                ]);
+            }
+
+            // Return Inertia response for web requests
+            return Inertia::render('admin/clinic-settings', [
+                'settings' => $data
             ]);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve clinic settings',
-                'error' => $e->getMessage()
-            ], 500);
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to retrieve clinic settings',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to retrieve clinic settings: ' . $e->getMessage());
         }
     }
 

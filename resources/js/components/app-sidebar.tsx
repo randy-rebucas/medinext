@@ -19,7 +19,7 @@ import {
     adminPatients,
     adminReports,
     adminAnalytics,
-    adminClinicSettings,
+    adminClinicManagement,
     adminRooms,
     adminSchedules,
     adminDashboard,
@@ -138,8 +138,8 @@ function getMainNavItems(userRole: string): NavItem[] {
                     icon: BarChart3,
                 },
                 {
-                    title: 'Clinic Settings',
-                    href: adminClinicSettings(),
+                    title: 'Clinic Management',
+                    href: adminClinicManagement(),
                     icon: Settings,
                 },
                 {

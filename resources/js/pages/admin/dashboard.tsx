@@ -10,7 +10,7 @@ import {
     adminRooms,
     adminReports,
     adminAnalytics,
-    adminClinicSettings
+    adminClinicManagement
 } from '@/routes';
 import { type BreadcrumbItem, type AdminDashboardData, type StatCard, type RecentActivity } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -405,10 +405,10 @@ export default function AdminDashboard({ user, stats }: AdminDashboardProps) {
                                     View Analytics
                                 </Button>
                             </Link>
-                            <Link href={adminClinicSettings()}>
+                            <Link href={adminClinicManagement()}>
                                 <Button className="w-full justify-start mb-2" variant="outline">
                                     <Settings className="mr-2 h-4 w-4" />
-                                    Clinic Settings
+                                    Clinic Management
                                 </Button>
                             </Link>
                         </CardContent>

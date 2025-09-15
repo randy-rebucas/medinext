@@ -166,32 +166,10 @@ export default function Reports({ analytics: initialAnalytics }: ReportsProps) {
         setErrors({});
     };
 
-    const fetchAnalytics = async () => {
-        try {
-            const response = await fetch('/admin/analytics', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Update analytics state if needed
-                console.log('Analytics data:', data);
-            } else {
-                console.error('Failed to fetch analytics');
-            }
-        } catch (error) {
-            console.error('Error fetching analytics:', error);
-        }
-    };
-
     const handleViewAnalytics = () => {
         setIsViewAnalyticsModalOpen(true);
-        fetchAnalytics();
+        // Analytics data is already available from props
+        console.log('Analytics data:', analytics);
     };
 
     const handleCancel = () => {
@@ -550,7 +528,7 @@ export default function Reports({ analytics: initialAnalytics }: ReportsProps) {
                     )}
                     <DialogFooter>
                         <Button variant="outline" onClick={handleCancel}>Close</Button>
-                        <Button onClick={fetchAnalytics} disabled={loading}>
+                        <Button onClick={() => console.log('Analytics data:', analytics)} disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             <RefreshCw className="mr-2 h-4 w-4" />
                             Refresh

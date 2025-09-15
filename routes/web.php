@@ -103,20 +103,20 @@ Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onb
             Route::post('reports/generate', [App\Http\Controllers\ReportsController::class, 'generate'])->name('admin.reports.generate');
             
             // Analytics dashboard
-            Route::get('analytics', function () {
-                return Inertia::render('admin/analytics');
-            })->name('admin.analytics');
+            Route::get('analytics', [App\Http\Controllers\ReportsController::class, 'analyticsPage'])->name('admin.analytics');
         });
 
-        // ===== CLINIC SETTINGS =====
-        // Admin has full access to clinic settings management
+        // ===== CLINIC MANAGEMENT =====
+        // Admin has full access to clinic management
         Route::middleware(['permission:settings.view'])->group(function () {
-            Route::get('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'index'])->name('admin.clinic-settings');
+            Route::get('clinic-management', [App\Http\Controllers\ClinicSettingsController::class, 'index'])->name('admin.clinic-management');
+            Route::get('settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'getSettings'])->name('admin.settings.clinic');
         });
         
         Route::middleware(['permission:settings.manage'])->group(function () {
-            Route::post('clinic-settings', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-settings.store');
-            Route::put('clinic-settings/{id}', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-settings.update');
+            Route::post('clinic-management', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-management.store');
+            Route::put('clinic-management/{id}', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-management.update');
+            Route::put('settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'updateSettings'])->name('admin.settings.clinic.update');
         });
 
         // ===== ROOM MANAGEMENT =====

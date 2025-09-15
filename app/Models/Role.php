@@ -132,114 +132,188 @@ class Role extends Model
     public function getDefaultPermissions(): array
     {
         $defaultPermissions = [
-            'admin' => [
-                'clinics.manage',
-                'clinics.view',
-                'clinics.create',
-                'clinics.edit',
-                'clinics.delete',
-                'doctors.manage',
-                'doctors.view',
-                'doctors.create',
-                'doctors.edit',
-                'doctors.delete',
-                'patients.manage',
-                'patients.view',
-                'patients.create',
-                'patients.edit',
-                'patients.delete',
-                'appointments.manage',
-                'appointments.view',
-                'appointments.create',
-                'appointments.edit',
-                'appointments.delete',
-                'prescriptions.manage',
-                'prescriptions.view',
-                'prescriptions.create',
-                'prescriptions.edit',
-                'prescriptions.delete',
-                'users.manage',
-                'users.view',
-                'users.create',
-                'users.edit',
-                'users.delete',
-                'roles.manage',
-                'roles.view',
-                'roles.create',
-                'roles.edit',
-                'roles.delete',
-                'billing.manage',
-                'billing.view',
-                'billing.create',
-                'billing.edit',
-                'billing.delete',
+            'superadmin' => [
+                'system.admin', 'system.info',
+                'clinics.manage', 'clinics.view', 'clinics.create', 'clinics.edit', 'clinics.delete',
+                'users.manage', 'users.view', 'users.create', 'users.edit', 'users.delete',
+                'roles.manage', 'roles.view', 'roles.create', 'roles.edit', 'roles.delete',
+                'doctors.manage', 'doctors.view', 'doctors.create', 'doctors.edit', 'doctors.delete',
+                'staff.manage', 'staff.view', 'staff.create', 'staff.edit', 'staff.delete',
+                'patients.manage', 'patients.view', 'patients.create', 'patients.edit', 'patients.delete',
+                'appointments.manage', 'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel', 'appointments.delete', 'appointments.checkin',
+                'prescriptions.manage', 'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 'prescriptions.delete', 'prescriptions.download',
+                'medical_records.manage', 'medical_records.view', 'medical_records.create', 'medical_records.edit', 'medical_records.delete',
+                'settings.manage', 'settings.view',
+                'dashboard.view', 'dashboard.stats',
+                // MedRep permissions
+                'medrep_visits.manage', 'medrep_visits.view', 'interactions.view', 'products.view', 'meetings.create',
+                // Reports permissions
                 'reports.view',
-                'reports.export',
-                'settings.manage',
+                // Profile permissions
+                'profile.view',
+                // Billing permissions
+                'billing.view',
+                // File Assets permissions
+                'file_assets.download',
+                // Encounters permissions
+                'encounters.view',
+                // Insurance permissions
+                'insurance.view',
+                // Lab Results permissions
+                'lab_results.view',
+                // Notifications permissions
+                'notifications.view',
+                // Queue permissions
+                'queue.manage', 'queue.view',
+                // Room permissions
+                'rooms.manage', 'rooms.view', 'rooms.create', 'rooms.edit', 'rooms.delete',
+                // Schedule permissions
+                'schedules.manage', 'schedules.view', 'schedules.create', 'schedules.edit', 'schedules.delete',
+                // System monitoring permissions
+                'system.status', 'activity_logs.view', 'activity_logs.export', 'backups.manage', 'system.monitor',
+                // User management additional permissions
+                'users.activate', 'users.deactivate',
+                // Permission management
+                'permissions.manage', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete',
+                // File assets additional permissions
+                'file_assets.upload',
+                // Encounters additional permissions
+                'encounters.complete',
+                // Queue additional permissions
+                'queue.add', 'queue.remove', 'queue.process',
+                // Search permissions
+                'search.patients', 'search.doctors', 'search.global',
+            ],
+            'admin' => [
+                'clinics.manage', 'clinics.view', 'clinics.edit',
+                'users.manage', 'users.view', 'users.create', 'users.edit', 'users.delete',
+                'roles.view', 'roles.create', 'roles.edit',
+                'doctors.manage', 'doctors.view', 'doctors.create', 'doctors.edit', 'doctors.delete',
+                'staff.manage', 'staff.view', 'staff.create', 'staff.edit', 'staff.delete',
+                'patients.manage', 'patients.view', 'patients.create', 'patients.edit', 'patients.delete',
+                'appointments.manage', 'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel', 'appointments.delete', 'appointments.checkin',
+                'prescriptions.manage', 'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 'prescriptions.delete', 'prescriptions.download',
+                'medical_records.manage', 'medical_records.view', 'medical_records.create', 'medical_records.edit', 'medical_records.delete',
+                'settings.manage', 'settings.view',
+                'dashboard.view', 'dashboard.stats',
+                // Reports permissions
+                'reports.view',
+                // Profile permissions
+                'profile.view',
+                // Billing permissions
+                'billing.view',
+                // File Assets permissions
+                'file_assets.download',
+                // Encounters permissions
+                'encounters.view',
+                // Insurance permissions
+                'insurance.view',
+                // Lab Results permissions
+                'lab_results.view',
+                // Notifications permissions
+                'notifications.view',
+                // Queue permissions
+                'queue.manage', 'queue.view',
+                // Room permissions
+                'rooms.manage', 'rooms.view', 'rooms.create', 'rooms.edit', 'rooms.delete',
+                // Schedule permissions
+                'schedules.manage', 'schedules.view', 'schedules.create', 'schedules.edit', 'schedules.delete',
+                // System monitoring permissions
+                'system.status', 'activity_logs.view', 'activity_logs.export', 'backups.manage', 'system.monitor',
+                // User management additional permissions
+                'users.activate', 'users.deactivate',
+                // Permission management
+                'permissions.manage', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete',
+                // File assets additional permissions
+                'file_assets.upload',
+                // Encounters additional permissions
+                'encounters.complete',
+                // Queue additional permissions
+                'queue.add', 'queue.remove', 'queue.process',
+                // Search permissions
+                'search.patients', 'search.doctors', 'search.global',
             ],
             'doctor' => [
-                'clinics.view',
-                'doctors.view',
-                'patients.view',
-                'patients.edit',
-                'appointments.view',
-                'appointments.create',
-                'appointments.edit',
-                'appointments.cancel',
-                'prescriptions.view',
-                'prescriptions.create',
-                'prescriptions.edit',
-                'prescriptions.delete',
-                'medical_records.view',
-                'medical_records.create',
-                'medical_records.edit',
-                'schedule.view',
-                'schedule.manage',
-                'reports.view',
-            ],
-            'patient' => [
-                'clinics.view',
-                'doctors.view',
-                'appointments.view',
-                'appointments.create',
-                'appointments.cancel',
-                'prescriptions.view',
-                'prescriptions.download',
-                'medical_records.view',
-                'profile.edit',
+                'clinics.view', 'doctors.view',
+                'patients.view', 'patients.edit',
+                'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel',
+                'prescriptions.view', 'prescriptions.create', 'prescriptions.edit', 'prescriptions.delete', 'prescriptions.download',
+                'medical_records.view', 'medical_records.create', 'medical_records.edit',
+                'dashboard.view', 'dashboard.stats',
+                // Profile permissions
+                'profile.view',
+                // Encounters permissions
+                'encounters.view',
+                // Lab Results permissions
+                'lab_results.view',
+                // Queue permissions
+                'queue.view',
             ],
             'receptionist' => [
-                'clinics.view',
-                'doctors.view',
-                'patients.view',
-                'patients.create',
-                'patients.edit',
-                'appointments.view',
-                'appointments.create',
-                'appointments.edit',
-                'appointments.cancel',
-                'appointments.checkin',
-                'billing.view',
-                'billing.create',
-                'billing.edit',
-                'schedule.view',
+                'clinics.view', 'doctors.view',
+                'patients.view', 'patients.create', 'patients.edit',
+                'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel', 'appointments.checkin',
+                'dashboard.view', 'dashboard.stats',
+                // Profile permissions
+                'profile.view',
+                // Encounters permissions
+                'encounters.view',
+                // Insurance permissions
+                'insurance.view',
+                // Reports permissions
                 'reports.view',
+                // Queue permissions
+                'queue.manage', 'queue.view',
+                // Room permissions
+                'rooms.manage', 'rooms.view', 'rooms.create', 'rooms.edit', 'rooms.delete',
+                // Schedule permissions
+                'schedules.manage', 'schedules.view', 'schedules.create', 'schedules.edit', 'schedules.delete',
+                // System monitoring permissions
+                'system.status', 'activity_logs.view', 'activity_logs.export', 'backups.manage', 'system.monitor',
+                // User management additional permissions
+                'users.activate', 'users.deactivate',
+                // Permission management
+                'permissions.manage', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete',
+                // File assets additional permissions
+                'file_assets.upload',
+                // Encounters additional permissions
+                'encounters.complete',
+                // Queue additional permissions
+                'queue.add', 'queue.remove', 'queue.process',
+                // Search permissions
+                'search.patients', 'search.doctors', 'search.global',
+            ],
+            'patient' => [
+                'clinics.view', 'doctors.view',
+                'appointments.view', 'appointments.create', 'appointments.cancel',
+                'prescriptions.view', 'prescriptions.download',
+                'medical_records.view',
+                'dashboard.view',
+                // Profile permissions
+                'profile.view',
+                // Billing permissions
+                'billing.view',
+                // File Assets permissions
+                'file_assets.download',
+                // Encounters permissions
+                'encounters.view',
+                // Insurance permissions
+                'insurance.view',
+                // Lab Results permissions
+                'lab_results.view',
+                // Notifications permissions
+                'notifications.view',
             ],
             'medrep' => [
-                'clinics.view',
+                'dashboard.view', 'dashboard.stats',
+                // MedRep permissions
+                'medrep_visits.manage', 'medrep_visits.view', 'interactions.view', 'products.view', 'meetings.create',
+                // Doctor permissions (required for medrep routes)
                 'doctors.view',
-                'products.view',
-                'products.create',
-                'products.edit',
-                'meetings.view',
-                'meetings.create',
-                'meetings.edit',
-                'meetings.delete',
-                'interactions.view',
-                'interactions.create',
-                'interactions.edit',
-                'schedule.view',
+                // Reports permissions
                 'reports.view',
+                // Profile permissions
+                'profile.view',
             ],
         ];
 

@@ -32,7 +32,7 @@ export function useSettings(): UseSettingsReturn {
 
     useEffect(() => {
         const fetchSettings = () => {
-            router.get('/settings/clinic', {}, {
+            router.get('/admin/settings/clinic', {}, {
                 onSuccess: (page) => {
                     setSettings(page.props.settings);
                     setLoading(false);

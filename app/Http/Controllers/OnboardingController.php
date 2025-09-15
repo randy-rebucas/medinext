@@ -397,8 +397,8 @@ class OnboardingController extends Controller
             // Check if there's a specific redirect route requested
             $redirectTo = $request->input('redirect_to');
 
-            if ($redirectTo && $redirectTo === '/admin/clinic-settings') {
-                return redirect()->route('admin.clinic-settings')
+            if ($redirectTo && $redirectTo === '/admin/clinic-management') {
+                return redirect()->route('admin.clinic-management')
                     ->with('success', 'Welcome to Medinext! Your account is ready to use.');
             }
 

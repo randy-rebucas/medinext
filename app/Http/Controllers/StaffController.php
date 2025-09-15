@@ -9,11 +9,151 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class StaffController extends Controller
+class StaffController extends \Illuminate\Routing\Controller
 {
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('verified');
+    }
+
+    /**
+     * Get user's clinic and role information
+     */
+    protected function getUserClinicRole(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return null;
+        }
+
+        return $user->userClinicRoles()->with(['clinic', 'role'])->first();
+    }
+
+    /**
+     * Check if user has permission in clinic
+     */
+    protected function hasPermissionInClinic(Request $request, string $permission, ?int $clinicId = null): bool
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return false;
+        }
+
+        $targetClinicId = $clinicId ?? $this->getUserClinicRole($request)?->clinic_id;
+        
+        if (!$targetClinicId) {
+            return false;
+        }
+
+        return $user->hasAnyPermissionInClinic([$permission], $targetClinicId);
+    }
+
+    /**
+     * Log web request with context
+     */
+    protected function logWebRequest(string $action, array $context = []): void
+    {
+        Log::info("Web Request: {$action}", array_merge([
+            'user_id' => request()->user()?->id,
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'endpoint' => request()->path(),
+            'method' => request()->method(),
+            'timestamp' => now()->toISOString(),
+        ], $context));
+    }
+
+    /**
+     * Log security event
+     */
+    protected function logSecurityEvent(string $event, array $context = []): void
+    {
+        Log::warning("Security Event: {$event}", array_merge([
+            'user_id' => request()->user()?->id,
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'endpoint' => request()->path(),
+            'method' => request()->method(),
+            'timestamp' => now()->toISOString(),
+        ], $context));
+    }
+
+    /**
+     * Handle exceptions with proper logging
+     */
+    protected function handleException(\Exception $e, string $context = 'Web Controller'): void
+    {
+        Log::error("{$context} Exception: " . $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+            'user_id' => request()->user()?->id,
+            'request_url' => request()->fullUrl(),
+            'request_method' => request()->method(),
+            'request_data' => request()->except(['password', 'password_confirmation', 'token'])
+        ]);
+    }
+
+    /**
+     * Validate and sanitize request data
+     */
+    protected function validateAndSanitize(Request $request, array $rules, array $messages = []): array
+    {
+        $validator = Validator::make($request->all(), $rules, $messages);
+        
+        if ($validator->fails()) {
+            throw new \Illuminate\Validation\ValidationException($validator);
+        }
+        
+        $validated = $validator->validated();
+        
+        // Sanitize input data to prevent XSS and other attacks
+        $sanitized = [];
+        foreach ($validated as $key => $value) {
+            if (is_string($value)) {
+                // Remove potentially dangerous characters and HTML tags
+                $sanitized[$key] = strip_tags(trim($value));
+            } elseif (is_array($value)) {
+                $sanitized[$key] = $this->sanitizeInput($value);
+            } else {
+                $sanitized[$key] = $value;
+            }
+        }
+        
+        return $sanitized;
+    }
+
+    /**
+     * Sanitize input data to prevent XSS and other attacks
+     */
+    protected function sanitizeInput(array $data): array
+    {
+        $sanitized = [];
+        
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                // Remove potentially dangerous characters and HTML tags
+                $sanitized[$key] = strip_tags(trim($value));
+            } elseif (is_array($value)) {
+                $sanitized[$key] = $this->sanitizeInput($value);
+            } else {
+                $sanitized[$key] = $value;
+            }
+        }
+        
+        return $sanitized;
+    }
+
     /**
      * Display a listing of staff members
      */
@@ -23,28 +163,17 @@ class StaffController extends Controller
             $this->logWebRequest('Staff Management Access', ['action' => 'index']);
             
             $user = $request->user();
+
             if (!$user) {
                 $this->logSecurityEvent('Unauthenticated staff access attempt');
                 return redirect()->route('login');
             }
 
-            // Get current clinic
-            $currentClinic = $user->getCurrentClinic();
-            if (!$currentClinic) {
-                return redirect()->route('dashboard')->with('error', 'No clinic selected. Please select a clinic first.');
-            }
+            // Check staff management access
+            $this->requireStaffManagementAccess($request, 'index');
             
-            // Get user's role in current clinic
-            $userClinicRole = $user->userClinicRoles()
-                ->where('clinic_id', $currentClinic->id)
-                ->with(['clinic', 'role'])
-                ->first();
-            
-            if (!$userClinicRole) {
-                return redirect()->route('dashboard')->with('error', 'You do not have access to this clinic.');
-            }
-            
-            $clinicId = $currentClinic->id;
+            $userClinicRole = $this->getUserClinicRole($request);
+            $clinicId = $userClinicRole->clinic_id;
 
             $query = User::whereHas('clinics', function ($q) use ($clinicId) {
                 $q->where('clinic_id', $clinicId);
@@ -117,6 +246,15 @@ class StaffController extends Controller
             // Get user permissions
             $permissions = $this->getUserPermissions($userClinicRole->role->name ?? 'user');
 
+            // Add security context for frontend
+            $securityContext = [
+                'can_create_staff' => $this->hasStaffManagementAccess($request),
+                'can_edit_staff' => $this->hasStaffManagementAccess($request),
+                'can_delete_staff' => $this->hasStaffManagementAccess($request),
+                'current_user_role' => $userClinicRole->role->name,
+                'is_superadmin' => $userClinicRole->role->name === 'superadmin',
+            ];
+
             return Inertia::render('admin/staff', [
                 'staff' => $transformedStaff->toArray(),
                 'pagination' => [
@@ -128,6 +266,7 @@ class StaffController extends Controller
                 'roles' => $roles,
                 'departments' => $departments,
                 'permissions' => $permissions,
+                'security' => $securityContext,
                 'filters' => [
                     'search' => $request->search,
                     'role' => $request->role,
@@ -151,6 +290,11 @@ class StaffController extends Controller
             
             $user = $request->user();
             
+            if (!$user) {
+                $this->logSecurityEvent('Unauthenticated staff show access attempt');
+                return redirect()->route('login');
+            }
+            
             // Get current clinic
             $currentClinic = $user->getCurrentClinic();
             if (!$currentClinic) {
@@ -164,8 +308,12 @@ class StaffController extends Controller
                 ->first();
             
             if (!$userClinicRole) {
+                $this->logSecurityEvent('Unauthorized staff show access attempt - no clinic role');
                 return redirect()->route('dashboard')->with('error', 'You do not have access to this clinic.');
             }
+
+            // Check staff management access
+            $this->requireStaffManagementAccess($request, 'show');
             
             $clinicId = $currentClinic->id;
 
@@ -240,63 +388,94 @@ class StaffController extends Controller
     public function store(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email',
-                'phone' => 'nullable|string|max:20',
-                'role' => 'required|string',
-                'department' => 'required|string',
-                'status' => 'required|string|in:Active,On Leave,Inactive',
-                'address' => 'nullable|string',
-                'emergency_contact' => 'nullable|string',
-                'emergency_phone' => 'nullable|string',
-                'notes' => 'nullable|string',
-            ]);
-
-            if ($validator->fails()) {
-                return redirect()->back()->withErrors($validator->errors())->withInput();
-            }
-
+            $this->logWebRequest('Staff Management Access', ['action' => 'store']);
+            
             $currentUser = $request->user();
             
-            // Get current clinic
+            if (!$currentUser) {
+                $this->logSecurityEvent('Unauthenticated staff store access attempt');
+                return redirect()->route('login');
+            }
+
+            // Get current clinic and check permissions
             $currentClinic = $currentUser->getCurrentClinic();
             if (!$currentClinic) {
                 return redirect()->back()->with('error', 'No clinic selected');
             }
+
+            // Check staff management access
+            $this->requireStaffManagementAccess($request, 'store');
+
+            // Sanitize and validate input
+            $validatedData = $this->validateAndSanitize($request, [
+                'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                'email' => 'required|email|unique:users,email|max:255',
+                'phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                'role' => 'required|string|exists:roles,name',
+                'department' => 'required|string|max:100',
+                'status' => 'required|string|in:Active,On Leave,Inactive',
+                'address' => 'nullable|string|max:500',
+                'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                'notes' => 'nullable|string|max:1000',
+            ], [
+                'name.regex' => 'Name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                'phone.regex' => 'Phone number format is invalid.',
+                'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                'emergency_phone.regex' => 'Emergency phone number format is invalid.',
+                'role.exists' => 'Selected role does not exist.',
+            ]);
             
             $clinicId = $currentClinic->id;
 
             // Find role by name
-            $role = Role::where('name', $request->role)->first();
+            $role = Role::where('name', $validatedData['role'])->first();
             if (!$role) {
                 return redirect()->back()->with('error', 'Invalid role selected')->withInput();
             }
 
-            // Generate a temporary password
-            $tempPassword = 'TempPass123!';
+            // Prevent creating superadmin role unless current user is superadmin
+            if ($role->name === 'superadmin' && !$currentUser->hasRole('superadmin')) {
+                $this->logSecurityEvent('Unauthorized superadmin creation attempt', [
+                    'user_id' => $currentUser->id,
+                    'attempted_role' => $role->name
+                ]);
+                return redirect()->back()->with('error', 'You cannot create superadmin users.')->withInput();
+            }
+
+            // Generate a secure temporary password
+            $tempPassword = $this->generateSecurePassword();
 
             // Create user
             $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'phone' => $request->phone,
+                'name' => $validatedData['name'],
+                'email' => $validatedData['email'],
+                'phone' => $validatedData['phone'],
                 'password' => Hash::make($tempPassword),
-                'is_active' => $request->status === 'Active',
+                'is_active' => $validatedData['status'] === 'Active',
                 'email_verified_at' => now(),
             ]);
 
             // Assign to clinic with role and additional staff information
             $user->clinics()->attach($clinicId, [
                 'role_id' => $role->id,
-                'department' => $request->department,
+                'department' => $validatedData['department'],
                 'assigned_by' => $currentUser->id,
                 'assigned_at' => now(),
                 'join_date' => now(),
-                'address' => $request->address,
-                'emergency_contact' => $request->emergency_contact,
-                'emergency_phone' => $request->emergency_phone,
-                'notes' => $request->notes,
+                'address' => $validatedData['address'],
+                'emergency_contact' => $validatedData['emergency_contact'],
+                'emergency_phone' => $validatedData['emergency_phone'],
+                'notes' => $validatedData['notes'],
+            ]);
+
+            // Log successful staff creation
+            $this->logWebRequest('Staff Member Created', [
+                'staff_id' => $user->id,
+                'staff_name' => $user->name,
+                'staff_email' => $user->email,
+                'role' => $role->name,
+                'department' => $validatedData['department']
             ]);
 
             return redirect()->route('admin.staff')->with('success', 'Staff member created successfully');
@@ -313,30 +492,43 @@ class StaffController extends Controller
     public function update(Request $request, int $id)
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $id,
-                'phone' => 'nullable|string|max:20',
-                'role' => 'required|string',
-                'department' => 'required|string',
-                'status' => 'required|string|in:Active,On Leave,Inactive',
-                'address' => 'nullable|string',
-                'emergency_contact' => 'nullable|string',
-                'emergency_phone' => 'nullable|string',
-                'notes' => 'nullable|string',
-            ]);
-
-            if ($validator->fails()) {
-                return redirect()->back()->withErrors($validator->errors())->withInput();
-            }
-
+            $this->logWebRequest('Staff Management Access', ['action' => 'update', 'staff_id' => $id]);
+            
             $currentUser = $request->user();
             
-            // Get current clinic
+            if (!$currentUser) {
+                $this->logSecurityEvent('Unauthenticated staff update access attempt');
+                return redirect()->route('login');
+            }
+
+            // Get current clinic and check permissions
             $currentClinic = $currentUser->getCurrentClinic();
             if (!$currentClinic) {
                 return redirect()->back()->with('error', 'No clinic selected');
             }
+
+            // Check staff management access
+            $this->requireStaffManagementAccess($request, 'update');
+
+            // Sanitize and validate input
+            $validatedData = $this->validateAndSanitize($request, [
+                'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                'email' => 'required|email|unique:users,email,' . $id . '|max:255',
+                'phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                'role' => 'required|string|exists:roles,name',
+                'department' => 'required|string|max:100',
+                'status' => 'required|string|in:Active,On Leave,Inactive',
+                'address' => 'nullable|string|max:500',
+                'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                'notes' => 'nullable|string|max:1000',
+            ], [
+                'name.regex' => 'Name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                'phone.regex' => 'Phone number format is invalid.',
+                'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                'emergency_phone.regex' => 'Emergency phone number format is invalid.',
+                'role.exists' => 'Selected role does not exist.',
+            ]);
             
             $clinicId = $currentClinic->id;
 
@@ -346,29 +538,57 @@ class StaffController extends Controller
             })->findOrFail($id);
 
             // Find role by name
-            $role = Role::where('name', $request->role)->first();
+            $role = Role::where('name', $validatedData['role'])->first();
             if (!$role) {
                 return redirect()->back()->with('error', 'Invalid role selected')->withInput();
             }
 
+            // Prevent role escalation unless current user is superadmin
+            if ($role->name === 'superadmin' && !$currentUser->hasRole('superadmin')) {
+                $this->logSecurityEvent('Unauthorized role escalation attempt', [
+                    'user_id' => $currentUser->id,
+                    'target_user_id' => $user->id,
+                    'attempted_role' => $role->name
+                ]);
+                return redirect()->back()->with('error', 'You cannot assign superadmin role.')->withInput();
+            }
+
+            // Prevent users from modifying their own role to a higher privilege
+            if ($user->id === $currentUser->id && $role->name === 'superadmin' && !$currentUser->hasRole('superadmin')) {
+                $this->logSecurityEvent('Self-role escalation attempt', [
+                    'user_id' => $currentUser->id,
+                    'attempted_role' => $role->name
+                ]);
+                return redirect()->back()->with('error', 'You cannot change your own role to superadmin.')->withInput();
+            }
+
             // Update user data
             $user->update([
-                'name' => $request->name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'is_active' => $request->status === 'Active',
+                'name' => $validatedData['name'],
+                'email' => $validatedData['email'],
+                'phone' => $validatedData['phone'],
+                'is_active' => $validatedData['status'] === 'Active',
             ]);
 
             // Update clinic role, department, and additional staff information
             $user->clinics()->updateExistingPivot($clinicId, [
                 'role_id' => $role->id,
-                'department' => $request->department,
+                'department' => $validatedData['department'],
                 'updated_by' => $currentUser->id,
                 'updated_at' => now(),
-                'address' => $request->address,
-                'emergency_contact' => $request->emergency_contact,
-                'emergency_phone' => $request->emergency_phone,
-                'notes' => $request->notes,
+                'address' => $validatedData['address'],
+                'emergency_contact' => $validatedData['emergency_contact'],
+                'emergency_phone' => $validatedData['emergency_phone'],
+                'notes' => $validatedData['notes'],
+            ]);
+
+            // Log successful staff update
+            $this->logWebRequest('Staff Member Updated', [
+                'staff_id' => $user->id,
+                'staff_name' => $user->name,
+                'staff_email' => $user->email,
+                'new_role' => $role->name,
+                'new_department' => $validatedData['department']
             ]);
 
             return redirect()->route('admin.staff')->with('success', 'Staff member updated successfully');
@@ -385,13 +605,23 @@ class StaffController extends Controller
     public function destroy(Request $request, int $id)
     {
         try {
+            $this->logWebRequest('Staff Management Access', ['action' => 'destroy', 'staff_id' => $id]);
+            
             $currentUser = $request->user();
             
-            // Get current clinic
+            if (!$currentUser) {
+                $this->logSecurityEvent('Unauthenticated staff destroy access attempt');
+                return redirect()->route('login');
+            }
+
+            // Get current clinic and check permissions
             $currentClinic = $currentUser->getCurrentClinic();
             if (!$currentClinic) {
                 return redirect()->back()->with('error', 'No clinic selected');
             }
+
+            // Check staff management access
+            $this->requireStaffManagementAccess($request, 'destroy');
             
             $clinicId = $currentClinic->id;
 
@@ -401,9 +631,45 @@ class StaffController extends Controller
             })->findOrFail($id);
 
             // Check if user is trying to remove themselves
-            if ($user->id === Auth::id()) {
+            if ($user->id === $currentUser->id) {
+                $this->logSecurityEvent('Self-removal attempt', [
+                    'user_id' => $currentUser->id
+                ]);
                 return redirect()->back()->with('error', 'You cannot remove yourself from the clinic');
             }
+
+            // Prevent removal of superadmin users unless current user is superadmin
+            if ($user->hasRole('superadmin') && !$currentUser->hasRole('superadmin')) {
+                $this->logSecurityEvent('Unauthorized superadmin removal attempt', [
+                    'user_id' => $currentUser->id,
+                    'target_user_id' => $user->id
+                ]);
+                return redirect()->back()->with('error', 'You cannot remove superadmin users.');
+            }
+
+            // Check if this is the last admin in the clinic
+            $adminCount = $currentClinic->userClinicRoles()
+                ->whereHas('role', function ($q) {
+                    $q->where('name', 'admin');
+                })
+                ->count();
+
+            if ($user->hasRole('admin') && $adminCount <= 1) {
+                $this->logSecurityEvent('Last admin removal attempt', [
+                    'user_id' => $currentUser->id,
+                    'target_user_id' => $user->id,
+                    'clinic_id' => $clinicId
+                ]);
+                return redirect()->back()->with('error', 'Cannot remove the last admin from the clinic.');
+            }
+
+            // Log the removal before executing
+            $this->logWebRequest('Staff Member Removal', [
+                'staff_id' => $user->id,
+                'staff_name' => $user->name,
+                'staff_email' => $user->email,
+                'clinic_id' => $clinicId
+            ]);
 
             // Remove user from clinic
             $user->clinics()->detach($clinicId);
@@ -422,18 +688,77 @@ class StaffController extends Controller
     }
 
     /**
+     * Generate a secure temporary password
+     */
+    private function generateSecurePassword(): string
+    {
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        $password = '';
+        $length = 12;
+        
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+        
+        return $password;
+    }
+
+    /**
+     * Check if user has staff management access
+     */
+    private function hasStaffManagementAccess(Request $request): bool
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return false;
+        }
+
+        $userClinicRole = $this->getUserClinicRole($request);
+        if (!$userClinicRole) {
+            return false;
+        }
+
+        // Check for admin role, superadmin role, or staff.view permission
+        return $userClinicRole->role->name === 'admin' || 
+               $userClinicRole->role->name === 'superadmin' ||
+               $this->hasPermissionInClinic($request, 'staff.view');
+    }
+
+    /**
+     * Require staff management access or redirect with error
+     */
+    private function requireStaffManagementAccess(Request $request, string $action = 'access'): void
+    {
+        if (!$this->hasStaffManagementAccess($request)) {
+            $user = $request->user();
+            $userClinicRole = $this->getUserClinicRole($request);
+            
+            $this->logSecurityEvent("Unauthorized staff {$action} attempt", [
+                'user_id' => $user?->id,
+                'role' => $userClinicRole?->role->name ?? 'unknown',
+                'action' => $action
+            ]);
+            
+            abort(403, 'You do not have permission to manage staff.');
+        }
+    }
+
+    /**
      * Get user permissions based on role
      */
     private function getUserPermissions($role)
     {
         $permissions = [
             'superadmin' => [
+                'staff.view', 'staff.create', 'staff.edit', 'staff.delete',
                 'manage_users', 'manage_clinics', 'manage_licenses', 'view_analytics',
                 'manage_settings', 'view_activity_logs', 'manage_roles', 'manage_permissions',
                 'view_system_health', 'manage_backups', 'view_financial_reports'
             ],
             'admin' => [
-                'manage_staff', 'manage_doctors', 'view_appointments', 'view_patients',
+                'staff.view', 'staff.create', 'staff.edit', 'staff.delete',
+                'manage_doctors', 'view_appointments', 'view_patients',
                 'view_reports', 'manage_settings', 'view_analytics', 'manage_clinic_settings',
                 'view_financial_reports', 'manage_rooms', 'manage_schedules'
             ],

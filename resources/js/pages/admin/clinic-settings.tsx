@@ -1,7 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { adminClinicSettings } from '@/routes';
+import { adminClinicManagement } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { useSettings } from '@/hooks/use-settings';
 import { applyBrandingStyles } from '@/lib/branding-utils';
@@ -12,8 +12,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/admin/dashboard',
     },
     {
-        title: 'Clinic Settings',
-        href: adminClinicSettings(),
+        title: 'Clinic Management',
+        href: adminClinicManagement(),
     },
 ];
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,7 +126,7 @@ export default function ClinicSettings() {
         setErrorMessage('');
 
         try {
-            const response = await fetch('/admin/clinic-settings', {
+            const response = await fetch('/admin/clinic-management', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ export default function ClinicSettings() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Clinic Settings - Medinext">
+            <Head title="Clinic Management - Medinext">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&family=instrument-sans:400,500,600" rel="stylesheet" />
             </Head>
@@ -171,7 +171,7 @@ export default function ClinicSettings() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">Clinic Settings</CardTitle>
+                                        <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">Clinic Management</CardTitle>
                                         <CardDescription className="text-slate-600 dark:text-slate-300">
                                             Manage your clinic's configuration and preferences
                                         </CardDescription>

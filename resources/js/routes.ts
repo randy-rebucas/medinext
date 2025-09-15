@@ -57,7 +57,7 @@ export const adminPatients = () => '/admin/patients';
 export const adminAppointments = () => '/admin/appointments';
 export const adminReports = () => '/admin/reports';
 export const adminAnalytics = () => '/admin/analytics';
-export const adminClinicSettings = () => '/admin/clinic-settings';
+export const adminClinicManagement = () => '/admin/clinic-management';
 export const adminRooms = () => '/admin/rooms';
 export const adminSchedules = () => '/admin/schedules';
 
