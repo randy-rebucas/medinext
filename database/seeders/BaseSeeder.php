@@ -131,6 +131,45 @@ class BaseSeeder extends Seeder
     }
 
     /**
+     * Run only essential seeding for installation (Step 1 only)
+     */
+    public function runInstallationSeeding(): void
+    {
+        $startTime = microtime(true);
+        
+        // Increase memory limit and enable garbage collection
+        ini_set('memory_limit', '1G');
+        gc_enable();
+
+        $this->faker = Faker::create();
+
+        $this->logInfo('🚀 Starting Installation Seeding - Core System Only...');
+        $this->logInfo('====================================================');
+
+        try {
+            // Use database transaction for rollback capability
+            DB::transaction(function () {
+                // Step 1: Core System (permissions, roles, settings) only
+                $this->seedCoreSystem();
+                gc_collect_cycles();
+            });
+
+            // Force garbage collection after transaction
+            gc_collect_cycles();
+
+            $endTime = microtime(true);
+            $executionTime = round($endTime - $startTime, 2);
+
+            $this->logInfo('✅ Installation seeding completed successfully!');
+            $this->logInfo("⏱️  Execution time: {$executionTime} seconds");
+
+        } catch (\Exception $e) {
+            $this->logError('❌ Installation seeding failed: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
      * Seed core system data (permissions, roles, settings)
      */
     public function seedCoreSystem(): void

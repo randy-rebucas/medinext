@@ -44,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'license.usage' => \App\Http\Middleware\LicenseUsageValidation::class,
             'trial.check' => \App\Http\Middleware\CheckTrialStatus::class,
             'onboarding.check' => \App\Http\Middleware\CheckOnboardingStatus::class,
+            'installation.check' => \App\Http\Middleware\CheckInstallationStatus::class,
             'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
             'api.rate.limit' => \App\Http\Middleware\ApiRateLimit::class,
         ]);
