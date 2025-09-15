@@ -25,7 +25,7 @@ interface TeamSetupProps {
     }>;
 }
 
-export default function TeamSetup({ user, clinic, roles }: TeamSetupProps) {
+export default function TeamSetup({ clinic, roles }: TeamSetupProps) {
     const { data, setData, post, processing, errors } = useForm({
         team_members: [
             {

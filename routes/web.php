@@ -6,9 +6,9 @@ use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
-})->name('home');
+})->name('home')->middleware('installation.check');
 
-Route::middleware(['auth', 'verified', 'trial.check', 'onboarding.check'])->group(function () {
+Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onboarding.check'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Admin routes - Clinic admin has full access to all management areas
@@ -544,3 +544,4 @@ Route::middleware(['auth', 'verified', 'trial.check', 'onboarding.check'])->grou
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/license-web.php';
+require __DIR__.'/installation.php';

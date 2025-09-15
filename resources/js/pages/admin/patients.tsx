@@ -61,7 +61,7 @@ interface PatientManagementProps {
 }
 
 export default function PatientManagement({ patients: initialPatients }: PatientManagementProps) {
-    const [patients, setPatients] = useState<Patient[]>(initialPatients);
+    const [patients] = useState<Patient[]>(initialPatients);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [genderFilter, setGenderFilter] = useState('all');
@@ -74,7 +74,7 @@ export default function PatientManagement({ patients: initialPatients }: Patient
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
     const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
     const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
-    const [healthRecordsData, setHealthRecordsData] = useState<{
+    const [, setHealthRecordsData] = useState<{
         patient: Patient;
         appointments: Array<{
             id: number;
@@ -366,6 +366,28 @@ export default function PatientManagement({ patients: initialPatients }: Patient
     const handleDeletePatient = (patient: Patient) => {
         setDeletingPatient(patient);
         setIsDeleteModalOpen(true);
+    };
+
+    const fetchHealthRecords = async (patientId: number) => {
+        try {
+            const response = await fetch(`/admin/patients/${patientId}/health-records`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setHealthRecordsData(data);
+            } else {
+                console.error('Failed to fetch health records');
+            }
+        } catch (error) {
+            console.error('Error fetching health records:', error);
+        }
     };
 
     const handleViewHealthRecords = (patient: Patient) => {

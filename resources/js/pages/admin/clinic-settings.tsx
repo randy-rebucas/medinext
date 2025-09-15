@@ -72,7 +72,7 @@ interface PageProps {
 export default function ClinicSettings() {
     const { props } = usePage<PageProps>();
     const [isSaving, setIsSaving] = useState(false);
-    const { settings, getBrandingColor, getClinicName } = useSettings();
+    const { settings } = useSettings();
 
     // Apply branding styles when settings change
     useEffect(() => {
@@ -148,7 +148,7 @@ export default function ClinicSettings() {
                 setErrorMessage(errorMessages.join(', ') || 'Failed to save settings');
                 setIsSaving(false);
             }
-        } catch (error: unknown) {
+        } catch {
             setSaveStatus('error');
             setErrorMessage('Failed to save settings');
             setIsSaving(false);

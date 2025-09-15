@@ -90,7 +90,7 @@ interface AdminAppointmentsProps {
 }
 
 export default function AdminAppointments({ appointments: initialAppointments, patients, doctors, rooms }: AdminAppointmentsProps) {
-    const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+    const [appointments] = useState<Appointment[]>(initialAppointments);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
@@ -105,7 +105,7 @@ export default function AdminAppointments({ appointments: initialAppointments, p
     const [deletingAppointment, setDeletingAppointment] = useState<Appointment | null>(null);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [calendarData, setCalendarData] = useState<Appointment[]>([]);
+    const [, setCalendarData] = useState<Appointment[]>([]);
     const [formData, setFormData] = useState({
         patient_id: '',
         doctor_id: '',

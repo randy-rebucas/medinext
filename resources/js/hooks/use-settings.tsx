@@ -37,7 +37,7 @@ export function useSettings(): UseSettingsReturn {
                     setSettings(page.props.settings);
                     setLoading(false);
                 },
-                onError: (errors) => {
+                onError: () => {
                     setError('Failed to fetch settings');
                     setLoading(false);
                 }

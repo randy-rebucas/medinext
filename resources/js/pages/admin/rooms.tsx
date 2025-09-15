@@ -160,7 +160,7 @@ export default function RoomManagement() {
     const handleSaveRoom = async () => {
         try {
             const url = editingRoom ? `/admin/rooms/${editingRoom.id}` : '/admin/rooms';
-            const method = editingRoom ? 'PUT' : 'POST';
+            // const method = editingRoom ? 'PUT' : 'POST';
             
             const response = await fetch(url, {
                 method: 'POST',

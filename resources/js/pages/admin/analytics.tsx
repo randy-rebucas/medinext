@@ -41,7 +41,7 @@ export default function Analytics() {
     }
 
     const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
-    const [analyticsData, setAnalyticsData] = useState({});
+    const [, setAnalyticsData] = useState({});
     const [loading, setLoading] = useState(true);
 
     // Fetch analytics data from database
