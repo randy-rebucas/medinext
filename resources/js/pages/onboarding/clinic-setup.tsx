@@ -31,7 +31,7 @@ interface ClinicSetupProps {
     } | null;
 }
 
-export default function ClinicSetup({ user, clinic }: ClinicSetupProps) {
+export default function ClinicSetup({ clinic }: ClinicSetupProps) {
     const { data, setData, post, processing, errors } = useForm({
         name: clinic?.name || '',
         address: clinic?.address?.street || '',

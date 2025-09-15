@@ -38,11 +38,11 @@ export default function Welcome({ system_requirements, database_connection }: Pr
     }
     
     const failedExtensions = Object.entries(system_requirements.extensions)
-      .filter(([_, status]) => !status)
+      .filter(([_name, status]) => !status)
       .map(([name]) => name);
     
     const failedPermissions = Object.entries(system_requirements.permissions)
-      .filter(([_, status]) => !status)
+      .filter(([_name, status]) => !status)
       .map(([name]) => name.replace('_', ' '));
     
     return {

@@ -77,7 +77,7 @@ interface ReportsProps {
 }
 
 export default function Reports({ analytics: initialAnalytics }: ReportsProps) {
-    const [analytics, setAnalytics] = useState(initialAnalytics);
+    const [analytics] = useState(initialAnalytics);
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
     const [isViewAnalyticsModalOpen, setIsViewAnalyticsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -164,6 +164,29 @@ export default function Reports({ analytics: initialAnalytics }: ReportsProps) {
             format: 'pdf'
         });
         setErrors({});
+    };
+
+    const fetchAnalytics = async () => {
+        try {
+            const response = await fetch('/admin/analytics', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Update analytics state if needed
+                console.log('Analytics data:', data);
+            } else {
+                console.error('Failed to fetch analytics');
+            }
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+        }
     };
 
     const handleViewAnalytics = () => {

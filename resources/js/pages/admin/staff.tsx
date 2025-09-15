@@ -49,8 +49,6 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         },
     ];
     
-    try {
-    
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -73,6 +71,8 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         emergency_phone: '',
         notes: ''
     });
+
+    try {
 
     // Ensure staff is an array
     const staffArray = Array.isArray(staff) ? staff : [];

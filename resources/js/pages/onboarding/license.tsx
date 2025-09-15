@@ -26,7 +26,7 @@ interface LicenseProps {
     };
 }
 
-export default function License({ user, license_info, trial_status }: LicenseProps) {
+export default function License({ license_info, trial_status }: LicenseProps) {
     const { data, setData, post, processing, errors } = useForm({
         license_key: '',
     });

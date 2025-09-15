@@ -90,7 +90,7 @@ interface DoctorManagementProps {
 }
 
 export default function DoctorManagement({ doctors: initialDoctors, specializations }: DoctorManagementProps) {
-    const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
+    const [doctors] = useState<Doctor[]>(initialDoctors);
     const [searchTerm, setSearchTerm] = useState('');
     const [specializationFilter, setSpecializationFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');

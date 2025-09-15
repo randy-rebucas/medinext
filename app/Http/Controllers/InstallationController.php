@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Clinic;
@@ -23,7 +24,7 @@ class InstallationController extends Controller
     /**
      * Show the installation welcome page
      */
-    public function index(): Response
+    public function index(): Response|RedirectResponse
     {
         // Check if already installed
         if ($this->isInstalled()) {
@@ -39,7 +40,7 @@ class InstallationController extends Controller
     /**
      * Show the database configuration page
      */
-    public function database(): Response
+    public function database(): Response|RedirectResponse
     {
         if ($this->isInstalled()) {
             return redirect()->route('login');
@@ -112,7 +113,7 @@ class InstallationController extends Controller
     /**
      * Show the admin user creation page
      */
-    public function admin(): Response
+    public function admin(): Response|RedirectResponse
     {
         if ($this->isInstalled()) {
             return redirect()->route('login');
@@ -193,7 +194,7 @@ class InstallationController extends Controller
     /**
      * Show the installation complete page
      */
-    public function complete(): Response
+    public function complete(): Response|RedirectResponse
     {
         if (!$this->isInstalled()) {
             return redirect()->route('installation.index');
