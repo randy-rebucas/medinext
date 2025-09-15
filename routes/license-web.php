@@ -24,7 +24,7 @@ Route::post('/license/activate', [LicenseController::class, 'activate'])
     ->middleware(['auth']);
 
 Route::post('/license/validate', [LicenseController::class, 'validate'])
-    ->name('license.validate')
+    ->name('web.license.validate')
     ->middleware(['auth']);
 
 // License status page

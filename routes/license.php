@@ -21,7 +21,7 @@ Route::prefix('v1/license')->group(function () {
         ->name('api.license.activate');
 
     Route::post('/validate', [LicenseController::class, 'validate'])
-        ->name('license.validate');
+        ->name('api.license.validate');
 
     // User license activation (requires authentication)
     Route::middleware(['api.auth'])->group(function () {
