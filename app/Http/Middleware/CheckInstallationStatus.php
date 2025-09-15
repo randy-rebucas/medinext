@@ -59,8 +59,8 @@ class CheckInstallationStatus
 
             // Check if there's at least one user with superadmin role
             $superadminExists = DB::table('users')
-                ->join('user_roles', 'users.id', '=', 'user_roles.user_id')
-                ->join('roles', 'user_roles.role_id', '=', 'roles.id')
+                ->join('user_clinic_roles', 'users.id', '=', 'user_clinic_roles.user_id')
+                ->join('roles', 'user_clinic_roles.role_id', '=', 'roles.id')
                 ->where('roles.name', 'superadmin')
                 ->exists();
 
