@@ -105,7 +105,7 @@ export default function AdminAppointments({ appointments: initialAppointments, p
     const [deletingAppointment, setDeletingAppointment] = useState<Appointment | null>(null);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [, setCalendarData] = useState<Appointment[]>([]);
+    const [calendarData, setCalendarData] = useState<Appointment[]>([]);
     const [formData, setFormData] = useState({
         patient_id: '',
         doctor_id: '',
@@ -127,9 +127,9 @@ export default function AdminAppointments({ appointments: initialAppointments, p
         const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter;
         const matchesType = typeFilter === 'all' || appointment.type === typeFilter;
         const matchesDate = dateFilter === 'all' ||
-            (dateFilter === 'today' && appointment.date === new Date().toISOString().split('T')[0]) ||
-            (dateFilter === 'tomorrow' && appointment.date === new Date(Date.now() + 86400000).toISOString().split('T')[0]) ||
-            (dateFilter === 'this_week' && new Date(appointment.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+            (dateFilter === 'today' && appointment.start_at.split('T')[0] === new Date().toISOString().split('T')[0]) ||
+            (dateFilter === 'tomorrow' && appointment.start_at.split('T')[0] === new Date(Date.now() + 86400000).toISOString().split('T')[0]) ||
+            (dateFilter === 'this_week' && new Date(appointment.start_at) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
 
         return matchesSearch && matchesStatus && matchesType && matchesDate;
     });
@@ -326,6 +326,12 @@ export default function AdminAppointments({ appointments: initialAppointments, p
         setIsDeleteModalOpen(true);
     };
 
+    const fetchCalendarData = () => {
+        // For now, we'll use the existing appointments data
+        // In a real implementation, you might want to fetch calendar-specific data
+        setCalendarData(appointments);
+    };
+
     const handleViewCalendar = () => {
         setIsCalendarModalOpen(true);
         fetchCalendarData();
@@ -470,7 +476,7 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                                         </div>
                                                         <div>
                                                             <div className="font-semibold text-slate-900 dark:text-white">{appointment.patient_name}</div>
-                                                            <div className="text-sm text-slate-500 dark:text-slate-400">{appointment.patient_email}</div>
+                                                            <div className="text-sm text-slate-500 dark:text-slate-400">ID: {appointment.patient_id}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
@@ -481,7 +487,7 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                                         </div>
                                                         <div>
                                                             <div className="font-medium text-slate-900 dark:text-white">{appointment.doctor_name}</div>
-                                                            <div className="text-sm text-slate-500 dark:text-slate-400">{appointment.doctor_specialization}</div>
+                                                            <div className="text-sm text-slate-500 dark:text-slate-400">ID: {appointment.doctor_id}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
@@ -491,10 +497,10 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                                             <Calendar className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                                                         </div>
                                                         <div>
-                                                            <div className="font-medium text-slate-900 dark:text-white">{appointment.date}</div>
+                                                            <div className="font-medium text-slate-900 dark:text-white">{new Date(appointment.start_at).toLocaleDateString()}</div>
                                                             <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center">
                                                                 <Clock className="mr-1 h-3 w-3" />
-                                                                {appointment.time} • {appointment.duration} min
+                                                                {new Date(appointment.start_at).toLocaleTimeString()} • {Math.round((new Date(appointment.end_at).getTime() - new Date(appointment.start_at).getTime()) / 60000)} min
                                                             </div>
                                                         </div>
                                                     </div>
@@ -764,93 +770,63 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                     <DialogHeader>
                         <DialogTitle>Edit Appointment</DialogTitle>
                         <DialogDescription>
-                            Update the appointment details for {editingAppointment?.patient}.
+                            Update the appointment details for {editingAppointment?.patient_name}.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="edit-patient">Patient Name *</Label>
-                                <Input
-                                    id="edit-patient"
-                                    value={formData.patient}
-                                    onChange={(e) => setFormData({...formData, patient: e.target.value})}
-                                    placeholder="Enter patient name"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-patientEmail">Patient Email *</Label>
-                                <Input
-                                    id="edit-patientEmail"
-                                    type="email"
-                                    value={formData.patientEmail}
-                                    onChange={(e) => setFormData({...formData, patientEmail: e.target.value})}
-                                    placeholder="patient@email.com"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-patientPhone">Patient Phone *</Label>
-                                <Input
-                                    id="edit-patientPhone"
-                                    value={formData.patientPhone}
-                                    onChange={(e) => setFormData({...formData, patientPhone: e.target.value})}
-                                    placeholder="+1 (555) 123-4567"
-                                />
+                                <Label htmlFor="edit-patient">Patient *</Label>
+                                <Select value={formData.patient_id} onValueChange={(value) => setFormData({...formData, patient_id: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select patient" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {patients.map((patient) => (
+                                            <SelectItem key={patient.id} value={String(patient.id)}>
+                                                {patient.name} ({patient.patient_id})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-doctor">Doctor *</Label>
-                                <Select value={formData.doctor} onValueChange={(value) => setFormData({...formData, doctor: value})}>
+                                <Select value={formData.doctor_id} onValueChange={(value) => setFormData({...formData, doctor_id: value})}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select doctor" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Dr. Sarah Johnson">Dr. Sarah Johnson - Cardiology</SelectItem>
-                                        <SelectItem value="Dr. Michael Brown">Dr. Michael Brown - Pediatrics</SelectItem>
-                                        <SelectItem value="Dr. Emily Davis">Dr. Emily Davis - Dermatology</SelectItem>
-                                        <SelectItem value="Dr. James Wilson">Dr. James Wilson - Orthopedics</SelectItem>
-                                        <SelectItem value="Dr. Jennifer Lee">Dr. Jennifer Lee - Neurology</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-date">Date *</Label>
-                                <Input
-                                    id="edit-date"
-                                    type="date"
-                                    value={formData.date}
-                                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-time">Time *</Label>
-                                <Input
-                                    id="edit-time"
-                                    type="time"
-                                    value={formData.time}
-                                    onChange={(e) => setFormData({...formData, time: e.target.value})}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-duration">Duration (minutes) *</Label>
-                                <Select value={formData.duration} onValueChange={(value) => setFormData({...formData, duration: value})}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select duration" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="15">15 minutes</SelectItem>
-                                        <SelectItem value="30">30 minutes</SelectItem>
-                                        <SelectItem value="45">45 minutes</SelectItem>
-                                        <SelectItem value="60">60 minutes</SelectItem>
-                                        <SelectItem value="90">90 minutes</SelectItem>
+                                        {doctors.map((doctor) => (
+                                            <SelectItem key={doctor.id} value={String(doctor.id)}>
+                                                {doctor.name} - {doctor.specialization}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-start_at">Start Date & Time *</Label>
+                                <Input
+                                    id="edit-start_at"
+                                    type="datetime-local"
+                                    value={formData.start_at}
+                                    onChange={(e) => setFormData({...formData, start_at: e.target.value})}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-end_at">End Date & Time *</Label>
+                                <Input
+                                    id="edit-end_at"
+                                    type="datetime-local"
+                                    value={formData.end_at}
+                                    onChange={(e) => setFormData({...formData, end_at: e.target.value})}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-type">Appointment Type *</Label>
                                 <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
@@ -867,18 +843,48 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit-room">Room *</Label>
-                                <Select value={formData.room} onValueChange={(value) => setFormData({...formData, room: value})}>
+                                <Label htmlFor="edit-priority">Priority *</Label>
+                                <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select priority" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Low">Low</SelectItem>
+                                        <SelectItem value="Normal">Normal</SelectItem>
+                                        <SelectItem value="High">High</SelectItem>
+                                        <SelectItem value="Urgent">Urgent</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-room_id">Room</Label>
+                                <Select value={formData.room_id} onValueChange={(value) => setFormData({...formData, room_id: value})}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select room" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Room 101">Room 101</SelectItem>
-                                        <SelectItem value="Room 102">Room 102</SelectItem>
-                                        <SelectItem value="Room 103">Room 103</SelectItem>
-                                        <SelectItem value="Room 104">Room 104</SelectItem>
-                                        <SelectItem value="Room 105">Room 105</SelectItem>
-                                        <SelectItem value="Emergency Room">Emergency Room</SelectItem>
+                                        {rooms.map((room) => (
+                                            <SelectItem key={room.id} value={String(room.id)}>
+                                                {room.name} ({room.room_number})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-status">Status *</Label>
+                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                        <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                        <SelectItem value="In Progress">In Progress</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -972,11 +978,11 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <Calendar className="h-4 w-4 text-slate-400" />
-                                        <span className="text-slate-700 dark:text-slate-300">{viewingAppointment.date} at {viewingAppointment.time}</span>
+                                        <span className="text-slate-700 dark:text-slate-300">{new Date(viewingAppointment.start_at).toLocaleDateString()} at {new Date(viewingAppointment.start_at).toLocaleTimeString()}</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <Clock className="h-4 w-4 text-slate-400" />
-                                        <span className="text-slate-700 dark:text-slate-300">{viewingAppointment.duration} minutes</span>
+                                        <span className="text-slate-700 dark:text-slate-300">{Math.round((new Date(viewingAppointment.end_at).getTime() - new Date(viewingAppointment.start_at).getTime()) / 60000)} minutes</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <MapPin className="h-4 w-4 text-slate-400" />
@@ -1016,11 +1022,11 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                 <TabsContent value="contact" className="space-y-4">
                                     <div className="flex items-center space-x-2">
                                         <Mail className="h-4 w-4 text-slate-400" />
-                                        <span className="text-slate-700 dark:text-slate-300">{viewingAppointment.patient_email}</span>
+                                        <span className="text-slate-700 dark:text-slate-300">ID: {viewingAppointment.patient_id}</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <Phone className="h-4 w-4 text-slate-400" />
-                                        <span className="text-slate-700 dark:text-slate-300">{viewingAppointment.patient_phone}</span>
+                                        <span className="text-slate-700 dark:text-slate-300">ID: {viewingAppointment.doctor_id}</span>
                                     </div>
                                 </TabsContent>
 
@@ -1072,10 +1078,10 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <div className="font-medium text-slate-900 dark:text-white">
-                                                {appointment.patient} - {appointment.doctor}
+                                                {appointment.patient_name} - {appointment.doctor_name}
                                             </div>
                                             <div className="text-sm text-slate-500 dark:text-slate-400">
-                                                {new Date(appointment.start).toLocaleString()} - {appointment.room}
+                                                {new Date(appointment.start_at).toLocaleDateString()} at {new Date(appointment.start_at).toLocaleTimeString()} - {appointment.room_name || 'No room assigned'}
                                             </div>
                                         </div>
                                         <Badge className={getTypeColor(appointment.type)}>
