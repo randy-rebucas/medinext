@@ -11,6 +11,8 @@ class UserClinicRole extends Model
         'user_id',
         'clinic_id',
         'role_id',
+        'assigned_by',
+        'assigned_at',
         'department',
         'status',
         'address',
@@ -18,6 +20,11 @@ class UserClinicRole extends Model
         'emergency_phone',
         'notes',
         'join_date',
+    ];
+
+    protected $casts = [
+        'join_date' => 'date',
+        'assigned_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

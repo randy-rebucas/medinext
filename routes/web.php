@@ -8,6 +8,11 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home')->middleware('installation.check');
 
+// CSRF token route for AJAX requests
+Route::get('/csrf-token', function () {
+    return response()->json(['csrf_token' => csrf_token()]);
+})->name('csrf-token');
+
 Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onboarding.check'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

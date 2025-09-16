@@ -59,6 +59,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
     const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info', message: string} | null>(null);
     const [formData, setFormData] = useState<StaffFormData>({
         name: '',
         email: '',
@@ -149,132 +150,288 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         setIsEditModalOpen(true);
     };
 
-    const handleSaveStaff = () => {
-        // Clear previous errors
-        setFormErrors({});
+    const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+        setNotification({ type, message });
+        setTimeout(() => setNotification(null), 5000);
+    };
 
-        // Basic client-side validation
+    const handleSaveStaff = async () => {
+        // Clear previous errors and notifications
+        setFormErrors({});
+        setNotification(null);
+
+        // Enhanced client-side validation
         const errors: Record<string, string> = {};
 
+        // Name validation
         if (!formData.name.trim()) {
             errors.name = 'Name is required';
+        } else if (formData.name.trim().length < 2) {
+            errors.name = 'Name must be at least 2 characters long';
+        } else if (formData.name.trim().length > 255) {
+            errors.name = 'Name must not exceed 255 characters';
+        } else if (!/^[a-zA-Z\s\-\.\']+$/.test(formData.name.trim())) {
+            errors.name = 'Name can only contain letters, spaces, hyphens, dots, and apostrophes';
         }
+
+        // Email validation
         if (!formData.email.trim()) {
             errors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        } else if (formData.email.trim().length > 255) {
+            errors.email = 'Email must not exceed 255 characters';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
             errors.email = 'Please enter a valid email address';
         }
+
+        // Phone validation
         if (!formData.phone.trim()) {
             errors.phone = 'Phone number is required';
+        } else if (formData.phone.trim().length > 20) {
+            errors.phone = 'Phone number must not exceed 20 characters';
+        } else if (!/^[\+]?[0-9\s\-\(\)]{10,20}$/.test(formData.phone.trim())) {
+            errors.phone = 'Please enter a valid phone number (10-20 digits)';
         }
+
+        // Role validation
         if (!formData.role) {
             errors.role = 'Role is required';
+        } else if (!roles.some(role => role.name === formData.role)) {
+            errors.role = 'Selected role is not valid';
         }
+
+        // Department validation
         if (!formData.department) {
             errors.department = 'Department is required';
+        } else if (formData.department.length > 100) {
+            errors.department = 'Department must not exceed 100 characters';
+        } else if (!departments.includes(formData.department)) {
+            errors.department = 'Selected department is not valid';
+        }
+
+        // Status validation
+        if (!formData.status || !['Active', 'On Leave', 'Inactive'].includes(formData.status)) {
+            errors.status = 'Status must be Active, On Leave, or Inactive';
+        }
+
+        // Address validation (optional)
+        if (formData.address && formData.address.length > 500) {
+            errors.address = 'Address must not exceed 500 characters';
+        }
+
+        // Emergency contact validation (optional)
+        if (formData.emergency_contact) {
+            if (formData.emergency_contact.length > 255) {
+                errors.emergency_contact = 'Emergency contact name must not exceed 255 characters';
+            } else if (!/^[a-zA-Z\s\-\.\']+$/.test(formData.emergency_contact.trim())) {
+                errors.emergency_contact = 'Emergency contact name can only contain letters, spaces, hyphens, dots, and apostrophes';
+            }
+        }
+
+        // Emergency phone validation (optional)
+        if (formData.emergency_phone) {
+            if (formData.emergency_phone.length > 20) {
+                errors.emergency_phone = 'Emergency phone number must not exceed 20 characters';
+            } else if (!/^[\+]?[0-9\s\-\(\)]{10,20}$/.test(formData.emergency_phone.trim())) {
+                errors.emergency_phone = 'Please enter a valid emergency phone number (10-20 digits)';
+            }
+        }
+
+        // Notes validation (optional)
+        if (formData.notes && formData.notes.length > 1000) {
+            errors.notes = 'Notes must not exceed 1000 characters';
         }
 
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
+            showNotification('error', 'Please fix the validation errors before submitting.');
             return;
         }
 
         setIsLoading(true);
 
-        if (editingStaff) {
-            // Update existing staff member
-            fetch(`/admin/staff/${editingStaff.id}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify({
-                    ...formData,
-                    _method: 'PUT'
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    alert('Staff member updated successfully!');
-                    
-                    // Reset form and close modals
-                    setFormData({
-                        name: '',
-                        email: '',
-                        phone: '',
-                        role: '',
-                        department: '',
-                        status: 'Active',
-                        address: '',
-                        emergency_contact: '',
-                        emergency_phone: '',
-                        notes: ''
-                    });
-                    setFormErrors({});
-                    setIsEditModalOpen(false);
-                    setEditingStaff(null);
-                    setIsLoading(false);
-                    
-                    // Refresh the page to show updated data
-                    window.location.reload();
-                } else {
-                    setFormErrors(data.errors || {});
-                    setIsLoading(false);
+        try {
+            // Create form data for submission
+            const submitData = new FormData();
+            
+            // Add all form fields to FormData
+            Object.entries(formData).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                    submitData.append(key, String(value));
                 }
-            })
-            .catch(error => {
-                console.error('Error updating staff:', error);
-                setIsLoading(false);
             });
-        } else {
-            // Create new staff member
-            fetch('/admin/staff', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(formData),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    alert('Staff member added successfully!');
-                    
-                    // Reset form and close modals
-                    setFormData({
-                        name: '',
-                        email: '',
-                        phone: '',
-                        role: '',
-                        department: '',
-                        status: 'Active',
-                        address: '',
-                        emergency_contact: '',
-                        emergency_phone: '',
-                        notes: ''
-                    });
-                    setFormErrors({});
-                    setIsAddModalOpen(false);
-                    setIsLoading(false);
-                    
-                    // Refresh the page to show updated data
-                    window.location.reload();
-                } else {
-                    setFormErrors(data.errors || {});
-                    setIsLoading(false);
+
+            // Get CSRF token from multiple possible sources
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                           document.querySelector('meta[name="csrf-token"]')?.getAttribute('value') ||
+                           (window as any).Laravel?.csrfToken ||
+                           (window as any).csrfToken;
+            
+            // If still not found, try to get it from the form or make a request to get it
+            if (!csrfToken) {
+                try {
+                    // Try to get CSRF token from a form on the page
+                    const csrfInput = document.querySelector('input[name="_token"]') as HTMLInputElement;
+                    if (csrfInput) {
+                        csrfToken = csrfInput.value;
+                    }
+                } catch (e) {
+                    console.warn('Could not find CSRF token from form input');
                 }
-            })
-            .catch(error => {
-                console.error('Error creating staff:', error);
-                setIsLoading(false);
-            });
+            }
+            
+            if (!csrfToken) {
+                console.error('CSRF token not found. Available meta tags:', 
+                    Array.from(document.querySelectorAll('meta')).map(m => ({ name: m.getAttribute('name'), content: m.getAttribute('content') }))
+                );
+                
+                // Try to fetch CSRF token from the server
+                try {
+                    const csrfResponse = await fetch('/csrf-token', {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (csrfResponse.ok) {
+                        const csrfData = await csrfResponse.json();
+                        csrfToken = csrfData.csrf_token;
+                        console.log('CSRF token fetched from server');
+                    }
+                } catch (csrfError) {
+                    console.warn('Could not fetch CSRF token from server:', csrfError);
+                }
+                
+                if (!csrfToken) {
+                    showNotification('error', 'Security token not found. Please refresh the page and try again.');
+                    return;
+                }
+            }
+
+            const headers = {
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+            };
+
+            console.log('Using CSRF token:', csrfToken ? 'Found' : 'Not found');
+
+            let response: Response;
+            let successMessage: string;
+
+            if (editingStaff) {
+                // Update existing staff member
+                submitData.append('_method', 'PUT');
+                console.log('Updating staff member:', editingStaff.id);
+                console.log('Form data:', Object.fromEntries(submitData.entries()));
+                
+                response = await fetch(`/admin/staff/${editingStaff.id}`, {
+                    method: 'POST',
+                    headers,
+                    body: submitData,
+                });
+                successMessage = 'Staff member updated successfully!';
+            } else {
+                // Create new staff member
+                console.log('Creating new staff member');
+                console.log('Form data:', Object.fromEntries(submitData.entries()));
+                
+                response = await fetch('/admin/staff', {
+                    method: 'POST',
+                    headers,
+                    body: submitData,
+                });
+                successMessage = 'Staff member added successfully!';
+            }
+
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+            // Handle response based on content type
+            const contentType = response.headers.get('content-type');
+            console.log('Response content type:', contentType);
+            
+            if (response.ok) {
+                // Success response
+                if (contentType && contentType.includes('application/json')) {
+                    // JSON response
+                    const data = await response.json();
+                    console.log('Success response data:', data);
+                    
+                    if (data.success) {
+                        showNotification('success', data.message || successMessage);
+                        
+                        // Reset form and close modals
+                        setFormData({
+                            name: '',
+                            email: '',
+                            phone: '',
+                            role: '',
+                            department: '',
+                            status: 'Active',
+                            address: '',
+                            emergency_contact: '',
+                            emergency_phone: '',
+                            notes: ''
+                        });
+                        setFormErrors({});
+                        setIsAddModalOpen(false);
+                        setIsEditModalOpen(false);
+                        setEditingStaff(null);
+                        
+                        // Refresh the page to show updated data
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showNotification('error', data.message || 'Operation failed');
+                    }
+                } else {
+                    // HTML response (redirect)
+                    showNotification('success', successMessage);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            } else {
+                // Error response
+                console.log('Error response status:', response.status);
+                
+                if (contentType && contentType.includes('application/json')) {
+                    // JSON error response
+                    const data = await response.json();
+                    console.log('Error response data:', data);
+                    
+                    if (data.errors) {
+                        setFormErrors(data.errors);
+                        showNotification('error', data.message || 'Please fix the validation errors.');
+                    } else if (data.message) {
+                        showNotification('error', data.message);
+                    } else {
+                        showNotification('error', `Failed to ${editingStaff ? 'update' : 'create'} staff member. Please try again.`);
+                    }
+                } else {
+                    // HTML error response
+                    const responseText = await response.text();
+                    console.log('Error response text:', responseText);
+                    
+                    if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
+                        // This might be a redirect response even with error status
+                        showNotification('success', successMessage);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showNotification('error', `Failed to ${editingStaff ? 'update' : 'create'} staff member. Please try again.`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Error ${editingStaff ? 'updating' : 'creating'} staff:`, error);
+            showNotification('error', `Failed to ${editingStaff ? 'update' : 'create'} staff member. Please check your connection and try again.`);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -288,24 +445,32 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         fetch(`/admin/staff/${staffId}`, {
             method: 'DELETE',
             headers: {
-                'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 'X-Requested-With': 'XMLHttpRequest',
             },
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success message
+        .then(response => {
+            if (response.ok) {
+                // Success - show message and refresh
                 alert(`${staffName} has been deactivated successfully.`);
                 setIsLoading(false);
                 
                 // Refresh the page to show updated data
                 window.location.reload();
             } else {
-                alert(`Failed to deactivate ${staffName}. Please try again.`);
-                setIsLoading(false);
+                // Handle errors
+                return response.json().catch(() => {
+                    throw new Error('Failed to deactivate staff member');
+                });
             }
+        })
+        .then(data => {
+            if (data && data.message) {
+                alert(data.message);
+            } else {
+                alert(`Failed to deactivate ${staffName}. Please try again.`);
+            }
+            setIsLoading(false);
         })
         .catch(error => {
             console.error('Error deleting staff:', error);
@@ -358,6 +523,27 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
             </Head>
 
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+                {/* Notification Display */}
+                {notification && (
+                    <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-md ${
+                        notification.type === 'success' 
+                            ? 'bg-green-100 border border-green-400 text-green-700 dark:bg-green-900/20 dark:border-green-600 dark:text-green-400'
+                            : notification.type === 'error'
+                            ? 'bg-red-100 border border-red-400 text-red-700 dark:bg-red-900/20 dark:border-red-600 dark:text-red-400'
+                            : 'bg-blue-100 border border-blue-400 text-blue-700 dark:bg-blue-900/20 dark:border-blue-600 dark:text-blue-400'
+                    }`}>
+                        <div className="flex items-center justify-between">
+                            <p className="font-medium">{notification.message}</p>
+                            <button
+                                onClick={() => setNotification(null)}
+                                className="ml-4 text-current hover:opacity-70"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+                
                 <div className="space-y-6 p-6">
 
                     <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
@@ -579,6 +765,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     placeholder="Enter full name"
                                     className={formErrors.name ? "border-red-500" : ""}
+                                    disabled={isLoading}
                                 />
                                 {formErrors.name && (
                                     <p className="text-sm text-red-500">{formErrors.name}</p>
@@ -593,6 +780,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                                     placeholder="Enter email address"
                                     className={formErrors.email ? "border-red-500" : ""}
+                                    disabled={isLoading}
                                 />
                                 {formErrors.email && (
                                     <p className="text-sm text-red-500">{formErrors.email}</p>
@@ -608,6 +796,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                                     placeholder="Enter phone number"
                                     className={formErrors.phone ? "border-red-500" : ""}
+                                    disabled={isLoading}
                                 />
                                 {formErrors.phone && (
                                     <p className="text-sm text-red-500">{formErrors.phone}</p>
@@ -615,7 +804,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="role">Role *</Label>
-                                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+                                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})} disabled={isLoading}>
                                     <SelectTrigger className={formErrors.role ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select role" />
                                     </SelectTrigger>
@@ -635,7 +824,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="department">Department *</Label>
-                                <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
+                                <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})} disabled={isLoading}>
                                     <SelectTrigger className={formErrors.department ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select department" />
                                     </SelectTrigger>
@@ -653,7 +842,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
-                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'Active' | 'On Leave' | 'Inactive'})}>
+                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'Active' | 'On Leave' | 'Inactive'})} disabled={isLoading}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
@@ -673,7 +862,12 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                 onChange={(e) => setFormData({...formData, address: e.target.value})}
                                 placeholder="Enter address"
                                 rows={2}
+                                className={formErrors.address ? "border-red-500" : ""}
+                                disabled={isLoading}
                             />
+                            {formErrors.address && (
+                                <p className="text-sm text-red-500">{formErrors.address}</p>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -683,7 +877,12 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.emergency_contact}
                                     onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
                                     placeholder="Emergency contact name"
+                                    className={formErrors.emergency_contact ? "border-red-500" : ""}
+                                    disabled={isLoading}
                                 />
+                                {formErrors.emergency_contact && (
+                                    <p className="text-sm text-red-500">{formErrors.emergency_contact}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="emergencyPhone">Emergency Phone</Label>
@@ -692,7 +891,12 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.emergency_phone}
                                     onChange={(e) => setFormData({...formData, emergency_phone: e.target.value})}
                                     placeholder="Emergency contact phone"
+                                    className={formErrors.emergency_phone ? "border-red-500" : ""}
+                                    disabled={isLoading}
                                 />
+                                {formErrors.emergency_phone && (
+                                    <p className="text-sm text-red-500">{formErrors.emergency_phone}</p>
+                                )}
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -703,11 +907,16 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                 onChange={(e) => setFormData({...formData, notes: e.target.value})}
                                 placeholder="Additional notes"
                                 rows={3}
+                                className={formErrors.notes ? "border-red-500" : ""}
+                                disabled={isLoading}
                             />
+                            {formErrors.notes && (
+                                <p className="text-sm text-red-500">{formErrors.notes}</p>
+                            )}
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={handleCancel}>
+                        <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
@@ -774,7 +983,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-role">Role *</Label>
-                                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+                                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})} disabled={isLoading}>
                                     <SelectTrigger className={formErrors.role ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select role" />
                                     </SelectTrigger>
@@ -794,7 +1003,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-department">Department *</Label>
-                                <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
+                                <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})} disabled={isLoading}>
                                     <SelectTrigger className={formErrors.department ? "border-red-500" : ""}>
                                         <SelectValue placeholder="Select department" />
                                     </SelectTrigger>
@@ -812,7 +1021,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-status">Status</Label>
-                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'Active' | 'On Leave' | 'Inactive'})}>
+                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as 'Active' | 'On Leave' | 'Inactive'})} disabled={isLoading}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
@@ -832,7 +1041,12 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                 onChange={(e) => setFormData({...formData, address: e.target.value})}
                                 placeholder="Enter address"
                                 rows={2}
+                                className={formErrors.address ? "border-red-500" : ""}
+                                disabled={isLoading}
                             />
+                            {formErrors.address && (
+                                <p className="text-sm text-red-500">{formErrors.address}</p>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -842,7 +1056,12 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.emergency_contact}
                                     onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
                                     placeholder="Emergency contact name"
+                                    className={formErrors.emergency_contact ? "border-red-500" : ""}
+                                    disabled={isLoading}
                                 />
+                                {formErrors.emergency_contact && (
+                                    <p className="text-sm text-red-500">{formErrors.emergency_contact}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-emergencyPhone">Emergency Phone</Label>
@@ -851,7 +1070,12 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                     value={formData.emergency_phone}
                                     onChange={(e) => setFormData({...formData, emergency_phone: e.target.value})}
                                     placeholder="Emergency contact phone"
+                                    className={formErrors.emergency_phone ? "border-red-500" : ""}
+                                    disabled={isLoading}
                                 />
+                                {formErrors.emergency_phone && (
+                                    <p className="text-sm text-red-500">{formErrors.emergency_phone}</p>
+                                )}
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -862,11 +1086,16 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                 onChange={(e) => setFormData({...formData, notes: e.target.value})}
                                 placeholder="Additional notes"
                                 rows={3}
+                                className={formErrors.notes ? "border-red-500" : ""}
+                                disabled={isLoading}
                             />
+                            {formErrors.notes && (
+                                <p className="text-sm text-red-500">{formErrors.notes}</p>
+                            )}
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={handleCancel}>
+                        <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>

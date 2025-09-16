@@ -407,24 +407,37 @@ class StaffController extends \Illuminate\Routing\Controller
             $this->requireStaffManagementAccess($request, 'store');
 
             // Sanitize and validate input
-            $validatedData = $this->validateAndSanitize($request, [
-                'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
-                'email' => 'required|email|unique:users,email|max:255',
-                'phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
-                'role' => 'required|string|exists:roles,name',
-                'department' => 'required|string|max:100',
-                'status' => 'required|string|in:Active,On Leave,Inactive',
-                'address' => 'nullable|string|max:500',
-                'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
-                'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
-                'notes' => 'nullable|string|max:1000',
-            ], [
-                'name.regex' => 'Name can only contain letters, spaces, hyphens, dots, and apostrophes.',
-                'phone.regex' => 'Phone number format is invalid.',
-                'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, dots, and apostrophes.',
-                'emergency_phone.regex' => 'Emergency phone number format is invalid.',
-                'role.exists' => 'Selected role does not exist.',
-            ]);
+            try {
+                $validatedData = $this->validateAndSanitize($request, [
+                    'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                    'email' => 'required|email|unique:users,email|max:255',
+                    'phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                    'role' => 'required|string|exists:roles,name',
+                    'department' => 'required|string|max:100',
+                    'status' => 'required|string|in:Active,On Leave,Inactive',
+                    'address' => 'nullable|string|max:500',
+                    'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                    'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                    'notes' => 'nullable|string|max:1000',
+                ], [
+                    'name.regex' => 'Name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                    'phone.regex' => 'Phone number format is invalid.',
+                    'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                    'emergency_phone.regex' => 'Emergency phone number format is invalid.',
+                    'role.exists' => 'Selected role does not exist.',
+                ]);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                // Handle AJAX requests
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed',
+                        'errors' => $e->errors()
+                    ], 422);
+                }
+                
+                return redirect()->back()->withErrors($e->errors())->withInput();
+            }
             
             $clinicId = $currentClinic->id;
 
@@ -478,10 +491,35 @@ class StaffController extends \Illuminate\Routing\Controller
                 'department' => $validatedData['department']
             ]);
 
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Staff member created successfully',
+                    'data' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $role->name,
+                        'department' => $validatedData['department']
+                    ]
+                ]);
+            }
+
             return redirect()->route('admin.staff')->with('success', 'Staff member created successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'StaffController::store');
+            
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create staff member. Please try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            
             return redirect()->back()->with('error', 'Failed to create staff member. Please try again.')->withInput();
         }
     }
@@ -511,24 +549,37 @@ class StaffController extends \Illuminate\Routing\Controller
             $this->requireStaffManagementAccess($request, 'update');
 
             // Sanitize and validate input
-            $validatedData = $this->validateAndSanitize($request, [
-                'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
-                'email' => 'required|email|unique:users,email,' . $id . '|max:255',
-                'phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
-                'role' => 'required|string|exists:roles,name',
-                'department' => 'required|string|max:100',
-                'status' => 'required|string|in:Active,On Leave,Inactive',
-                'address' => 'nullable|string|max:500',
-                'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
-                'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
-                'notes' => 'nullable|string|max:1000',
-            ], [
-                'name.regex' => 'Name can only contain letters, spaces, hyphens, dots, and apostrophes.',
-                'phone.regex' => 'Phone number format is invalid.',
-                'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, dots, and apostrophes.',
-                'emergency_phone.regex' => 'Emergency phone number format is invalid.',
-                'role.exists' => 'Selected role does not exist.',
-            ]);
+            try {
+                $validatedData = $this->validateAndSanitize($request, [
+                    'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                    'email' => 'required|email|unique:users,email,' . $id . '|max:255',
+                    'phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                    'role' => 'required|string|exists:roles,name',
+                    'department' => 'required|string|max:100',
+                    'status' => 'required|string|in:Active,On Leave,Inactive',
+                    'address' => 'nullable|string|max:500',
+                    'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\.\']+$/',
+                    'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                    'notes' => 'nullable|string|max:1000',
+                ], [
+                    'name.regex' => 'Name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                    'phone.regex' => 'Phone number format is invalid.',
+                    'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, dots, and apostrophes.',
+                    'emergency_phone.regex' => 'Emergency phone number format is invalid.',
+                    'role.exists' => 'Selected role does not exist.',
+                ]);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                // Handle AJAX requests
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed',
+                        'errors' => $e->errors()
+                    ], 422);
+                }
+                
+                return redirect()->back()->withErrors($e->errors())->withInput();
+            }
             
             $clinicId = $currentClinic->id;
 
@@ -591,10 +642,35 @@ class StaffController extends \Illuminate\Routing\Controller
                 'new_department' => $validatedData['department']
             ]);
 
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Staff member updated successfully',
+                    'data' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $role->name,
+                        'department' => $validatedData['department']
+                    ]
+                ]);
+            }
+
             return redirect()->route('admin.staff')->with('success', 'Staff member updated successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'StaffController::update');
+            
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update staff member. Please try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            
             return redirect()->back()->with('error', 'Failed to update staff member. Please try again.')->withInput();
         }
     }
