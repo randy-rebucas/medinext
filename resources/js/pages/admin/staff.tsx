@@ -31,7 +31,12 @@ import {
     Shield,
     Clock,
     Save,
-    X
+    X,
+    Upload,
+    Download,
+    FileText,
+    AlertCircle,
+    CheckCircle
 } from 'lucide-react';
 
 interface StaffManagementProps {
@@ -55,10 +60,22 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
     const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null);
+    const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [importErrors, setImportErrors] = useState<string[]>([]);
+    const [importResult, setImportResult] = useState<{
+        total_rows: number;
+        successful_imports: number;
+        failed_imports: number;
+        errors: string[];
+    } | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info', message: string} | null>(null);
     const [formData, setFormData] = useState<StaffFormData>({
         name: '',
@@ -125,6 +142,117 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         });
         // Reset any previous errors
         setFormErrors({});
+    };
+
+    const handleImportStaff = () => {
+        setIsImportModalOpen(true);
+        setSelectedFile(null);
+        setImportErrors([]);
+        setImportResult(null);
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            // Validate file type
+            const allowedTypes = [
+                'text/csv',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ];
+            
+            if (!allowedTypes.includes(file.type) && !file.name.match(/\.(csv|xlsx|xls)$/i)) {
+                setImportErrors(['Please select a valid CSV or Excel file.']);
+                return;
+            }
+
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                setImportErrors(['File size must not exceed 10MB.']);
+                return;
+            }
+
+            setSelectedFile(file);
+            setImportErrors([]);
+        }
+    };
+
+    const handleDownloadTemplate = async () => {
+        try {
+            const response = await fetch('/admin/staff/import/template', {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'staff_import_template.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showNotification('success', 'Template downloaded successfully!');
+            } else {
+                showNotification('error', 'Failed to download template.');
+            }
+        } catch (error) {
+            console.error('Error downloading template:', error);
+            showNotification('error', 'Failed to download template.');
+        }
+    };
+
+    const handleImportSubmit = async () => {
+        if (!selectedFile) {
+            setImportErrors(['Please select a file to import.']);
+            return;
+        }
+
+        setIsImporting(true);
+        setImportErrors([]);
+        setImportResult(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('import_file', selectedFile);
+
+            const response = await fetch('/admin/staff/import', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                setImportResult(data.data);
+                showNotification('success', data.message);
+                
+                // Close modal and refresh page after a delay
+                setTimeout(() => {
+                    setIsImportModalOpen(false);
+                    window.location.reload();
+                }, 2000);
+            } else {
+                setImportErrors([data.message || 'Import failed. Please check your file and try again.']);
+                if (data.data && data.data.errors) {
+                    setImportErrors(data.data.errors);
+                }
+            }
+        } catch (error) {
+            console.error('Error importing staff:', error);
+            setImportErrors(['Failed to import staff. Please check your connection and try again.']);
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     const handleViewStaff = (staffMember: StaffMember) => {
@@ -435,14 +563,17 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         }
     };
 
-    const handleDeleteStaff = (staffId: number, staffName: string) => {
-        if (!confirm(`Are you sure you want to deactivate ${staffName}? This action can be reversed by editing the staff member.`)) {
-            return;
-        }
+    const handleDeleteStaff = (staff: StaffMember) => {
+        setDeletingStaff(staff);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDeleteStaff = () => {
+        if (!deletingStaff) return;
 
         setIsLoading(true);
         
-        fetch(`/admin/staff/${staffId}`, {
+        fetch(`/admin/staff/${deletingStaff.id}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
@@ -452,8 +583,13 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         .then(response => {
             if (response.ok) {
                 // Success - show message and refresh
-                alert(`${staffName} has been deactivated successfully.`);
+                setNotification({
+                    type: 'success',
+                    message: `${deletingStaff.name} has been deactivated successfully.`
+                });
                 setIsLoading(false);
+                setIsDeleteModalOpen(false);
+                setDeletingStaff(null);
                 
                 // Refresh the page to show updated data
                 window.location.reload();
@@ -466,16 +602,29 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         })
         .then(data => {
             if (data && data.message) {
-                alert(data.message);
+                setNotification({
+                    type: data.success ? 'success' : 'error',
+                    message: data.message
+                });
             } else {
-                alert(`Failed to deactivate ${staffName}. Please try again.`);
+                setNotification({
+                    type: 'error',
+                    message: `Failed to deactivate ${deletingStaff?.name}. Please try again.`
+                });
             }
             setIsLoading(false);
+            setIsDeleteModalOpen(false);
+            setDeletingStaff(null);
         })
         .catch(error => {
             console.error('Error deleting staff:', error);
-            alert(`Failed to deactivate ${staffName}. Please try again.`);
+            setNotification({
+                type: 'error',
+                message: `Failed to deactivate ${deletingStaff?.name}. Please try again.`
+            });
             setIsLoading(false);
+            setIsDeleteModalOpen(false);
+            setDeletingStaff(null);
         });
     };
 
@@ -483,8 +632,14 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         setIsAddModalOpen(false);
         setIsEditModalOpen(false);
         setIsViewModalOpen(false);
+        setIsDeleteModalOpen(false);
+        setIsImportModalOpen(false);
         setEditingStaff(null);
         setViewingStaff(null);
+        setDeletingStaff(null);
+        setSelectedFile(null);
+        setImportErrors([]);
+        setImportResult(null);
         setFormErrors({});
         setFormData({
             name: '',
@@ -558,9 +713,10 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                 <div className="flex space-x-3">
                                     <Button
                                         variant="outline"
+                                        onClick={handleImportStaff}
                                         className="border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
                                     >
-                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        <Upload className="mr-2 h-4 w-4" />
                                         Import Staff
                                     </Button>
                                     <Button
@@ -712,7 +868,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                                             variant="ghost"
                                                             size="sm"
                                                             title="Deactivate Staff"
-                                                            onClick={() => handleDeleteStaff(member.id, member.name)}
+                                                            onClick={() => handleDeleteStaff(member)}
                                                             disabled={isLoading}
                                                             className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
                                                         >
@@ -1224,6 +1380,199 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                         }}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Staff Member
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Confirm Deactivation</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to deactivate {deletingStaff?.name}? This action can be reversed by editing the staff member.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="destructive" 
+                            onClick={confirmDeleteStaff} 
+                            disabled={isLoading}
+                        >
+                            {isLoading ? 'Deactivating...' : 'Deactivate Staff'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Import Staff Modal */}
+            <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Import Staff Members</DialogTitle>
+                        <DialogDescription>
+                            Upload a CSV or Excel file to import multiple staff members at once.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6 py-4">
+                        {/* Template Download Section */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                            <div className="flex items-start space-x-3">
+                                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                                <div className="flex-1">
+                                    <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                        Download Template
+                                    </h3>
+                                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                        Download our CSV template to ensure your file has the correct format and column headers.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleDownloadTemplate}
+                                        className="mt-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-800"
+                                    >
+                                        <Download className="mr-2 h-4 w-4" />
+                                        Download Template
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* File Upload Section */}
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="import-file" className="text-sm font-medium">
+                                    Select File *
+                                </Label>
+                                <div className="mt-2">
+                                    <Input
+                                        id="import-file"
+                                        type="file"
+                                        accept=".csv,.xlsx,.xls"
+                                        onChange={handleFileSelect}
+                                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/20 dark:file:text-blue-300"
+                                        disabled={isImporting}
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Supported formats: CSV, Excel (.xlsx, .xls). Maximum file size: 10MB.
+                                </p>
+                            </div>
+
+                            {/* Selected File Display */}
+                            {selectedFile && (
+                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                                    <div className="flex items-center space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                        <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                                            Selected: {selectedFile.name}
+                                        </span>
+                                        <span className="text-xs text-green-700 dark:text-green-300">
+                                            ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Import Errors */}
+                            {importErrors.length > 0 && (
+                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                                    <div className="flex items-start space-x-2">
+                                        <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
+                                        <div className="flex-1">
+                                            <h3 className="text-sm font-medium text-red-900 dark:text-red-100">
+                                                Import Errors
+                                            </h3>
+                                            <ul className="text-sm text-red-700 dark:text-red-300 mt-1 space-y-1">
+                                                {importErrors.map((error, index) => (
+                                                    <li key={index}>• {error}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Import Results */}
+                            {importResult && (
+                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                                    <div className="flex items-start space-x-2">
+                                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                                        <div className="flex-1">
+                                            <h3 className="text-sm font-medium text-green-900 dark:text-green-100">
+                                                Import Results
+                                            </h3>
+                                            <div className="text-sm text-green-700 dark:text-green-300 mt-1 space-y-1">
+                                                <p>• Total rows processed: {importResult.total_rows}</p>
+                                                <p>• Successfully imported: {importResult.successful_imports}</p>
+                                                {importResult.failed_imports > 0 && (
+                                                    <p>• Failed imports: {importResult.failed_imports}</p>
+                                                )}
+                                            </div>
+                                            {importResult.errors.length > 0 && (
+                                                <div className="mt-2">
+                                                    <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                                                        Errors:
+                                                    </p>
+                                                    <ul className="text-xs text-red-600 dark:text-red-400 mt-1 space-y-1">
+                                                        {importResult.errors.slice(0, 5).map((error, index) => (
+                                                            <li key={index}>• {error}</li>
+                                                        ))}
+                                                        {importResult.errors.length > 5 && (
+                                                            <li>• ... and {importResult.errors.length - 5} more errors</li>
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Required Fields Info */}
+                        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                            <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">
+                                Required Fields
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                <div>• Name (Full Name)</div>
+                                <div>• Email Address</div>
+                                <div>• Role</div>
+                                <div>• Department</div>
+                            </div>
+                            <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2 mt-3">
+                                Optional Fields
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                <div>• Phone Number</div>
+                                <div>• Status (Active/On Leave/Inactive)</div>
+                                <div>• Address</div>
+                                <div>• Emergency Contact</div>
+                                <div>• Emergency Phone</div>
+                                <div>• Notes</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancel} disabled={isImporting}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleImportSubmit} 
+                            disabled={!selectedFile || isImporting}
+                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                        >
+                            <Upload className="mr-2 h-4 w-4" />
+                            {isImporting ? 'Importing...' : 'Import Staff'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

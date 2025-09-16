@@ -58,6 +58,12 @@ Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onb
             Route::delete('staff/{id}', [App\Http\Controllers\StaffController::class, 'destroy'])->name('admin.staff.destroy');
         });
 
+        // Staff import routes
+        Route::middleware(['permission:staff.create'])->group(function () {
+            Route::post('staff/import', [App\Http\Controllers\StaffController::class, 'import'])->name('admin.staff.import');
+            Route::get('staff/import/template', [App\Http\Controllers\StaffController::class, 'downloadTemplate'])->name('admin.staff.import.template');
+        });
+
         // ===== PATIENT MANAGEMENT =====
         // Admin has full CRUD access to patient management
         Route::middleware(['permission:patients.view'])->group(function () {

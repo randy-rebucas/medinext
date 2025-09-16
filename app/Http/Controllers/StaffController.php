@@ -10,8 +10,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithValidation;
 
 class StaffController extends \Illuminate\Routing\Controller
 {
@@ -686,12 +691,29 @@ class StaffController extends \Illuminate\Routing\Controller
             
             if (!$currentUser) {
                 $this->logSecurityEvent('Unauthenticated staff destroy access attempt');
+                
+                // Handle AJAX requests
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Authentication required'
+                    ], 401);
+                }
+                
                 return redirect()->route('login');
             }
 
             // Get current clinic and check permissions
             $currentClinic = $currentUser->getCurrentClinic();
             if (!$currentClinic) {
+                // Handle AJAX requests
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No clinic selected'
+                    ], 422);
+                }
+                
                 return redirect()->back()->with('error', 'No clinic selected');
             }
 
@@ -710,6 +732,15 @@ class StaffController extends \Illuminate\Routing\Controller
                 $this->logSecurityEvent('Self-removal attempt', [
                     'user_id' => $currentUser->id
                 ]);
+                
+                // Handle AJAX requests
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You cannot remove yourself from the clinic'
+                    ], 422);
+                }
+                
                 return redirect()->back()->with('error', 'You cannot remove yourself from the clinic');
             }
 
@@ -719,6 +750,15 @@ class StaffController extends \Illuminate\Routing\Controller
                     'user_id' => $currentUser->id,
                     'target_user_id' => $user->id
                 ]);
+                
+                // Handle AJAX requests
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You cannot remove superadmin users.'
+                    ], 422);
+                }
+                
                 return redirect()->back()->with('error', 'You cannot remove superadmin users.');
             }
 
@@ -735,6 +775,15 @@ class StaffController extends \Illuminate\Routing\Controller
                     'target_user_id' => $user->id,
                     'clinic_id' => $clinicId
                 ]);
+                
+                // Handle AJAX requests
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cannot remove the last admin from the clinic.'
+                    ], 422);
+                }
+                
                 return redirect()->back()->with('error', 'Cannot remove the last admin from the clinic.');
             }
 
@@ -754,10 +803,28 @@ class StaffController extends \Illuminate\Routing\Controller
                 $user->update(['is_active' => false]);
             }
 
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Staff member removed from clinic successfully'
+                ]);
+            }
+
             return redirect()->route('admin.staff')->with('success', 'Staff member removed from clinic successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'StaffController::destroy');
+            
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to remove staff member. Please try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            
             return redirect()->back()->with('error', 'Failed to remove staff member. Please try again.');
         }
     }
@@ -860,5 +927,363 @@ class StaffController extends \Illuminate\Routing\Controller
         ];
 
         return $permissions[$role] ?? [];
+    }
+
+    /**
+     * Import staff members from CSV/Excel file
+     */
+    public function import(Request $request)
+    {
+        try {
+            $this->logWebRequest('Staff Import Access', ['action' => 'import']);
+            
+            $currentUser = $request->user();
+            
+            if (!$currentUser) {
+                $this->logSecurityEvent('Unauthenticated staff import access attempt');
+                return redirect()->route('login');
+            }
+
+            // Get current clinic and check permissions
+            $currentClinic = $currentUser->getCurrentClinic();
+            if (!$currentClinic) {
+                return redirect()->back()->with('error', 'No clinic selected');
+            }
+
+            // Check staff management access
+            $this->requireStaffManagementAccess($request, 'import');
+
+            // Validate file upload
+            $validatedData = $this->validateAndSanitize($request, [
+                'import_file' => 'required|file|mimes:csv,xlsx,xls|max:10240', // 10MB max
+            ], [
+                'import_file.required' => 'Please select a file to import.',
+                'import_file.file' => 'The uploaded file is not valid.',
+                'import_file.mimes' => 'The file must be a CSV or Excel file.',
+                'import_file.max' => 'The file size must not exceed 10MB.',
+            ]);
+
+            $file = $request->file('import_file');
+            $clinicId = $currentClinic->id;
+
+            // Process the import
+            $importResult = $this->processStaffImport($file, $clinicId, $currentUser);
+
+            // Log import result
+            $this->logWebRequest('Staff Import Completed', [
+                'total_rows' => $importResult['total_rows'],
+                'successful_imports' => $importResult['successful_imports'],
+                'failed_imports' => $importResult['failed_imports'],
+                'errors' => $importResult['errors']
+            ]);
+
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Import completed. {$importResult['successful_imports']} staff members imported successfully.",
+                    'data' => $importResult
+                ]);
+            }
+
+            $message = "Import completed successfully! {$importResult['successful_imports']} staff members imported.";
+            if ($importResult['failed_imports'] > 0) {
+                $message .= " {$importResult['failed_imports']} records failed to import.";
+            }
+
+            return redirect()->route('admin.staff')->with('success', $message);
+
+        } catch (\Exception $e) {
+            $this->handleException($e, 'StaffController::import');
+            
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to import staff members. Please check your file format and try again.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to import staff members. Please check your file format and try again.');
+        }
+    }
+
+    /**
+     * Download staff import template
+     */
+    public function downloadTemplate(Request $request)
+    {
+        try {
+            $this->logWebRequest('Staff Import Template Download', ['action' => 'download_template']);
+            
+            $currentUser = $request->user();
+            
+            if (!$currentUser) {
+                $this->logSecurityEvent('Unauthenticated template download attempt');
+                return redirect()->route('login');
+            }
+
+            // Check staff management access
+            $this->requireStaffManagementAccess($request, 'download_template');
+
+            // Get available roles and departments
+            $roles = Role::where('is_system_role', false)->pluck('name')->toArray();
+            $departments = [
+                'General', 'Administration', 'Medical', 'Nursing', 'Reception',
+                'Laboratory', 'Pharmacy', 'Maintenance', 'Security', 'IT Support'
+            ];
+
+            // Create CSV template
+            $templateData = [
+                [
+                    'name' => 'John Doe',
+                    'email' => 'john.doe@example.com',
+                    'phone' => '+1234567890',
+                    'role' => 'Doctor',
+                    'department' => 'Medical',
+                    'status' => 'Active',
+                    'address' => '123 Main St, City, State',
+                    'emergency_contact' => 'Jane Doe',
+                    'emergency_phone' => '+1234567891',
+                    'notes' => 'Sample staff member'
+                ]
+            ];
+
+            $filename = 'staff_import_template.csv';
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+
+            $callback = function() use ($templateData) {
+                $file = fopen('php://output', 'w');
+                
+                // Add headers
+                fputcsv($file, array_keys($templateData[0]));
+                
+                // Add sample data
+                foreach ($templateData as $row) {
+                    fputcsv($file, $row);
+                }
+                
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+
+        } catch (\Exception $e) {
+            $this->handleException($e, 'StaffController::downloadTemplate');
+            return redirect()->back()->with('error', 'Failed to download template.');
+        }
+    }
+
+    /**
+     * Process staff import from uploaded file
+     */
+    private function processStaffImport($file, int $clinicId, $currentUser): array
+    {
+        $result = [
+            'total_rows' => 0,
+            'successful_imports' => 0,
+            'failed_imports' => 0,
+            'errors' => []
+        ];
+
+        try {
+            // Get file extension
+            $extension = $file->getClientOriginalExtension();
+            
+            if ($extension === 'csv') {
+                $data = $this->parseCsvFile($file);
+            } else {
+                // For Excel files, use Laravel Excel
+                $data = Excel::toArray(new class implements ToModel, WithHeadingRow {
+                    public function model(array $row) {
+                        return $row;
+                    }
+                }, $file)[0];
+            }
+
+            $result['total_rows'] = count($data);
+
+            foreach ($data as $index => $row) {
+                try {
+                    // Skip empty rows
+                    if (empty(array_filter($row))) {
+                        continue;
+                    }
+
+                    // Validate and process each row
+                    $staffData = $this->validateAndProcessStaffRow($row, $index + 1);
+                    
+                    if ($staffData) {
+                        // Create staff member
+                        $this->createStaffFromImport($staffData, $clinicId, $currentUser);
+                        $result['successful_imports']++;
+                    } else {
+                        $result['failed_imports']++;
+                    }
+
+                } catch (\Exception $e) {
+                    $result['failed_imports']++;
+                    $result['errors'][] = "Row " . ($index + 1) . ": " . $e->getMessage();
+                }
+            }
+
+        } catch (\Exception $e) {
+            $result['errors'][] = "File processing error: " . $e->getMessage();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Parse CSV file
+     */
+    private function parseCsvFile($file): array
+    {
+        $data = [];
+        $handle = fopen($file->getPathname(), 'r');
+        
+        if ($handle !== false) {
+            $headers = fgetcsv($handle);
+            
+            while (($row = fgetcsv($handle)) !== false) {
+                $data[] = array_combine($headers, $row);
+            }
+            
+            fclose($handle);
+        }
+        
+        return $data;
+    }
+
+    /**
+     * Validate and process a single staff row
+     */
+    private function validateAndProcessStaffRow(array $row, int $rowNumber): ?array
+    {
+        try {
+            // Normalize column names (handle different variations)
+            $normalizedRow = $this->normalizeRowData($row);
+
+            // Validate required fields
+            $requiredFields = ['name', 'email', 'role', 'department'];
+            foreach ($requiredFields as $field) {
+                if (empty($normalizedRow[$field])) {
+                    throw new \Exception("Missing required field: {$field}");
+                }
+            }
+
+            // Validate email format
+            if (!filter_var($normalizedRow['email'], FILTER_VALIDATE_EMAIL)) {
+                throw new \Exception("Invalid email format: {$normalizedRow['email']}");
+            }
+
+            // Check if email already exists
+            if (User::where('email', $normalizedRow['email'])->exists()) {
+                throw new \Exception("Email already exists: {$normalizedRow['email']}");
+            }
+
+            // Validate role exists
+            $role = Role::where('name', $normalizedRow['role'])->first();
+            if (!$role) {
+                throw new \Exception("Invalid role: {$normalizedRow['role']}");
+            }
+
+            // Set default values
+            $staffData = [
+                'name' => trim($normalizedRow['name']),
+                'email' => trim($normalizedRow['email']),
+                'phone' => trim($normalizedRow['phone'] ?? ''),
+                'role' => $normalizedRow['role'],
+                'department' => trim($normalizedRow['department']),
+                'status' => $normalizedRow['status'] ?? 'Active',
+                'address' => trim($normalizedRow['address'] ?? ''),
+                'emergency_contact' => trim($normalizedRow['emergency_contact'] ?? ''),
+                'emergency_phone' => trim($normalizedRow['emergency_phone'] ?? ''),
+                'notes' => trim($normalizedRow['notes'] ?? ''),
+            ];
+
+            // Validate status
+            if (!in_array($staffData['status'], ['Active', 'On Leave', 'Inactive'])) {
+                $staffData['status'] = 'Active';
+            }
+
+            return $staffData;
+
+        } catch (\Exception $e) {
+            throw new \Exception("Row {$rowNumber}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Normalize row data to handle different column name variations
+     */
+    private function normalizeRowData(array $row): array
+    {
+        $normalized = [];
+        $mappings = [
+            'name' => ['name', 'full_name', 'fullname', 'staff_name'],
+            'email' => ['email', 'email_address', 'e_mail'],
+            'phone' => ['phone', 'phone_number', 'mobile', 'contact'],
+            'role' => ['role', 'position', 'job_title'],
+            'department' => ['department', 'dept', 'division'],
+            'status' => ['status', 'active_status', 'employment_status'],
+            'address' => ['address', 'home_address', 'location'],
+            'emergency_contact' => ['emergency_contact', 'emergency_contact_name', 'emergency_name'],
+            'emergency_phone' => ['emergency_phone', 'emergency_contact_phone', 'emergency_mobile'],
+            'notes' => ['notes', 'comments', 'remarks', 'additional_info']
+        ];
+
+        foreach ($mappings as $key => $variations) {
+            foreach ($variations as $variation) {
+                if (isset($row[$variation]) && !empty($row[$variation])) {
+                    $normalized[$key] = $row[$variation];
+                    break;
+                }
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Create staff member from import data
+     */
+    private function createStaffFromImport(array $staffData, int $clinicId, $currentUser): void
+    {
+        // Find role
+        $role = Role::where('name', $staffData['role'])->first();
+        if (!$role) {
+            throw new \Exception("Role not found: {$staffData['role']}");
+        }
+
+        // Generate secure temporary password
+        $tempPassword = $this->generateSecurePassword();
+
+        // Create user
+        $user = User::create([
+            'name' => $staffData['name'],
+            'email' => $staffData['email'],
+            'phone' => $staffData['phone'],
+            'password' => Hash::make($tempPassword),
+            'is_active' => $staffData['status'] === 'Active',
+            'email_verified_at' => now(),
+        ]);
+
+        // Assign to clinic with role and additional staff information
+        $user->clinics()->attach($clinicId, [
+            'role_id' => $role->id,
+            'department' => $staffData['department'],
+            'assigned_by' => $currentUser->id,
+            'assigned_at' => now(),
+            'join_date' => now(),
+            'address' => $staffData['address'],
+            'emergency_contact' => $staffData['emergency_contact'],
+            'emergency_phone' => $staffData['emergency_phone'],
+            'notes' => $staffData['notes'],
+        ]);
     }
 }
