@@ -625,8 +625,7 @@ class StaffController extends \Illuminate\Routing\Controller
             $user->clinics()->updateExistingPivot($clinicId, [
                 'role_id' => $role->id,
                 'department' => $validatedData['department'],
-                'updated_by' => $currentUser->id,
-                'updated_at' => now(),
+                'status' => $validatedData['status'],
                 'address' => $validatedData['address'],
                 'emergency_contact' => $validatedData['emergency_contact'],
                 'emergency_phone' => $validatedData['emergency_phone'],

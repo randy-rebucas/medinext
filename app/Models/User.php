@@ -96,7 +96,18 @@ class User extends Authenticatable
     public function clinics(): BelongsToMany
     {
         return $this->belongsToMany(Clinic::class, 'user_clinic_roles')
-            ->withPivot('role_id')
+            ->withPivot([
+                'role_id',
+                'assigned_by',
+                'assigned_at',
+                'department',
+                'status',
+                'address',
+                'emergency_contact',
+                'emergency_phone',
+                'notes',
+                'join_date'
+            ])
             ->withTimestamps();
     }
 
