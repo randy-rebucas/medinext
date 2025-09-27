@@ -155,34 +155,52 @@ class PatientController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'dob' => 'required|date|before:today',
+        $rules = [
+            'first_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'last_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'dob' => 'required|date|before:today|after:1900-01-01',
             'sex' => 'required|string|in:Male,Female,Other',
             'contact' => 'required|array',
-            'contact.email' => 'required|email|max:255',
-            'contact.phone' => 'required|string|max:20',
+            'contact.email' => 'required|email:rfc,dns|max:255',
+            'contact.phone' => 'required|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
             'contact.address' => 'nullable|string|max:500',
-            'contact.city' => 'nullable|string|max:100',
-            'contact.state' => 'nullable|string|max:100',
-            'contact.zip_code' => 'nullable|string|max:20',
+            'contact.city' => 'nullable|string|max:100|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'contact.state' => 'nullable|string|max:100|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'contact.zip_code' => 'nullable|string|max:20|regex:/^[0-9\-\s]+$/',
             'emergency_contact' => 'nullable|array',
-            'emergency_contact.name' => 'nullable|string|max:255',
-            'emergency_contact.phone' => 'nullable|string|max:20',
-            'emergency_contact.relationship' => 'nullable|string|max:100',
+            'emergency_contact.name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+            'emergency_contact.phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+            'emergency_contact.relationship' => 'nullable|string|max:100|regex:/^[a-zA-Z\s\-\'\.]+$/',
             'insurance' => 'nullable|array',
             'insurance.provider' => 'nullable|string|max:255',
-            'insurance.policy_number' => 'nullable|string|max:100',
-            'insurance.group_number' => 'nullable|string|max:100',
+            'insurance.policy_number' => 'nullable|string|max:100|alpha_num',
+            'insurance.group_number' => 'nullable|string|max:100|alpha_num',
             'allergies' => 'nullable|array',
             'medical_history' => 'nullable|string|max:2000',
             'medications' => 'nullable|string|max:2000',
             'notes' => 'nullable|string|max:2000',
-        ]);
+        ];
 
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator->errors())->withInput();
+        $messages = [
+            'first_name.regex' => 'First name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'last_name.regex' => 'Last name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'dob.after' => 'Date of birth must be after 1900.',
+            'contact.email.email' => 'Please provide a valid email address.',
+            'contact.phone.regex' => 'Phone number format is invalid.',
+            'contact.city.regex' => 'City can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'contact.state.regex' => 'State can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'contact.zip_code.regex' => 'ZIP code format is invalid.',
+            'emergency_contact.name.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'emergency_contact.phone.regex' => 'Emergency contact phone format is invalid.',
+            'emergency_contact.relationship.regex' => 'Relationship can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'insurance.policy_number.alpha_num' => 'Policy number can only contain letters and numbers.',
+            'insurance.group_number.alpha_num' => 'Group number can only contain letters and numbers.',
+        ];
+
+        try {
+            $validatedData = $this->validateAndSanitize($request, $rules, $messages);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
         try {
@@ -190,22 +208,23 @@ class PatientController extends Controller
 
             // Update patient
             $patient->update([
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'dob' => $request->dob,
-                'sex' => $request->sex,
-                'contact' => $request->contact,
-                'emergency_contact' => $request->emergency_contact,
-                'insurance' => $request->insurance,
-                'allergies' => $request->allergies,
-                'medical_history' => $request->medical_history,
-                'medications' => $request->medications,
-                'notes' => $request->notes,
+                'first_name' => $validatedData['first_name'],
+                'last_name' => $validatedData['last_name'],
+                'dob' => $validatedData['dob'],
+                'sex' => $validatedData['sex'],
+                'contact' => $validatedData['contact'],
+                'emergency_contact' => $validatedData['emergency_contact'] ?? null,
+                'insurance' => $validatedData['insurance'] ?? null,
+                'allergies' => $validatedData['allergies'] ?? null,
+                'medical_history' => $validatedData['medical_history'] ?? null,
+                'medications' => $validatedData['medications'] ?? null,
+                'notes' => $validatedData['notes'] ?? null,
             ]);
 
             return redirect()->route('admin.patients')->with('success', 'Patient updated successfully');
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'PatientController::update');
             return redirect()->back()->with('error', 'Failed to update patient. Please try again.')->withInput();
         }
     }

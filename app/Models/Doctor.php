@@ -18,12 +18,21 @@ class Doctor extends Model
         'is_active',
         'consultation_fee',
         'availability_schedule',
+        'experience',
+        'education',
+        'certifications',
+        'address',
+        'emergency_contact',
+        'emergency_phone',
+        'notes',
+        'availability',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'consultation_fee' => 'decimal:2',
         'availability_schedule' => 'array',
+        'availability' => 'array',
     ];
 
     /**

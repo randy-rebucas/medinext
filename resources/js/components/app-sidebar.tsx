@@ -428,23 +428,6 @@ export function AppSidebar() {
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    {accessStatus && (
-                        <SidebarMenuItem>
-                            <div className="px-2 py-1 space-y-2">
-                                <LicenseIndicatorCompact accessStatus={accessStatus} />
-                                {(accessStatus.status === 'expired' || (accessStatus.status === 'active' && accessStatus.type === 'trial')) && (
-                                    <LicenseActivationModal
-                                        trigger={
-                                            <Button size="sm" variant="outline" className="w-full gap-2 text-xs">
-                                                <Key className="h-3 w-3" />
-                                                {accessStatus.status === 'expired' ? 'Activate License' : 'Upgrade to License'}
-                                            </Button>
-                                        }
-                                    />
-                                )}
-                            </div>
-                        </SidebarMenuItem>
-                    )}
                 </SidebarMenu>
             </SidebarHeader>
 

@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminDoctors } from '@/routes';
 import { type BreadcrumbItem, type Doctor } from '@/types';
@@ -66,10 +66,48 @@ import {
     Loader2
 } from 'lucide-react';
 
-// Simple toast implementation
+// Simple toast implementation using browser notifications
 const toast = {
-    success: (message: string) => console.log('Success:', message),
-    error: (message: string) => console.error('Error:', message),
+    success: (message: string) => {
+        // Create a temporary success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
+    error: (message: string) => {
+        // Create a temporary error notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -90,6 +128,7 @@ interface DoctorManagementProps {
 }
 
 export default function DoctorManagement({ doctors: initialDoctors, specializations }: DoctorManagementProps) {
+    const { props } = usePage();
     const [doctors] = useState<Doctor[]>(initialDoctors);
     const [searchTerm, setSearchTerm] = useState('');
     const [specializationFilter, setSpecializationFilter] = useState('all');
@@ -103,32 +142,17 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
     const [viewingDoctor, setViewingDoctor] = useState<Doctor | null>(null);
     const [deletingDoctor, setDeletingDoctor] = useState<Doctor | null>(null);
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        specialization: '',
-        license: '',
-        status: 'Active',
-        experience: '',
-        education: '',
-        certifications: '',
-        address: '',
-        emergencyContact: '',
-        emergencyPhone: '',
-        notes: '',
-        consultationFee: '',
-        availability: {
-            monday: { start: '09:00', end: '17:00', available: true },
-            tuesday: { start: '09:00', end: '17:00', available: true },
-            wednesday: { start: '09:00', end: '17:00', available: true },
-            thursday: { start: '09:00', end: '17:00', available: true },
-            friday: { start: '09:00', end: '17:00', available: true },
-            saturday: { start: '09:00', end: '13:00', available: false },
-            sunday: { start: '09:00', end: '13:00', available: false }
+
+    // Handle flash messages
+    useEffect(() => {
+        const flash = props.flash as any;
+        if (flash?.success) {
+            toast.success(flash.success);
         }
-    });
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [props.flash]);
 
 
     const filteredDoctors = doctors.filter(doctor => {
@@ -141,71 +165,47 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
         return matchesSearch && matchesSpecialization && matchesStatus;
     });
 
-    // Web route functions
-    const saveDoctor = (doctorData: typeof formData, isEdit = false) => {
-        setLoading(true);
-        setErrors({});
+    // Inertia form for creating/updating doctors
+    const { data, setData, post, put, processing, errors: formErrors, reset } = useForm({
+        name: '',
+        email: '',
+        phone: '',
+        specialization: '',
+        license: '',
+        status: 'Active',
+        experience: '',
+        education: '',
+        certifications: '',
+        address: '',
+        emergency_contact: '',
+        emergency_phone: '',
+        notes: '',
+        consultation_fee: '',
+        availability: {
+            monday: { start: '09:00', end: '17:00', available: true },
+            tuesday: { start: '09:00', end: '17:00', available: true },
+            wednesday: { start: '09:00', end: '17:00', available: true },
+            thursday: { start: '09:00', end: '17:00', available: true },
+            friday: { start: '09:00', end: '17:00', available: true },
+            saturday: { start: '09:00', end: '13:00', available: false },
+            sunday: { start: '09:00', end: '13:00', available: false }
+        }
+    });
 
-        if (isEdit && editingDoctor) {
+    const saveDoctor = () => {
+        if (isEditModalOpen && editingDoctor) {
             // Update existing doctor
-            fetch(`/admin/doctors/${editingDoctor.id}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify({
-                    ...doctorData,
-                    _method: 'PUT'
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toast.success('Doctor updated successfully!');
+            put(`/admin/doctors/${editingDoctor.id}`, {
+                onSuccess: () => {
                     handleCancel();
-                    setLoading(false);
-                    window.location.reload();
-                } else {
-                    setErrors(data.errors || {});
-                    toast.error('Failed to update doctor');
-                    setLoading(false);
                 }
-            })
-            .catch(error => {
-                console.error('Error updating doctor:', error);
-                toast.error('Failed to update doctor');
-                setLoading(false);
             });
         } else {
             // Create new doctor
-            fetch('/admin/doctors', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(doctorData),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toast.success('Doctor added successfully!');
+            post('/admin/doctors', {
+                onSuccess: () => {
                     handleCancel();
-                    setLoading(false);
-                    window.location.reload();
-                } else {
-                    setErrors(data.errors || {});
-                    toast.error('Failed to add doctor');
-                    setLoading(false);
                 }
-            })
-            .catch(error => {
-                console.error('Error creating doctor:', error);
-                toast.error('Failed to add doctor');
-                setLoading(false);
             });
         }
     };
@@ -213,33 +213,11 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
     const deleteDoctor = () => {
         if (!deletingDoctor) return;
 
-        setLoading(true);
-        
-        fetch(`/admin/doctors/${deletingDoctor.id}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                toast.success('Doctor deleted successfully!');
+        router.delete(`/admin/doctors/${deletingDoctor.id}`, {
+            onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setDeletingDoctor(null);
-                setLoading(false);
-                window.location.reload();
-            } else {
-                toast.error('Failed to delete doctor');
-                setLoading(false);
             }
-        })
-        .catch(error => {
-            console.error('Error deleting doctor:', error);
-            toast.error('Failed to delete doctor');
-            setLoading(false);
         });
     };
 
@@ -265,38 +243,12 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
 
     const handleAddDoctor = () => {
         setIsAddModalOpen(true);
-        setErrors({});
-        setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            specialization: '',
-            license: '',
-            status: 'Active',
-            experience: '',
-            education: '',
-            certifications: '',
-            address: '',
-            emergencyContact: '',
-            emergencyPhone: '',
-            notes: '',
-            consultationFee: '',
-            availability: {
-                monday: { start: '09:00', end: '17:00', available: true },
-                tuesday: { start: '09:00', end: '17:00', available: true },
-                wednesday: { start: '09:00', end: '17:00', available: true },
-                thursday: { start: '09:00', end: '17:00', available: true },
-                friday: { start: '09:00', end: '17:00', available: true },
-                saturday: { start: '09:00', end: '13:00', available: false },
-                sunday: { start: '09:00', end: '13:00', available: false }
-            }
-        });
+        reset();
     };
 
     const handleEditDoctor = (doctor: Doctor) => {
         setEditingDoctor(doctor);
-        setErrors({});
-        setFormData({
+        setData({
             name: doctor.name,
             email: doctor.email,
             phone: doctor.phone || '',
@@ -307,10 +259,10 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
             education: doctor.education || '',
             certifications: doctor.certifications || '',
             address: doctor.address || '',
-            emergencyContact: doctor.emergency_contact || '',
-            emergencyPhone: doctor.emergency_phone || '',
+            emergency_contact: doctor.emergency_contact || '',
+            emergency_phone: doctor.emergency_phone || '',
             notes: doctor.notes || '',
-            consultationFee: String(doctor.consultation_fee || ''),
+            consultation_fee: String(doctor.consultation_fee || ''),
             availability: (typeof doctor.availability === 'object' && !Array.isArray(doctor.availability)) ? doctor.availability : {
                 monday: { start: '09:00', end: '17:00', available: true },
                 tuesday: { start: '09:00', end: '17:00', available: true },
@@ -340,7 +292,7 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
     };
 
     const handleSaveDoctor = () => {
-        saveDoctor(formData, isEditModalOpen);
+        saveDoctor();
     };
 
     const handleCancel = () => {
@@ -350,32 +302,7 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
         setIsScheduleModalOpen(false);
         setEditingDoctor(null);
         setViewingDoctor(null);
-        setErrors({});
-        setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            specialization: '',
-            license: '',
-            status: 'Active',
-            experience: '',
-            education: '',
-            certifications: '',
-            address: '',
-            emergencyContact: '',
-            emergencyPhone: '',
-            notes: '',
-            consultationFee: '',
-            availability: {
-                monday: { start: '09:00', end: '17:00', available: true },
-                tuesday: { start: '09:00', end: '17:00', available: true },
-                wednesday: { start: '09:00', end: '17:00', available: true },
-                thursday: { start: '09:00', end: '17:00', available: true },
-                friday: { start: '09:00', end: '17:00', available: true },
-                saturday: { start: '09:00', end: '13:00', available: false },
-                sunday: { start: '09:00', end: '13:00', available: false }
-            }
-        });
+        reset();
     };
 
     return (
@@ -603,24 +530,24 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="name">Full Name *</Label>
                                 <Input
                                     id="name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
                                     placeholder="Dr. John Smith"
-                                    className={errors.name ? 'border-red-500' : ''}
+                                    className={formErrors.name ? 'border-red-500' : ''}
                                 />
-                                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+                                {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email *</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    value={data.email}
+                                    onChange={(e) => setData('email', e.target.value)}
                                     placeholder="doctor@clinic.com"
-                                    className={errors.email ? 'border-red-500' : ''}
+                                    className={formErrors.email ? 'border-red-500' : ''}
                                 />
-                                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                                {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -628,30 +555,30 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="phone">Phone Number *</Label>
                                 <Input
                                     id="phone"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    value={data.phone}
+                                    onChange={(e) => setData('phone', e.target.value)}
                                     placeholder="+1 (555) 123-4567"
-                                    className={errors.phone ? 'border-red-500' : ''}
+                                    className={formErrors.phone ? 'border-red-500' : ''}
                                 />
-                                {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
+                                {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="license">Medical License *</Label>
                                 <Input
                                     id="license"
-                                    value={formData.license}
-                                    onChange={(e) => setFormData({...formData, license: e.target.value})}
+                                    value={data.license}
+                                    onChange={(e) => setData('license', e.target.value)}
                                     placeholder="MD12345"
-                                    className={errors.license ? 'border-red-500' : ''}
+                                    className={formErrors.license ? 'border-red-500' : ''}
                                 />
-                                {errors.license && <p className="text-sm text-red-500">{errors.license}</p>}
+                                {formErrors.license && <p className="text-sm text-red-500">{formErrors.license}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="specialization">Specialization *</Label>
-                                <Select value={formData.specialization} onValueChange={(value) => setFormData({...formData, specialization: value})}>
-                                    <SelectTrigger className={errors.specialization ? 'border-red-500' : ''}>
+                                <Select value={data.specialization} onValueChange={(value) => setData('specialization', value)}>
+                                    <SelectTrigger className={formErrors.specialization ? 'border-red-500' : ''}>
                                         <SelectValue placeholder="Select specialization" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -660,18 +587,18 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {errors.specialization && <p className="text-sm text-red-500">{errors.specialization}</p>}
+                                {formErrors.specialization && <p className="text-sm text-red-500">{formErrors.specialization}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="experience">Years of Experience *</Label>
                                 <Input
                                     id="experience"
-                                    value={formData.experience}
-                                    onChange={(e) => setFormData({...formData, experience: e.target.value})}
+                                    value={data.experience}
+                                    onChange={(e) => setData('experience', e.target.value)}
                                     placeholder="5 years"
-                                    className={errors.experience ? 'border-red-500' : ''}
+                                    className={formErrors.experience ? 'border-red-500' : ''}
                                 />
-                                {errors.experience && <p className="text-sm text-red-500">{errors.experience}</p>}
+                                {formErrors.experience && <p className="text-sm text-red-500">{formErrors.experience}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -679,14 +606,14 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="consultationFee">Consultation Fee</Label>
                                 <Input
                                     id="consultationFee"
-                                    value={formData.consultationFee}
-                                    onChange={(e) => setFormData({...formData, consultationFee: e.target.value})}
+                                    value={data.consultation_fee}
+                                    onChange={(e) => setData('consultation_fee', e.target.value)}
                                     placeholder="$150"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
-                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                                <Select value={data.status} onValueChange={(value) => setData('status', value)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
@@ -702,8 +629,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="education">Education</Label>
                             <Textarea
                                 id="education"
-                                value={formData.education}
-                                onChange={(e) => setFormData({...formData, education: e.target.value})}
+                                value={data.education}
+                                onChange={(e) => setData('education', e.target.value)}
                                 placeholder="Medical degree, residency, fellowship details..."
                                 rows={2}
                             />
@@ -712,8 +639,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="certifications">Certifications</Label>
                             <Textarea
                                 id="certifications"
-                                value={formData.certifications}
-                                onChange={(e) => setFormData({...formData, certifications: e.target.value})}
+                                value={data.certifications}
+                                onChange={(e) => setData('certifications', e.target.value)}
                                 placeholder="Board certifications, special training..."
                                 rows={2}
                             />
@@ -722,8 +649,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="address">Address</Label>
                             <Textarea
                                 id="address"
-                                value={formData.address}
-                                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                value={data.address}
+                                onChange={(e) => setData('address', e.target.value)}
                                 placeholder="Home address"
                                 rows={2}
                             />
@@ -733,8 +660,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="emergencyContact">Emergency Contact</Label>
                                 <Input
                                     id="emergencyContact"
-                                    value={formData.emergencyContact}
-                                    onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                                    value={data.emergency_contact}
+                                    onChange={(e) => setData('emergency_contact', e.target.value)}
                                     placeholder="Emergency contact name"
                                 />
                             </div>
@@ -742,8 +669,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="emergencyPhone">Emergency Phone</Label>
                                 <Input
                                     id="emergencyPhone"
-                                    value={formData.emergencyPhone}
-                                    onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
+                                    value={data.emergency_phone}
+                                    onChange={(e) => setData('emergency_phone', e.target.value)}
                                     placeholder="Emergency contact phone"
                                 />
                             </div>
@@ -752,8 +679,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="notes">Notes</Label>
                             <Textarea
                                 id="notes"
-                                value={formData.notes}
-                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                value={data.notes}
+                                onChange={(e) => setData('notes', e.target.value)}
                                 placeholder="Additional notes about the doctor"
                                 rows={3}
                             />
@@ -763,18 +690,15 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                         <div className="space-y-4">
                             <Label className="text-base font-medium">Availability Schedule</Label>
                             <div className="space-y-3">
-                                {Object.entries(formData.availability).map(([day, schedule]) => (
+                                {Object.entries(data.availability).map(([day, schedule]) => (
                                     <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
                                         <div className="flex items-center space-x-3">
                                             <Checkbox
                                                 checked={schedule.available}
                                                 onCheckedChange={(checked) => {
-                                                    setFormData({
-                                                        ...formData,
-                                                        availability: {
-                                                            ...formData.availability,
-                                                            [day]: { ...schedule, available: checked }
-                                                        }
+                                                    setData('availability', {
+                                                        ...data.availability,
+                                                        [day]: { ...schedule, available: checked }
                                                     });
                                                 }}
                                             />
@@ -786,12 +710,9 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                                     type="time"
                                                     value={schedule.start}
                                                     onChange={(e) => {
-                                                        setFormData({
-                                                            ...formData,
-                                                            availability: {
-                                                                ...formData.availability,
-                                                                [day]: { ...schedule, start: e.target.value }
-                                                            }
+                                                        setData('availability', {
+                                                            ...data.availability,
+                                                            [day]: { ...schedule, start: e.target.value }
                                                         });
                                                     }}
                                                     className="w-32"
@@ -801,12 +722,9 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                                     type="time"
                                                     value={schedule.end}
                                                     onChange={(e) => {
-                                                        setFormData({
-                                                            ...formData,
-                                                            availability: {
-                                                                ...formData.availability,
-                                                                [day]: { ...schedule, end: e.target.value }
-                                                            }
+                                                        setData('availability', {
+                                                            ...data.availability,
+                                                            [day]: { ...schedule, end: e.target.value }
                                                         });
                                                     }}
                                                     className="w-32"
@@ -823,8 +741,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveDoctor} disabled={loading}>
-                            {loading ? (
+                        <Button onClick={handleSaveDoctor} disabled={processing}>
+                            {processing ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Adding...
@@ -855,8 +773,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="edit-name">Full Name *</Label>
                                 <Input
                                     id="edit-name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
                                     placeholder="Dr. John Smith"
                                 />
                             </div>
@@ -865,8 +783,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Input
                                     id="edit-email"
                                     type="email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    value={data.email}
+                                    onChange={(e) => setData('email', e.target.value)}
                                     placeholder="doctor@clinic.com"
                                 />
                             </div>
@@ -876,8 +794,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="edit-phone">Phone Number *</Label>
                                 <Input
                                     id="edit-phone"
-                                    value={formData.phone}
-                                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                    value={data.phone}
+                                    onChange={(e) => setData('phone', e.target.value)}
                                     placeholder="+1 (555) 123-4567"
                                 />
                             </div>
@@ -885,8 +803,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="edit-license">Medical License *</Label>
                                 <Input
                                     id="edit-license"
-                                    value={formData.license}
-                                    onChange={(e) => setFormData({...formData, license: e.target.value})}
+                                    value={data.license}
+                                    onChange={(e) => setData('license', e.target.value)}
                                     placeholder="MD12345"
                                 />
                             </div>
@@ -894,7 +812,7 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-specialization">Specialization *</Label>
-                                <Select value={formData.specialization} onValueChange={(value) => setFormData({...formData, specialization: value})}>
+                                <Select value={data.specialization} onValueChange={(value) => setData('specialization', value)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select specialization" />
                                     </SelectTrigger>
@@ -916,8 +834,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="edit-experience">Years of Experience *</Label>
                                 <Input
                                     id="edit-experience"
-                                    value={formData.experience}
-                                    onChange={(e) => setFormData({...formData, experience: e.target.value})}
+                                    value={data.experience}
+                                    onChange={(e) => setData('experience', e.target.value)}
                                     placeholder="5 years"
                                 />
                             </div>
@@ -927,14 +845,14 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="edit-consultationFee">Consultation Fee</Label>
                                 <Input
                                     id="edit-consultationFee"
-                                    value={formData.consultationFee}
-                                    onChange={(e) => setFormData({...formData, consultationFee: e.target.value})}
+                                    value={data.consultation_fee}
+                                    onChange={(e) => setData('consultation_fee', e.target.value)}
                                     placeholder="$150"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-status">Status</Label>
-                                <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                                <Select value={data.status} onValueChange={(value) => setData('status', value)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
@@ -950,8 +868,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="edit-education">Education</Label>
                             <Textarea
                                 id="edit-education"
-                                value={formData.education}
-                                onChange={(e) => setFormData({...formData, education: e.target.value})}
+                                value={data.education}
+                                onChange={(e) => setData('education', e.target.value)}
                                 placeholder="Medical degree, residency, fellowship details..."
                                 rows={2}
                             />
@@ -960,8 +878,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="edit-certifications">Certifications</Label>
                             <Textarea
                                 id="edit-certifications"
-                                value={formData.certifications}
-                                onChange={(e) => setFormData({...formData, certifications: e.target.value})}
+                                value={data.certifications}
+                                onChange={(e) => setData('certifications', e.target.value)}
                                 placeholder="Board certifications, special training..."
                                 rows={2}
                             />
@@ -970,8 +888,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="edit-address">Address</Label>
                             <Textarea
                                 id="edit-address"
-                                value={formData.address}
-                                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                value={data.address}
+                                onChange={(e) => setData('address', e.target.value)}
                                 placeholder="Home address"
                                 rows={2}
                             />
@@ -981,8 +899,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="edit-emergencyContact">Emergency Contact</Label>
                                 <Input
                                     id="edit-emergencyContact"
-                                    value={formData.emergencyContact}
-                                    onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                                    value={data.emergency_contact}
+                                    onChange={(e) => setData('emergency_contact', e.target.value)}
                                     placeholder="Emergency contact name"
                                 />
                             </div>
@@ -990,8 +908,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 <Label htmlFor="edit-emergencyPhone">Emergency Phone</Label>
                                 <Input
                                     id="edit-emergencyPhone"
-                                    value={formData.emergencyPhone}
-                                    onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
+                                    value={data.emergency_phone}
+                                    onChange={(e) => setData('emergency_phone', e.target.value)}
                                     placeholder="Emergency contact phone"
                                 />
                             </div>
@@ -1000,8 +918,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Label htmlFor="edit-notes">Notes</Label>
                             <Textarea
                                 id="edit-notes"
-                                value={formData.notes}
-                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                value={data.notes}
+                                onChange={(e) => setData('notes', e.target.value)}
                                 placeholder="Additional notes about the doctor"
                                 rows={3}
                             />
@@ -1011,18 +929,15 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                         <div className="space-y-4">
                             <Label className="text-base font-medium">Availability Schedule</Label>
                             <div className="space-y-3">
-                                {Object.entries(formData.availability).map(([day, schedule]) => (
+                                {Object.entries(data.availability).map(([day, schedule]) => (
                                     <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
                                         <div className="flex items-center space-x-3">
                                             <Checkbox
                                                 checked={schedule.available}
                                                 onCheckedChange={(checked) => {
-                                                    setFormData({
-                                                        ...formData,
-                                                        availability: {
-                                                            ...formData.availability,
-                                                            [day]: { ...schedule, available: checked }
-                                                        }
+                                                    setData('availability', {
+                                                        ...data.availability,
+                                                        [day]: { ...schedule, available: checked }
                                                     });
                                                 }}
                                             />
@@ -1034,12 +949,9 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                                     type="time"
                                                     value={schedule.start}
                                                     onChange={(e) => {
-                                                        setFormData({
-                                                            ...formData,
-                                                            availability: {
-                                                                ...formData.availability,
-                                                                [day]: { ...schedule, start: e.target.value }
-                                                            }
+                                                        setData('availability', {
+                                                            ...data.availability,
+                                                            [day]: { ...schedule, start: e.target.value }
                                                         });
                                                     }}
                                                     className="w-32"
@@ -1049,12 +961,9 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                                     type="time"
                                                     value={schedule.end}
                                                     onChange={(e) => {
-                                                        setFormData({
-                                                            ...formData,
-                                                            availability: {
-                                                                ...formData.availability,
-                                                                [day]: { ...schedule, end: e.target.value }
-                                                            }
+                                                        setData('availability', {
+                                                            ...data.availability,
+                                                            [day]: { ...schedule, end: e.target.value }
                                                         });
                                                     }}
                                                     className="w-32"
@@ -1071,8 +980,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveDoctor} disabled={loading}>
-                            {loading ? (
+                        <Button onClick={handleSaveDoctor} disabled={processing}>
+                            {processing ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Updating...
@@ -1352,9 +1261,9 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                         <AlertDialogAction
                             onClick={deleteDoctor}
                             className="bg-red-600 hover:bg-red-700 text-white"
-                            disabled={loading}
+                            disabled={processing}
                         >
-                            {loading ? (
+                            {processing ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Deleting...

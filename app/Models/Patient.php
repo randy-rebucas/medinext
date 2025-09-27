@@ -12,18 +12,26 @@ class Patient extends Model
     protected $fillable = [
         'clinic_id',
         'code',
+        'patient_id',
         'first_name',
         'last_name',
         'dob',
         'sex',
         'contact',
+        'emergency_contact',
+        'insurance',
         'allergies',
+        'medical_history',
+        'medications',
+        'notes',
         'consents',
     ];
 
     protected $casts = [
         'dob' => 'date',
         'contact' => 'array',
+        'emergency_contact' => 'array',
+        'insurance' => 'array',
         'allergies' => 'array',
         'consents' => 'array',
     ];

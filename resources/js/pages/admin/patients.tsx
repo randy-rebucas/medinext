@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { adminPatients } from '@/routes';
 import { type BreadcrumbItem, type Patient } from '@/types';
@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -38,10 +37,48 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Simple toast implementation
+// Simple toast implementation using browser notifications
 const toast = {
-    success: (message: string) => console.log('Success:', message),
-    error: (message: string) => console.error('Error:', message),
+    success: (message: string) => {
+        // Create a temporary success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
+    error: (message: string) => {
+        // Create a temporary error notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -61,6 +98,7 @@ interface PatientManagementProps {
 }
 
 export default function PatientManagement({ patients: initialPatients }: PatientManagementProps) {
+    const { props } = usePage();
     const [patients] = useState<Patient[]>(initialPatients);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -108,36 +146,20 @@ export default function PatientManagement({ patients: initialPatients }: Patient
             status: string;
         }>;
     } | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [formData, setFormData] = useState<{
-        first_name: string;
-        last_name: string;
-        dob: string;
-        sex: string;
-        contact: {
-            email: string;
-            phone: string;
-            address: string;
-            city: string;
-            state: string;
-            zip_code: string;
-        };
-        emergency_contact: {
-            name: string;
-            phone: string;
-            relationship: string;
-        };
-        insurance: {
-            provider: string;
-            policy_number: string;
-            group_number: string;
-        };
-        allergies: string[];
-        medical_history: string;
-        medications: string;
-        notes: string;
-    }>({
+
+    // Handle flash messages
+    useEffect(() => {
+        const flash = props.flash as any;
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [props.flash]);
+
+    // Inertia form for creating/updating patients
+    const { data, setData, post, put, processing, errors: formErrors, reset } = useForm({
         first_name: '',
         last_name: '',
         dob: '',
@@ -160,77 +182,26 @@ export default function PatientManagement({ patients: initialPatients }: Patient
             policy_number: '',
             group_number: ''
         },
-        allergies: [],
+        allergies: [] as string[],
         medical_history: '',
         medications: '',
         notes: ''
     });
 
-    // Web route functions
-    const savePatient = (patientData: typeof formData, isEdit = false) => {
-        setLoading(true);
-        setErrors({});
-
-        if (isEdit && editingPatient) {
+    const savePatient = () => {
+        if (isEditModalOpen && editingPatient) {
             // Update existing patient
-            fetch(`/admin/patients/${editingPatient.id}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify({
-                    ...patientData,
-                    _method: 'PUT'
-                }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toast.success('Patient updated successfully!');
+            put(`/admin/patients/${editingPatient.id}`, {
+                onSuccess: () => {
                     handleCancel();
-                    setLoading(false);
-                    window.location.reload();
-                } else {
-                    setErrors(data.errors || {});
-                    toast.error('Failed to update patient');
-                    setLoading(false);
                 }
-            })
-            .catch(error => {
-                console.error('Error updating patient:', error);
-                toast.error('Failed to update patient');
-                setLoading(false);
             });
         } else {
             // Create new patient
-            fetch('/admin/patients', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(patientData),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toast.success('Patient added successfully!');
+            post('/admin/patients', {
+                onSuccess: () => {
                     handleCancel();
-                    setLoading(false);
-                    window.location.reload();
-                } else {
-                    setErrors(data.errors || {});
-                    toast.error('Failed to add patient');
-                    setLoading(false);
                 }
-            })
-            .catch(error => {
-                console.error('Error creating patient:', error);
-                toast.error('Failed to add patient');
-                setLoading(false);
             });
         }
     };
@@ -238,33 +209,11 @@ export default function PatientManagement({ patients: initialPatients }: Patient
     const deletePatient = () => {
         if (!deletingPatient) return;
 
-        setLoading(true);
-        
-        fetch(`/admin/patients/${deletingPatient.id}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                toast.success('Patient deleted successfully!');
+        router.delete(`/admin/patients/${deletingPatient.id}`, {
+            onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setDeletingPatient(null);
-                setLoading(false);
-                window.location.reload();
-            } else {
-                toast.error('Failed to delete patient');
-                setLoading(false);
             }
-        })
-        .catch(error => {
-            console.error('Error deleting patient:', error);
-            toast.error('Failed to delete patient');
-            setLoading(false);
         });
     };
 
@@ -293,41 +242,12 @@ export default function PatientManagement({ patients: initialPatients }: Patient
 
     const handleAddPatient = () => {
         setIsAddModalOpen(true);
-        setErrors({});
-        setFormData({
-            first_name: '',
-            last_name: '',
-            dob: '',
-            sex: '',
-            contact: {
-                email: '',
-                phone: '',
-                address: '',
-                city: '',
-                state: '',
-                zip_code: ''
-            },
-            emergency_contact: {
-                name: '',
-                phone: '',
-                relationship: ''
-            },
-            insurance: {
-                provider: '',
-                policy_number: '',
-                group_number: ''
-            },
-            allergies: [] as string[],
-            medical_history: '',
-            medications: '',
-            notes: ''
-        });
+        reset();
     };
 
     const handleEditPatient = (patient: Patient) => {
         setEditingPatient(patient);
-        setErrors({});
-        setFormData({
+        setData({
             first_name: patient.first_name || '',
             last_name: patient.last_name || '',
             dob: patient.dob || '',
@@ -397,7 +317,7 @@ export default function PatientManagement({ patients: initialPatients }: Patient
     };
 
     const handleSavePatient = () => {
-        savePatient(formData, isEditModalOpen);
+        savePatient();
     };
 
     const handleCancel = () => {
@@ -407,35 +327,7 @@ export default function PatientManagement({ patients: initialPatients }: Patient
         setIsHealthRecordsModalOpen(false);
         setEditingPatient(null);
         setViewingPatient(null);
-        setErrors({});
-        setFormData({
-            first_name: '',
-            last_name: '',
-            dob: '',
-            sex: '',
-            contact: {
-                email: '',
-                phone: '',
-                address: '',
-                city: '',
-                state: '',
-                zip_code: ''
-            },
-            emergency_contact: {
-                name: '',
-                phone: '',
-                relationship: ''
-            },
-            insurance: {
-                provider: '',
-                policy_number: '',
-                group_number: ''
-            },
-            allergies: [] as string[],
-            medical_history: '',
-            medications: '',
-            notes: ''
-        });
+        reset();
     };
 
     return (
@@ -661,37 +553,40 @@ export default function PatientManagement({ patients: initialPatients }: Patient
             </div>
 
             {/* Add Patient Modal */}
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Add New Patient</DialogTitle>
-                        <DialogDescription>
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsAddModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add New Patient</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Register a new patient in the system.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="grid gap-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="first_name">First Name *</Label>
                                 <Input
                                     id="first_name"
-                                    value={formData.first_name}
-                                    onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                                    value={data.first_name}
+                                    onChange={(e) => setData('first_name', e.target.value)}
                                     placeholder="Enter first name"
-                                    className={errors.first_name ? 'border-red-500' : ''}
+                                    className={formErrors.first_name ? 'border-red-500' : ''}
                                 />
-                                {errors.first_name && <p className="text-sm text-red-500">{errors.first_name}</p>}
+                                {formErrors.first_name && <p className="text-sm text-red-500">{formErrors.first_name}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="last_name">Last Name *</Label>
                                 <Input
                                     id="last_name"
-                                    value={formData.last_name}
-                                    onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                                    value={data.last_name}
+                                    onChange={(e) => setData('last_name', e.target.value)}
                                     placeholder="Enter last name"
-                                    className={errors.last_name ? 'border-red-500' : ''}
+                                    className={formErrors.last_name ? 'border-red-500' : ''}
                                 />
-                                {errors.last_name && <p className="text-sm text-red-500">{errors.last_name}</p>}
+                                {formErrors.last_name && <p className="text-sm text-red-500">{formErrors.last_name}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -700,23 +595,23 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Input
                                     id="email"
                                     type="email"
-                                    value={formData.contact.email}
-                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, email: e.target.value}})}
+                                    value={data.contact.email}
+                                    onChange={(e) => setData('contact', {...data.contact, email: e.target.value})}
                                     placeholder="patient@email.com"
-                                    className={errors['contact.email'] ? 'border-red-500' : ''}
+                                    className={formErrors['contact.email'] ? 'border-red-500' : ''}
                                 />
-                                {errors['contact.email'] && <p className="text-sm text-red-500">{errors['contact.email']}</p>}
+                                {formErrors['contact.email'] && <p className="text-sm text-red-500">{formErrors['contact.email']}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="phone">Phone Number *</Label>
                                 <Input
                                     id="phone"
-                                    value={formData.contact.phone}
-                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, phone: e.target.value}})}
+                                    value={data.contact.phone}
+                                    onChange={(e) => setData('contact', {...data.contact, phone: e.target.value})}
                                     placeholder="+1 (555) 123-4567"
-                                    className={errors['contact.phone'] ? 'border-red-500' : ''}
+                                    className={formErrors['contact.phone'] ? 'border-red-500' : ''}
                                 />
-                                {errors['contact.phone'] && <p className="text-sm text-red-500">{errors['contact.phone']}</p>}
+                                {formErrors['contact.phone'] && <p className="text-sm text-red-500">{formErrors['contact.phone']}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -725,16 +620,16 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Input
                                     id="dob"
                                     type="date"
-                                    value={formData.dob}
-                                    onChange={(e) => setFormData({...formData, dob: e.target.value})}
-                                    className={errors.dob ? 'border-red-500' : ''}
+                                    value={data.dob}
+                                    onChange={(e) => setData('dob', e.target.value)}
+                                    className={formErrors.dob ? 'border-red-500' : ''}
                                 />
-                                {errors.dob && <p className="text-sm text-red-500">{errors.dob}</p>}
+                                {formErrors.dob && <p className="text-sm text-red-500">{formErrors.dob}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="sex">Gender *</Label>
-                                <Select value={formData.sex} onValueChange={(value) => setFormData({...formData, sex: value})}>
-                                    <SelectTrigger className={errors.sex ? 'border-red-500' : ''}>
+                                <Select value={data.sex} onValueChange={(value) => setData('sex', value)}>
+                                    <SelectTrigger className={formErrors.sex ? 'border-red-500' : ''}>
                                         <SelectValue placeholder="Select gender" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -743,7 +638,7 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                         <SelectItem value="Other">Other</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                {errors.sex && <p className="text-sm text-red-500">{errors.sex}</p>}
+                                {formErrors.sex && <p className="text-sm text-red-500">{formErrors.sex}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -751,8 +646,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="address">Address</Label>
                                 <Input
                                     id="address"
-                                    value={formData.contact.address}
-                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, address: e.target.value}})}
+                                    value={data.contact.address}
+                                    onChange={(e) => setData('contact', {...data.contact, address: e.target.value})}
                                     placeholder="Enter address"
                                 />
                             </div>
@@ -760,8 +655,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="city">City</Label>
                                 <Input
                                     id="city"
-                                    value={formData.contact.city}
-                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, city: e.target.value}})}
+                                    value={data.contact.city}
+                                    onChange={(e) => setData('contact', {...data.contact, city: e.target.value})}
                                     placeholder="Enter city"
                                 />
                             </div>
@@ -771,8 +666,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="state">State</Label>
                                 <Input
                                     id="state"
-                                    value={formData.contact.state}
-                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, state: e.target.value}})}
+                                    value={data.contact.state}
+                                    onChange={(e) => setData('contact', {...data.contact, state: e.target.value})}
                                     placeholder="Enter state"
                                 />
                             </div>
@@ -780,8 +675,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="zip_code">ZIP Code</Label>
                                 <Input
                                     id="zip_code"
-                                    value={formData.contact.zip_code}
-                                    onChange={(e) => setFormData({...formData, contact: {...formData.contact, zip_code: e.target.value}})}
+                                    value={data.contact.zip_code}
+                                    onChange={(e) => setData('contact', {...data.contact, zip_code: e.target.value})}
                                     placeholder="Enter ZIP code"
                                 />
                             </div>
@@ -791,8 +686,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="emergency_name">Emergency Contact Name</Label>
                                 <Input
                                     id="emergency_name"
-                                    value={formData.emergency_contact.name}
-                                    onChange={(e) => setFormData({...formData, emergency_contact: {...formData.emergency_contact, name: e.target.value}})}
+                                    value={data.emergency_contact.name}
+                                    onChange={(e) => setData('emergency_contact', {...data.emergency_contact, name: e.target.value})}
                                     placeholder="Enter emergency contact name"
                                 />
                             </div>
@@ -800,8 +695,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="emergency_phone">Emergency Contact Phone</Label>
                                 <Input
                                     id="emergency_phone"
-                                    value={formData.emergency_contact.phone}
-                                    onChange={(e) => setFormData({...formData, emergency_contact: {...formData.emergency_contact, phone: e.target.value}})}
+                                    value={data.emergency_contact.phone}
+                                    onChange={(e) => setData('emergency_contact', {...data.emergency_contact, phone: e.target.value})}
                                     placeholder="Enter emergency contact phone"
                                 />
                             </div>
@@ -811,8 +706,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="emergency_relationship">Emergency Contact Relationship</Label>
                                 <Input
                                     id="emergency_relationship"
-                                    value={formData.emergency_contact.relationship}
-                                    onChange={(e) => setFormData({...formData, emergency_contact: {...formData.emergency_contact, relationship: e.target.value}})}
+                                    value={data.emergency_contact.relationship}
+                                    onChange={(e) => setData('emergency_contact', {...data.emergency_contact, relationship: e.target.value})}
                                     placeholder="e.g., Spouse, Parent, Sibling"
                                 />
                             </div>
@@ -820,8 +715,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="insurance_provider">Insurance Provider</Label>
                                 <Input
                                     id="insurance_provider"
-                                    value={formData.insurance.provider}
-                                    onChange={(e) => setFormData({...formData, insurance: {...formData.insurance, provider: e.target.value}})}
+                                    value={data.insurance.provider}
+                                    onChange={(e) => setData('insurance', {...data.insurance, provider: e.target.value})}
                                     placeholder="Enter insurance provider"
                                 />
                             </div>
@@ -831,8 +726,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="policy_number">Policy Number</Label>
                                 <Input
                                     id="policy_number"
-                                    value={formData.insurance.policy_number}
-                                    onChange={(e) => setFormData({...formData, insurance: {...formData.insurance, policy_number: e.target.value}})}
+                                    value={data.insurance.policy_number}
+                                    onChange={(e) => setData('insurance', {...data.insurance, policy_number: e.target.value})}
                                     placeholder="Enter policy number"
                                 />
                             </div>
@@ -840,8 +735,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 <Label htmlFor="group_number">Group Number</Label>
                                 <Input
                                     id="group_number"
-                                    value={formData.insurance.group_number}
-                                    onChange={(e) => setFormData({...formData, insurance: {...formData.insurance, group_number: e.target.value}})}
+                                    value={data.insurance.group_number}
+                                    onChange={(e) => setData('insurance', {...data.insurance, group_number: e.target.value})}
                                     placeholder="Enter group number"
                                 />
                             </div>
@@ -850,8 +745,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                             <Label htmlFor="medical_history">Medical History</Label>
                             <Textarea
                                 id="medical_history"
-                                value={formData.medical_history}
-                                onChange={(e) => setFormData({...formData, medical_history: e.target.value})}
+                                value={data.medical_history}
+                                onChange={(e) => setData('medical_history', e.target.value)}
                                 placeholder="Enter medical history"
                                 rows={3}
                             />
@@ -860,8 +755,8 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                             <Label htmlFor="medications">Current Medications</Label>
                             <Textarea
                                 id="medications"
-                                value={formData.medications}
-                                onChange={(e) => setFormData({...formData, medications: e.target.value})}
+                                value={data.medications}
+                                onChange={(e) => setData('medications', e.target.value)}
                                 placeholder="Enter current medications"
                                 rows={3}
                             />
@@ -870,70 +765,265 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                             <Label htmlFor="notes">Notes</Label>
                             <Textarea
                                 id="notes"
-                                value={formData.notes}
-                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                value={data.notes}
+                                onChange={(e) => setData('notes', e.target.value)}
                                 placeholder="Enter additional notes"
                                 rows={3}
                             />
                         </div>
+                        </div>
                     </div>
-                    <DialogFooter>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSavePatient}>
-                            <Save className="mr-2 h-4 w-4" />
-                            Add Patient
+                        <Button onClick={handleSavePatient} disabled={processing}>
+                            {processing ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Adding...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Add Patient
+                                </>
+                            )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Edit Patient Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Patient</DialogTitle>
-                        <DialogDescription>
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsEditModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Patient</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Update patient information for {editingPatient?.name}.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        {/* Same form fields as add modal but with edit- prefix */}
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="grid gap-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-first_name">First Name *</Label>
                                 <Input
                                     id="edit-first_name"
-                                    value={formData.first_name}
-                                    onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                                    value={data.first_name}
+                                    onChange={(e) => setData('first_name', e.target.value)}
                                     placeholder="Enter first name"
-                                    className={errors.first_name ? 'border-red-500' : ''}
+                                    className={formErrors.first_name ? 'border-red-500' : ''}
                                 />
-                                {errors.first_name && <p className="text-sm text-red-500">{errors.first_name}</p>}
+                                {formErrors.first_name && <p className="text-sm text-red-500">{formErrors.first_name}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-last_name">Last Name *</Label>
                                 <Input
                                     id="edit-last_name"
-                                    value={formData.last_name}
-                                    onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                                    value={data.last_name}
+                                    onChange={(e) => setData('last_name', e.target.value)}
                                     placeholder="Enter last name"
-                                    className={errors.last_name ? 'border-red-500' : ''}
+                                    className={formErrors.last_name ? 'border-red-500' : ''}
                                 />
-                                {errors.last_name && <p className="text-sm text-red-500">{errors.last_name}</p>}
+                                {formErrors.last_name && <p className="text-sm text-red-500">{formErrors.last_name}</p>}
                             </div>
                         </div>
-                        {/* Add other form fields here - same structure as add modal */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-email">Email *</Label>
+                                <Input
+                                    id="edit-email"
+                                    type="email"
+                                    value={data.contact.email}
+                                    onChange={(e) => setData('contact', {...data.contact, email: e.target.value})}
+                                    placeholder="patient@email.com"
+                                    className={formErrors['contact.email'] ? 'border-red-500' : ''}
+                                />
+                                {formErrors['contact.email'] && <p className="text-sm text-red-500">{formErrors['contact.email']}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-phone">Phone Number *</Label>
+                                <Input
+                                    id="edit-phone"
+                                    value={data.contact.phone}
+                                    onChange={(e) => setData('contact', {...data.contact, phone: e.target.value})}
+                                    placeholder="+1 (555) 123-4567"
+                                    className={formErrors['contact.phone'] ? 'border-red-500' : ''}
+                                />
+                                {formErrors['contact.phone'] && <p className="text-sm text-red-500">{formErrors['contact.phone']}</p>}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-dob">Date of Birth *</Label>
+                                <Input
+                                    id="edit-dob"
+                                    type="date"
+                                    value={data.dob}
+                                    onChange={(e) => setData('dob', e.target.value)}
+                                    className={formErrors.dob ? 'border-red-500' : ''}
+                                />
+                                {formErrors.dob && <p className="text-sm text-red-500">{formErrors.dob}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-sex">Gender *</Label>
+                                <Select value={data.sex} onValueChange={(value) => setData('sex', value)}>
+                                    <SelectTrigger className={formErrors.sex ? 'border-red-500' : ''}>
+                                        <SelectValue placeholder="Select gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Male">Male</SelectItem>
+                                        <SelectItem value="Female">Female</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {formErrors.sex && <p className="text-sm text-red-500">{formErrors.sex}</p>}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-address">Address</Label>
+                                <Input
+                                    id="edit-address"
+                                    value={data.contact.address}
+                                    onChange={(e) => setData('contact', {...data.contact, address: e.target.value})}
+                                    placeholder="Enter address"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-city">City</Label>
+                                <Input
+                                    id="edit-city"
+                                    value={data.contact.city}
+                                    onChange={(e) => setData('contact', {...data.contact, city: e.target.value})}
+                                    placeholder="Enter city"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-state">State</Label>
+                                <Input
+                                    id="edit-state"
+                                    value={data.contact.state}
+                                    onChange={(e) => setData('contact', {...data.contact, state: e.target.value})}
+                                    placeholder="Enter state"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-zip_code">ZIP Code</Label>
+                                <Input
+                                    id="edit-zip_code"
+                                    value={data.contact.zip_code}
+                                    onChange={(e) => setData('contact', {...data.contact, zip_code: e.target.value})}
+                                    placeholder="Enter ZIP code"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-emergency_name">Emergency Contact Name</Label>
+                                <Input
+                                    id="edit-emergency_name"
+                                    value={data.emergency_contact.name}
+                                    onChange={(e) => setData('emergency_contact', {...data.emergency_contact, name: e.target.value})}
+                                    placeholder="Enter emergency contact name"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-emergency_phone">Emergency Contact Phone</Label>
+                                <Input
+                                    id="edit-emergency_phone"
+                                    value={data.emergency_contact.phone}
+                                    onChange={(e) => setData('emergency_contact', {...data.emergency_contact, phone: e.target.value})}
+                                    placeholder="Enter emergency contact phone"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-emergency_relationship">Emergency Contact Relationship</Label>
+                                <Input
+                                    id="edit-emergency_relationship"
+                                    value={data.emergency_contact.relationship}
+                                    onChange={(e) => setData('emergency_contact', {...data.emergency_contact, relationship: e.target.value})}
+                                    placeholder="e.g., Spouse, Parent, Sibling"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-insurance_provider">Insurance Provider</Label>
+                                <Input
+                                    id="edit-insurance_provider"
+                                    value={data.insurance.provider}
+                                    onChange={(e) => setData('insurance', {...data.insurance, provider: e.target.value})}
+                                    placeholder="Enter insurance provider"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-policy_number">Policy Number</Label>
+                                <Input
+                                    id="edit-policy_number"
+                                    value={data.insurance.policy_number}
+                                    onChange={(e) => setData('insurance', {...data.insurance, policy_number: e.target.value})}
+                                    placeholder="Enter policy number"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-group_number">Group Number</Label>
+                                <Input
+                                    id="edit-group_number"
+                                    value={data.insurance.group_number}
+                                    onChange={(e) => setData('insurance', {...data.insurance, group_number: e.target.value})}
+                                    placeholder="Enter group number"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-medical_history">Medical History</Label>
+                            <Textarea
+                                id="edit-medical_history"
+                                value={data.medical_history}
+                                onChange={(e) => setData('medical_history', e.target.value)}
+                                placeholder="Enter medical history"
+                                rows={3}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-medications">Current Medications</Label>
+                            <Textarea
+                                id="edit-medications"
+                                value={data.medications}
+                                onChange={(e) => setData('medications', e.target.value)}
+                                placeholder="Enter current medications"
+                                rows={3}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-notes">Notes</Label>
+                            <Textarea
+                                id="edit-notes"
+                                value={data.notes}
+                                onChange={(e) => setData('notes', e.target.value)}
+                                placeholder="Enter additional notes"
+                                rows={3}
+                            />
+                        </div>
+                        </div>
                     </div>
-                    <DialogFooter>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSavePatient} disabled={loading}>
-                            {loading ? (
+                        <Button onClick={handleSavePatient} disabled={processing}>
+                            {processing ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Updating...
@@ -945,21 +1035,25 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 </>
                             )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* View Patient Details Modal */}
-            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Patient Details</DialogTitle>
-                        <DialogDescription>
+            {isViewModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsViewModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Patient Details</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Complete information about {viewingPatient?.name}
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
                     {viewingPatient && (
-                        <div className="space-y-6">
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <div className="flex items-center space-x-3">
@@ -1083,9 +1177,10 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                     </div>
                                 </TabsContent>
                             </Tabs>
+                            </div>
                         </div>
                     )}
-                    <DialogFooter>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
                             Close
                         </Button>
@@ -1096,21 +1191,25 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Patient
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Health Records Modal */}
-            <Dialog open={isHealthRecordsModalOpen} onOpenChange={setIsHealthRecordsModalOpen}>
-                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Health Records</DialogTitle>
-                        <DialogDescription>
+            {isHealthRecordsModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsHealthRecordsModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[60vw] min-w-[700px] max-w-[900px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Health Records</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Complete medical history for {viewingPatient?.name}
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
                     {healthRecordsData && (
-                        <div className="space-y-6">
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="space-y-6">
                             <Tabs defaultValue="appointments" className="w-full">
                                 <TabsList className="grid w-full grid-cols-3">
                                     <TabsTrigger value="appointments">Appointments</TabsTrigger>
@@ -1160,35 +1259,52 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                     </div>
                                 </TabsContent>
                             </Tabs>
+                            </div>
                         </div>
                     )}
-                    <DialogFooter>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
                         <Button variant="outline" onClick={() => setIsHealthRecordsModalOpen(false)}>
                             Close
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
-            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete Patient</DialogTitle>
-                        <DialogDescription>
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsDeleteModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[40vw] min-w-[500px] max-w-[600px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Delete Patient</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Are you sure you want to delete {deletingPatient?.name}? This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
+                        </p>
+                    </div>
+                    <div className="flex-1 p-6">
+                        <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-red-900 dark:text-red-100">Warning</h4>
+                                <p className="text-sm text-red-700 dark:text-red-300">
+                                    This will permanently delete the patient record and all associated data.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                             Cancel
                         </Button>
                         <Button
                             onClick={deletePatient}
                             className="bg-red-600 hover:bg-red-700 text-white"
-                            disabled={loading}
+                            disabled={processing}
                         >
-                            {loading ? (
+                            {processing ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Deleting...
@@ -1200,9 +1316,10 @@ export default function PatientManagement({ patients: initialPatients }: Patient
                                 </>
                             )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

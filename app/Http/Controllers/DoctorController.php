@@ -63,7 +63,7 @@ class DoctorController extends Controller
             'email' => 'required|string|email:rfc,dns|max:255|unique:users',
             'phone' => 'required|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
             'specialization' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
-            'license' => 'required|string|max:255|unique:doctors,license_number|alpha_num',
+            'license' => 'required|string|max:255|unique:doctors,license_no|alpha_num',
             'status' => 'required|string|in:Active,On Leave,Inactive',
             'experience' => 'required|string|max:255',
             'education' => 'nullable|string|max:1000',
@@ -90,6 +90,14 @@ class DoctorController extends Controller
         try {
             $validatedData = $this->validateAndSanitize($request, $rules, $messages);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
@@ -126,8 +134,8 @@ class DoctorController extends Controller
             $doctor = Doctor::create([
                 'user_id' => $newUser->id,
                 'clinic_id' => $clinicId,
-                'specialization' => $request->specialization,
-                'license_number' => $request->license,
+                'specialty' => $request->specialization,
+                'license_no' => $request->license,
                 'experience' => $request->experience,
                 'education' => $request->education,
                 'certifications' => $request->certifications,
@@ -153,10 +161,13 @@ class DoctorController extends Controller
                 'join_date' => Carbon::now(),
             ]);
 
+            // Always return Inertia response for consistency
             return redirect()->route('admin.doctors')->with('success', 'Doctor added successfully');
 
         } catch (\Exception $e) {
             $this->handleException($e, 'DoctorController::store');
+            
+            // Always return Inertia response for consistency
             return redirect()->back()->with('error', 'Failed to add doctor. Please try again.')->withInput();
         }
     }
@@ -166,45 +177,63 @@ class DoctorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique('users')->ignore($id)
-            ],
-            'phone' => 'required|string|max:20',
-            'specialization' => 'required|string|max:255',
-            'license' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('doctors', 'license_number')->ignore($id)
-            ],
-            'status' => 'required|string|in:Active,On Leave,Inactive',
-            'experience' => 'required|string|max:255',
-            'education' => 'nullable|string|max:1000',
-            'certifications' => 'nullable|string|max:1000',
-            'address' => 'nullable|string|max:500',
-            'emergency_contact' => 'nullable|string|max:255',
-            'emergency_phone' => 'nullable|string|max:20',
-            'notes' => 'nullable|string|max:1000',
-            'consultation_fee' => 'nullable|numeric|min:0',
-            'availability' => 'nullable|array',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator->errors())->withInput();
-        }
-
         try {
             $doctor = Doctor::findOrFail($id);
             $user = $doctor->user;
 
             if (!$user) {
                 return redirect()->back()->with('error', 'Doctor user not found');
+            }
+
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+                'email' => [
+                    'required',
+                    'string',
+                    'email:rfc,dns',
+                    'max:255',
+                    Rule::unique('users')->ignore($user->id)
+                ],
+                'phone' => 'required|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                'specialization' => 'required|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+                'license' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    'alpha_num',
+                    Rule::unique('doctors', 'license_no')->ignore($id)
+                ],
+                'status' => 'required|string|in:Active,On Leave,Inactive',
+                'experience' => 'required|string|max:255',
+                'education' => 'nullable|string|max:1000',
+                'certifications' => 'nullable|string|max:1000',
+                'address' => 'nullable|string|max:500',
+                'emergency_contact' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\-\'\.]+$/',
+                'emergency_phone' => 'nullable|string|max:20|regex:/^[\+]?[0-9\s\-\(\)]+$/',
+                'notes' => 'nullable|string|max:1000',
+                'consultation_fee' => 'nullable|numeric|min:0|max:999999.99',
+                'availability' => 'nullable|array',
+            ], [
+                'name.regex' => 'Name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+                'email.email' => 'Please provide a valid email address.',
+                'phone.regex' => 'Phone number format is invalid.',
+                'specialization.regex' => 'Specialization can only contain letters, spaces, hyphens, apostrophes, and periods.',
+                'license.alpha_num' => 'License number can only contain letters and numbers.',
+                'consultation_fee.max' => 'Consultation fee cannot exceed 999,999.99.',
+                'emergency_contact.regex' => 'Emergency contact name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+                'emergency_phone.regex' => 'Emergency contact phone format is invalid.',
+            ]);
+
+            if ($validator->fails()) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed',
+                        'errors' => $validator->errors()
+                    ], 422);
+                }
+                
+                return redirect()->back()->withErrors($validator->errors())->withInput();
             }
 
             // Update user
@@ -217,8 +246,8 @@ class DoctorController extends Controller
 
             // Update doctor
             $doctor->update([
-                'specialization' => $request->specialization,
-                'license_number' => $request->license,
+                'specialty' => $request->specialization,
+                'license_no' => $request->license,
                 'experience' => $request->experience,
                 'education' => $request->education,
                 'certifications' => $request->certifications,
@@ -240,9 +269,13 @@ class DoctorController extends Controller
                 ]);
             }
 
+            // Always return Inertia response for consistency
             return redirect()->route('admin.doctors')->with('success', 'Doctor updated successfully');
 
         } catch (\Exception $e) {
+            $this->handleException($e, 'DoctorController::update');
+            
+            // Always return Inertia response for consistency
             return redirect()->back()->with('error', 'Failed to update doctor. Please try again.')->withInput();
         }
     }
@@ -270,9 +303,11 @@ class DoctorController extends Controller
                 $userClinicRole->update(['status' => 'Inactive']);
             }
 
+            // Always return Inertia response for consistency
             return redirect()->route('admin.doctors')->with('success', 'Doctor deactivated successfully');
 
         } catch (\Exception $e) {
+            // Always return Inertia response for consistency
             return redirect()->back()->with('error', 'Failed to deactivate doctor. Please try again.');
         }
     }
@@ -323,8 +358,8 @@ class DoctorController extends Controller
                         'name' => $doctor->user->name,
                         'email' => $doctor->user->email,
                         'phone' => $doctor->user->phone,
-                        'specialization' => $doctor->specialization,
-                        'license' => $doctor->license_number,
+                        'specialization' => $doctor->specialty,
+                        'license' => $doctor->license_no,
                         'status' => $doctor->is_active ? 'Active' : 'Inactive',
                         'experience' => $doctor->experience,
                         'education' => $doctor->education,
@@ -357,8 +392,8 @@ class DoctorController extends Controller
             'name' => $doctor->user->name,
             'email' => $doctor->user->email,
             'phone' => $doctor->user->phone,
-            'specialization' => $doctor->specialization,
-            'license' => $doctor->license_number,
+            'specialization' => $doctor->specialty,
+            'license' => $doctor->license_no,
             'status' => $doctor->is_active ? 'Active' : 'Inactive',
             'experience' => $doctor->experience,
             'education' => $doctor->education,
