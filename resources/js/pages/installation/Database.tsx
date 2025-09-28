@@ -19,7 +19,10 @@ export default function Database() {
     post('/install/database');
   };
 
-  const isFormValid = data.db_name.trim() && data.db_username.trim() && data.db_host.trim();
+  const isFormValid = data.db_name && data.db_name.trim() !== '' && 
+                     data.db_username && data.db_username.trim() !== '' && 
+                     data.db_host && data.db_host.trim() !== '';
+  
   
   const getConnectionStatus = () => {
     if (Object.keys(errors).length > 0) {
@@ -34,12 +37,12 @@ export default function Database() {
   const connectionStatus = getConnectionStatus();
 
   return (
-    <InstallationLayout 
-      title="Database Configuration" 
-      subtitle="Configure your database connection"
-      step={2}
-      totalSteps={4}
-    >
+      <InstallationLayout
+        title="Database Configuration"
+        subtitle="Configure your database connection"
+        step={2}
+        totalSteps={4}
+      >
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Database Setup</h2>
         <p className="text-gray-600">

@@ -49,12 +49,12 @@ export default function Admin() {
   const passwordStrength = getPasswordStrength(data.password);
 
   return (
-    <InstallationLayout 
-      title="Admin Account Setup" 
-      subtitle="Create your administrator account and clinic information"
-      step={3}
-      totalSteps={4}
-    >
+      <InstallationLayout
+        title="Admin Account Setup"
+        subtitle="Create your administrator account and clinic information"
+        step={4}
+        totalSteps={4}
+      >
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Create Admin Account</h2>
         <p className="text-gray-600">

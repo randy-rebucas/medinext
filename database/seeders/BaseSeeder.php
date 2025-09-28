@@ -51,6 +51,43 @@ class BaseSeeder extends Seeder
     }
 
     /**
+     * Update progress for installation tracking
+     */
+    private function updateProgress(string $stepId, string $status, string $message = null, int $progress = null): void
+    {
+        if (!$this->options['show_progress']) {
+            return;
+        }
+
+        // Update session if we're in a web context
+        try {
+            if (session()->isStarted()) {
+                $steps = session('seeding_steps', []);
+                
+                foreach ($steps as &$step) {
+                    if ($step['id'] === $stepId) {
+                        $step['status'] = $status;
+                        if ($message) $step['message'] = $message;
+                        if ($progress !== null) $step['progress'] = $progress;
+                        break;
+                    }
+                }
+
+                session([
+                    'seeding_steps' => $steps,
+                    'seeding_current_step' => $status === 'running' ? $stepId : null,
+                ]);
+            }
+        } catch (\Exception $e) {
+            // If session update fails, just log the error and continue
+            $this->logInfo("Session update failed: " . $e->getMessage());
+        }
+
+        // Also log to console
+        $this->logInfo("Step: {$stepId} - {$status}" . ($message ? " - {$message}" : ""));
+    }
+
+    /**
      * Set command instance for logging
      */
     public function setCommand($command): void
@@ -94,23 +131,34 @@ class BaseSeeder extends Seeder
 
         $this->logInfo('🚀 Starting BaseSeeder - Unified Database Seeding...');
         $this->logInfo('================================================');
+        $this->logInfo('Options: ' . json_encode($this->options));
 
         try {
             // Use database transaction for rollback capability
             DB::transaction(function () {
+                $this->updateProgress('core_system', 'running', 'Setting up core system...');
                 $this->seedCoreSystem();
+                $this->updateProgress('core_system', 'completed', 'Core system setup complete');
                 gc_collect_cycles();
                 
+                $this->updateProgress('infrastructure', 'running', 'Setting up infrastructure...');
                 $this->seedInfrastructure();
+                $this->updateProgress('infrastructure', 'completed', 'Infrastructure setup complete');
                 gc_collect_cycles();
                 
+                $this->updateProgress('users_roles', 'running', 'Setting up users and roles...');
                 $this->seedUsersAndRoles();
+                $this->updateProgress('users_roles', 'completed', 'Users and roles setup complete');
                 gc_collect_cycles();
                 
+                $this->updateProgress('business_data', 'running', 'Setting up business data...');
                 $this->seedBusinessData();
+                $this->updateProgress('business_data', 'completed', 'Business data setup complete');
                 gc_collect_cycles();
                 
+                $this->updateProgress('activity_logs', 'running', 'Setting up activity logs...');
                 $this->seedActivityLogs();
+                $this->updateProgress('activity_logs', 'completed', 'Activity logs setup complete');
                 gc_collect_cycles();
             });
 

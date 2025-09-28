@@ -230,11 +230,11 @@ export default function InstallationLayout({
       <div className="installation-page min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         {/* Progress Bar */}
         {step && totalSteps && (
-          <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={totalSteps} aria-label={`Installation progress: step ${step} of ${totalSteps}`}>
+          <div className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50" role="progressbar" aria-valuenow={Math.floor(step)} aria-valuemin={1} aria-valuemax={totalSteps} aria-label={`Installation progress: step ${Math.floor(step)} of ${totalSteps}`}>
             <div className="max-w-4xl mx-auto px-4 py-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  Step {step} of {totalSteps}
+                  Step {Math.floor(step)} of {totalSteps}
                 </span>
                 <span className="text-sm text-gray-500">
                   {Math.round((step / totalSteps) * 100)}% Complete

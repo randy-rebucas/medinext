@@ -21,6 +21,10 @@ Route::prefix('install')->name('installation.')->group(function () {
     Route::get('/database', [InstallationController::class, 'database'])->name('database');
     Route::post('/database', [InstallationController::class, 'configureDatabase'])->name('database.configure');
     
+    // System data setup
+    Route::get('/setup-data', [InstallationController::class, 'setupData'])->name('setup-data');
+    Route::post('/setup-data', [InstallationController::class, 'createSystemData'])->name('setup-data.create');
+    
     // Admin user creation
     Route::get('/admin', [InstallationController::class, 'admin'])->name('admin');
     Route::post('/admin', [InstallationController::class, 'createAdmin'])->name('admin.create');
