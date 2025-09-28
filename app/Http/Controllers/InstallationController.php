@@ -133,21 +133,24 @@ class InstallationController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'password' => 'required|string|min:8|confirmed',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
             'clinic_name' => 'required|string|max:255',
-            'clinic_phone' => 'required|string|max:20',
+            'clinic_phone' => 'required|string|max:20|regex:/^[\+]?[1-9][\d]{0,15}$/',
             'clinic_email' => 'required|string|email|max:255',
             'clinic_address' => 'required|string|max:500',
         ], [
             'name.required' => 'Admin name is required',
             'email.required' => 'Admin email is required',
             'email.email' => 'Please enter a valid email address',
+            'email.unique' => 'This email address is already in use',
             'password.required' => 'Password is required',
             'password.min' => 'Password must be at least 8 characters',
             'password.confirmed' => 'Password confirmation does not match',
+            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
             'clinic_name.required' => 'Clinic name is required',
             'clinic_phone.required' => 'Clinic phone is required',
+            'clinic_phone.regex' => 'Please enter a valid phone number',
             'clinic_email.required' => 'Clinic email is required',
             'clinic_email.email' => 'Please enter a valid clinic email address',
             'clinic_address.required' => 'Clinic address is required',
@@ -158,6 +161,9 @@ class InstallationController extends Controller
         }
 
         try {
+            // Create installation backup point
+            $backupPoint = $this->createInstallationBackup();
+
             // Run database migrations
             $this->runMigrations();
 
@@ -165,11 +171,16 @@ class InstallationController extends Controller
             $result = $this->createAdminUserAndClinic($request->all());
 
             if (!$result['success']) {
+                // Rollback to backup point
+                $this->rollbackToBackup($backupPoint);
                 return back()->withErrors(['admin' => $result['message']])->withInput();
             }
 
             // Mark installation as complete
             $this->markInstallationComplete();
+
+            // Clean up backup files
+            $this->cleanupBackup($backupPoint);
 
             // Log successful installation
             Log::info('MediNext installation completed successfully', [
@@ -177,17 +188,24 @@ class InstallationController extends Controller
                 'clinic_name' => $request->clinic_name,
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
+                'installation_id' => $backupPoint,
             ]);
 
             return redirect()->route('installation.complete');
 
         } catch (\Exception $e) {
+            // Attempt rollback if backup exists
+            if (isset($backupPoint)) {
+                $this->rollbackToBackup($backupPoint);
+            }
+
             Log::error('Admin creation failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'backup_point' => $backupPoint ?? null,
             ]);
 
-            return back()->withErrors(['admin' => 'Admin creation failed: ' . $e->getMessage()])->withInput();
+            return back()->withErrors(['admin' => 'Installation failed: ' . $e->getMessage()])->withInput();
         }
     }
 
@@ -529,5 +547,143 @@ class InstallationController extends Controller
             'completed_at' => now()->toISOString(),
             'version' => '1.0.0',
         ]));
+    }
+
+    /**
+     * Create installation backup point
+     */
+    private function createInstallationBackup(): string
+    {
+        $backupId = 'install_' . now()->format('Y_m_d_H_i_s') . '_' . uniqid();
+        $backupPath = storage_path('app/installation_backups/' . $backupId);
+        
+        // Create backup directory
+        if (!file_exists($backupPath)) {
+            mkdir($backupPath, 0755, true);
+        }
+
+        // Store current database state
+        $this->backupDatabaseState($backupPath);
+        
+        // Store current .env file
+        $envPath = base_path('.env');
+        if (file_exists($envPath)) {
+            copy($envPath, $backupPath . '/.env.backup');
+        }
+
+        return $backupId;
+    }
+
+    /**
+     * Backup current database state
+     */
+    private function backupDatabaseState(string $backupPath): void
+    {
+        try {
+            // Get list of existing tables
+            $tables = DB::select('SHOW TABLES');
+            $tableList = [];
+            
+            foreach ($tables as $table) {
+                $tableName = array_values((array) $table)[0];
+                $tableList[] = $tableName;
+            }
+
+            // Store table list
+            file_put_contents(
+                $backupPath . '/tables.json', 
+                json_encode($tableList, JSON_PRETTY_PRINT)
+            );
+
+            // Store database schema
+            $schema = [];
+            foreach ($tableList as $tableName) {
+                $createTable = DB::select("SHOW CREATE TABLE `{$tableName}`");
+                $schema[$tableName] = $createTable[0]->{'Create Table'};
+            }
+
+            file_put_contents(
+                $backupPath . '/schema.sql', 
+                json_encode($schema, JSON_PRETTY_PRINT)
+            );
+
+        } catch (\Exception $e) {
+            Log::warning('Failed to backup database state', [
+                'error' => $e->getMessage(),
+                'backup_path' => $backupPath
+            ]);
+        }
+    }
+
+    /**
+     * Rollback to backup point
+     */
+    private function rollbackToBackup(string $backupId): void
+    {
+        $backupPath = storage_path('app/installation_backups/' . $backupId);
+        
+        if (!file_exists($backupPath)) {
+            Log::error('Backup not found for rollback', ['backup_id' => $backupId]);
+            return;
+        }
+
+        try {
+            // Restore .env file
+            $envBackup = $backupPath . '/.env.backup';
+            if (file_exists($envBackup)) {
+                copy($envBackup, base_path('.env'));
+            }
+
+            // Drop all tables if they exist
+            $tablesFile = $backupPath . '/tables.json';
+            if (file_exists($tablesFile)) {
+                $tables = json_decode(file_get_contents($tablesFile), true);
+                foreach ($tables as $table) {
+                    try {
+                        DB::statement("DROP TABLE IF EXISTS `{$table}`");
+                    } catch (\Exception $e) {
+                        Log::warning("Failed to drop table {$table}", ['error' => $e->getMessage()]);
+                    }
+                }
+            }
+
+            Log::info('Installation rollback completed', ['backup_id' => $backupId]);
+
+        } catch (\Exception $e) {
+            Log::error('Rollback failed', [
+                'error' => $e->getMessage(),
+                'backup_id' => $backupId
+            ]);
+        }
+    }
+
+    /**
+     * Clean up backup files
+     */
+    private function cleanupBackup(string $backupId): void
+    {
+        $backupPath = storage_path('app/installation_backups/' . $backupId);
+        
+        if (file_exists($backupPath)) {
+            $this->deleteDirectory($backupPath);
+        }
+    }
+
+    /**
+     * Recursively delete directory
+     */
+    private function deleteDirectory(string $dir): bool
+    {
+        if (!is_dir($dir)) {
+            return false;
+        }
+
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            $path = $dir . DIRECTORY_SEPARATOR . $file;
+            is_dir($path) ? $this->deleteDirectory($path) : unlink($path);
+        }
+
+        return rmdir($dir);
     }
 }

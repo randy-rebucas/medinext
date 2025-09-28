@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\DemoController;
 use App\Http\Controllers\Api\MonitoringController;
+use App\Http\Controllers\ClinicSwitchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,6 +85,30 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
 
     Route::middleware(['api.permission:dashboard.stats'])->group(function () {
         Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    });
+
+    // Clinic management and switching
+    Route::middleware(['api.permission:clinics.view'])->group(function () {
+        Route::get('/clinics', [ClinicController::class, 'index']);
+        Route::get('/clinics/{clinic}', [ClinicController::class, 'show']);
+        Route::get('/clinics/current', [ClinicSwitchController::class, 'current']);
+        Route::get('/clinics/list', [ClinicSwitchController::class, 'list']);
+    });
+
+    Route::middleware(['api.permission:clinics.create'])->group(function () {
+        Route::post('/clinics', [ClinicController::class, 'store']);
+    });
+
+    Route::middleware(['api.permission:clinics.edit'])->group(function () {
+        Route::put('/clinics/{clinic}', [ClinicController::class, 'update']);
+    });
+
+    Route::middleware(['api.permission:clinics.delete'])->group(function () {
+        Route::delete('/clinics/{clinic}', [ClinicController::class, 'destroy']);
+    });
+
+    Route::middleware(['api.permission:clinics.view'])->group(function () {
+        Route::post('/clinics/switch', [ClinicSwitchController::class, 'switch']);
     });
 
     // Settings and configuration
@@ -425,6 +450,25 @@ Route::prefix('v1')->middleware(['api.auth'])->group(function () {
     Route::apiResource('insurance', App\Http\Controllers\Api\InsuranceController::class);
     Route::get('/insurance/{insurance}/verify', [App\Http\Controllers\Api\InsuranceController::class, 'verify']);
     Route::get('/insurance/providers', [App\Http\Controllers\Api\InsuranceController::class, 'providers']);
+
+    // Schedule management
+    Route::middleware(['api.permission:schedules.view'])->group(function () {
+        Route::get('/schedules', [App\Http\Controllers\ScheduleController::class, 'index']);
+        Route::get('/schedules/{schedule}', [App\Http\Controllers\ScheduleController::class, 'show']);
+        Route::get('/schedules/{schedule}/available-slots', [App\Http\Controllers\ScheduleController::class, 'availableSlots']);
+    });
+
+    Route::middleware(['api.permission:schedules.create'])->group(function () {
+        Route::post('/schedules', [App\Http\Controllers\ScheduleController::class, 'store']);
+    });
+
+    Route::middleware(['api.permission:schedules.edit'])->group(function () {
+        Route::put('/schedules/{schedule}', [App\Http\Controllers\ScheduleController::class, 'update']);
+    });
+
+    Route::middleware(['api.permission:schedules.delete'])->group(function () {
+        Route::delete('/schedules/{schedule}', [App\Http\Controllers\ScheduleController::class, 'destroy']);
+    });
 
     // Medrep management (requires medrep_management feature)
     Route::middleware(['license.feature:medrep_management'])->group(function () {

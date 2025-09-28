@@ -8,34 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-// Simple AlertDialog components
-const AlertDialog = ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">{children}</div> : null;
-
-const AlertDialogContent = ({ children }: { children: React.ReactNode }) =>
-    <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4">{children}</div>;
-
-const AlertDialogHeader = ({ children }: { children: React.ReactNode }) =>
-    <div className="mb-4">{children}</div>;
-
-const AlertDialogTitle = ({ children }: { children: React.ReactNode }) =>
-    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{children}</h2>;
-
-const AlertDialogDescription = ({ children }: { children: React.ReactNode }) =>
-    <p className="text-sm text-slate-600 dark:text-slate-400">{children}</p>;
-
-const AlertDialogFooter = ({ children }: { children: React.ReactNode }) =>
-    <div className="flex justify-end space-x-2 mt-6">{children}</div>;
-
-const AlertDialogCancel = ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) =>
-    <Button variant="outline" onClick={onClick}>{children}</Button>;
-
-const AlertDialogAction = ({ children, onClick, className, disabled }: { children: React.ReactNode; onClick?: () => void; className?: string; disabled?: boolean }) =>
-    <Button onClick={onClick} className={className} disabled={disabled}>{children}</Button>;
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Table,
@@ -63,7 +39,8 @@ import {
     GraduationCap,
     Award,
     DollarSign,
-    Loader2
+    Loader2,
+    AlertCircle
 } from 'lucide-react';
 
 // Simple toast implementation using browser notifications
@@ -129,7 +106,7 @@ interface DoctorManagementProps {
 
 export default function DoctorManagement({ doctors: initialDoctors, specializations }: DoctorManagementProps) {
     const { props } = usePage();
-    const [doctors] = useState<Doctor[]>(initialDoctors);
+    const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
     const [searchTerm, setSearchTerm] = useState('');
     const [specializationFilter, setSpecializationFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -196,14 +173,22 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
         if (isEditModalOpen && editingDoctor) {
             // Update existing doctor
             put(`/admin/doctors/${editingDoctor.id}`, {
-                onSuccess: () => {
+                onSuccess: (page: any) => {
+                    // Update the doctors list with the new data
+                    if (page.props.doctors) {
+                        setDoctors(page.props.doctors);
+                    }
                     handleCancel();
                 }
             });
         } else {
             // Create new doctor
             post('/admin/doctors', {
-                onSuccess: () => {
+                onSuccess: (page: any) => {
+                    // Update the doctors list with the new data
+                    if (page.props.doctors) {
+                        setDoctors(page.props.doctors);
+                    }
                     handleCancel();
                 }
             });
@@ -214,7 +199,11 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
         if (!deletingDoctor) return;
 
         router.delete(`/admin/doctors/${deletingDoctor.id}`, {
-            onSuccess: () => {
+            onSuccess: (page: any) => {
+                // Update the doctors list with the new data
+                if (page.props.doctors) {
+                    setDoctors(page.props.doctors);
+                }
                 setIsDeleteModalOpen(false);
                 setDeletingDoctor(null);
             }
@@ -241,6 +230,17 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
         return colors[specialization as keyof typeof colors] || 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-400';
     };
 
+    const isValidAvailability = (availability: any): availability is Record<string, { available: boolean; start: string; end: string }> => {
+        return availability && typeof availability === 'object' && !Array.isArray(availability);
+    };
+
+    const getScheduleForDay = (availability: any, dayKey: string) => {
+        if (isValidAvailability(availability) && availability[dayKey]) {
+            return availability[dayKey];
+        }
+        return undefined;
+    };
+
     const handleAddDoctor = () => {
         setIsAddModalOpen(true);
         reset();
@@ -263,7 +263,7 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
             emergency_phone: doctor.emergency_phone || '',
             notes: doctor.notes || '',
             consultation_fee: String(doctor.consultation_fee || ''),
-            availability: (typeof doctor.availability === 'object' && !Array.isArray(doctor.availability)) ? doctor.availability : {
+            availability: isValidAvailability(doctor.availability) ? doctor.availability : {
                 monday: { start: '09:00', end: '17:00', available: true },
                 tuesday: { start: '09:00', end: '17:00', available: true },
                 wednesday: { start: '09:00', end: '17:00', available: true },
@@ -402,7 +402,7 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                                         <div>
                                                             <div className="font-semibold text-slate-900 dark:text-white">{doctor.name}</div>
                                                             <div className="text-sm text-slate-500 dark:text-slate-400">License: {doctor.license || doctor.license_number}</div>
-                                                            <div className="text-xs text-slate-400 dark:text-slate-500">{doctor.experience || 'N/A'} • ⭐ {doctor.rating || 'N/A'}</div>
+                                                            <div className="text-xs text-slate-400 dark:text-slate-500">{doctor.experience || 'N/A'} • ⭐ {typeof doctor.rating === 'number' ? doctor.rating.toFixed(1) : (doctor.rating || 'N/A')}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
@@ -516,14 +516,17 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
             </div>
 
             {/* Add Doctor Modal */}
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Add New Doctor</DialogTitle>
-                        <DialogDescription>
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsAddModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add New Doctor</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Enter the details for the new doctor.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -736,7 +739,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
@@ -754,19 +758,23 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 </>
                             )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Edit Doctor Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Doctor</DialogTitle>
-                        <DialogDescription>
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsEditModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Doctor</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Update the details for {editingDoctor?.name}.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -817,16 +825,9 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                         <SelectValue placeholder="Select specialization" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Cardiology">Cardiology</SelectItem>
-                                        <SelectItem value="Pediatrics">Pediatrics</SelectItem>
-                                        <SelectItem value="Dermatology">Dermatology</SelectItem>
-                                        <SelectItem value="Orthopedics">Orthopedics</SelectItem>
-                                        <SelectItem value="Neurology">Neurology</SelectItem>
-                                        <SelectItem value="Internal Medicine">Internal Medicine</SelectItem>
-                                        <SelectItem value="Emergency Medicine">Emergency Medicine</SelectItem>
-                                        <SelectItem value="Radiology">Radiology</SelectItem>
-                                        <SelectItem value="Pathology">Pathology</SelectItem>
-                                        <SelectItem value="Anesthesiology">Anesthesiology</SelectItem>
+                                        {specializations.map((spec) => (
+                                            <SelectItem key={spec} value={spec}>{spec}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -975,7 +976,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
@@ -993,19 +995,23 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                 </>
                             )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* View Doctor Details Modal */}
-            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Doctor Details</DialogTitle>
-                        <DialogDescription>
+            {isViewModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsViewModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Doctor Details</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Complete information about {viewingDoctor?.name}
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     {viewingDoctor && (
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-6">
@@ -1134,7 +1140,7 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
 
                                 <TabsContent value="schedule" className="space-y-4">
                                     <div className="space-y-3">
-                                        {viewingDoctor.availability && typeof viewingDoctor.availability === 'object' && !Array.isArray(viewingDoctor.availability) && Object.entries(viewingDoctor.availability).map(([day, schedule]) => (
+                                        {isValidAvailability(viewingDoctor.availability) && Object.entries(viewingDoctor.availability).map(([day, schedule]) => (
                                             <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
                                                 <div className="flex items-center space-x-3">
                                                     <Checkbox checked={schedule.available} disabled />
@@ -1153,7 +1159,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             </Tabs>
                         </div>
                     )}
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
                             Close
                         </Button>
@@ -1164,19 +1171,23 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Doctor
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* View Schedule Modal */}
-            <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Doctor Schedule</DialogTitle>
-                        <DialogDescription>
+            {isScheduleModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsScheduleModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Doctor Schedule</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             View and manage schedule for {viewingDoctor?.name}
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     {viewingDoctor && (
                         <div className="space-y-6">
                             <div className="text-center">
@@ -1192,20 +1203,20 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <div className="grid grid-cols-7 gap-2">
                                 {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
                                     const dayKey = day.toLowerCase() as keyof typeof viewingDoctor.availability;
-                                    const schedule = viewingDoctor.availability && typeof viewingDoctor.availability === 'object' && !Array.isArray(viewingDoctor.availability) ? viewingDoctor.availability[dayKey] : undefined;
+                                    const schedule = getScheduleForDay(viewingDoctor.availability, dayKey);
                                     return (
                                         <div key={day} className="text-center">
                                             <div className="font-medium text-sm text-slate-700 dark:text-slate-300 mb-2">{day}</div>
                                             <div className={`p-3 rounded-lg border ${
-                                                schedule && typeof schedule === 'object' && 'available' in schedule && (schedule as { available: boolean }).available
+                                                schedule?.available
                                                     ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
                                                     : 'bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
                                             }`}>
-                                                {schedule && typeof schedule === 'object' && 'available' in schedule && (schedule as { available: boolean }).available ? (
+                                                {schedule?.available ? (
                                                     <div className="space-y-1">
                                                         <div className="text-xs font-medium text-green-800 dark:text-green-400">Available</div>
                                                         <div className="text-xs text-green-600 dark:text-green-500">
-                                                            {'start' in schedule && 'end' in schedule ? `${(schedule as { start: string; end: string }).start} - ${(schedule as { start: string; end: string }).end}` : 'N/A'}
+                                                            {schedule.start} - {schedule.end}
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -1232,7 +1243,8 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             </div>
                         </div>
                     )}
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={() => setIsScheduleModalOpen(false)}>
                             Close
                         </Button>
@@ -1243,22 +1255,40 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Schedule
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
-            <AlertDialog open={isDeleteModalOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Doctor</AlertDialogTitle>
-                        <AlertDialogDescription>
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsDeleteModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[40vw] min-w-[500px] max-w-[600px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Delete Doctor</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Are you sure you want to deactivate {deletingDoctor?.name}? This action will make the doctor inactive and they will not be able to access the system.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            <div>
+                                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                                    Warning: This action cannot be undone
+                                </p>
+                                <p className="text-sm text-red-600 dark:text-red-400">
+                                    The doctor will be deactivated and lose access to the system.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
                             onClick={deleteDoctor}
                             className="bg-red-600 hover:bg-red-700 text-white"
                             disabled={processing}
@@ -1274,10 +1304,11 @@ export default function DoctorManagement({ doctors: initialDoctors, specializati
                                     Delete
                                 </>
                             )}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

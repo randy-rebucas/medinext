@@ -47,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'installation.check' => \App\Http\Middleware\CheckInstallationStatus::class,
             'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
             'api.rate.limit' => \App\Http\Middleware\ApiRateLimit::class,
+            'clinic.current' => \App\Http\Middleware\EnsureCurrentClinic::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

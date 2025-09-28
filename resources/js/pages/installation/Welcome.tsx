@@ -75,9 +75,15 @@ export default function Welcome({ system_requirements, database_connection }: Pr
             <span className="text-sm text-gray-500 mr-2">
               {requirementStatus.total - requirementStatus.failed.length} of {requirementStatus.total} passed
             </span>
-            <div className="w-16 bg-gray-200 rounded-full h-2">
+            <div className="w-20 bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  requirementStatus.failed.length === 0 
+                    ? 'bg-green-500' 
+                    : requirementStatus.failed.length <= 2 
+                      ? 'bg-yellow-500' 
+                      : 'bg-red-500'
+                }`}
                 style={{ width: `${((requirementStatus.total - requirementStatus.failed.length) / requirementStatus.total) * 100}%` }}
               ></div>
             </div>
@@ -185,12 +191,21 @@ export default function Welcome({ system_requirements, database_connection }: Pr
           </div>
         </div>
         {!database_connection.status && (
-          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-start">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm text-red-800 font-medium">Connection Failed</p>
-                <p className="text-sm text-red-700 mt-1">{database_connection.message}</p>
+              <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-800 font-medium mb-2">Connection Failed</p>
+                <p className="text-sm text-red-700 mb-3">{database_connection.message}</p>
+                <div className="text-xs text-red-600">
+                  <p className="font-medium mb-1">Common solutions:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Verify your database server is running</li>
+                    <li>Check your database credentials</li>
+                    <li>Ensure the database exists</li>
+                    <li>Verify network connectivity</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

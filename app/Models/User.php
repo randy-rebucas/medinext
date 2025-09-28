@@ -38,6 +38,7 @@ class User extends Authenticatable
         'is_trial_user',
         'has_activated_license',
         'onboarding_completed_at',
+        'current_clinic_id',
     ];
 
     /**
@@ -69,6 +70,7 @@ class User extends Authenticatable
             'is_trial_user' => 'boolean',
             'has_activated_license' => 'boolean',
             'onboarding_completed_at' => 'datetime',
+            'current_clinic_id' => 'integer',
         ];
     }
 
@@ -377,7 +379,12 @@ class User extends Authenticatable
      */
     public function getCurrentClinic(): ?Clinic
     {
-        // Try to get from session first
+        // Try to get from database field first
+        if ($this->current_clinic_id) {
+            return $this->currentClinic;
+        }
+
+        // Try to get from session
         if (session('current_clinic_id')) {
             return Clinic::find(session('current_clinic_id'));
         }
@@ -572,6 +579,14 @@ class User extends Authenticatable
     public function license()
     {
         return $this->belongsTo(License::class, 'license_key', 'license_key');
+    }
+
+    /**
+     * Get the current clinic relationship
+     */
+    public function currentClinic()
+    {
+        return $this->belongsTo(Clinic::class, 'current_clinic_id');
     }
 
     /**

@@ -24,5 +24,8 @@ class DatabaseSeeder extends Seeder
 
         // Use the unified BaseSeeder
         $this->call(BaseSeeder::class);
+        
+        // Add clinic-specific seeding
+        $this->call(ClinicSeeder::class);
     }
 }

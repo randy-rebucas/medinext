@@ -198,6 +198,8 @@ class ReportsController extends Controller
         $endOfMonth = $now->copy()->endOfMonth();
         $startOfLastMonth = $now->copy()->subMonth()->startOfMonth();
         $endOfLastMonth = $now->copy()->subMonth()->endOfMonth();
+        $startOfWeek = $now->copy()->startOfWeek();
+        $endOfWeek = $now->copy()->endOfWeek();
 
         // Patient analytics
         $totalPatients = Patient::where('clinic_id', $clinicId)->count();
@@ -207,6 +209,9 @@ class ReportsController extends Controller
         $newPatientsLastMonth = Patient::where('clinic_id', $clinicId)
             ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
             ->count();
+        $newPatientsThisWeek = Patient::where('clinic_id', $clinicId)
+            ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+            ->count();
 
         // Appointment analytics
         $totalAppointments = Appointment::where('clinic_id', $clinicId)->count();
@@ -215,6 +220,9 @@ class ReportsController extends Controller
             ->count();
         $appointmentsLastMonth = Appointment::where('clinic_id', $clinicId)
             ->whereBetween('start_at', [$startOfLastMonth, $endOfLastMonth])
+            ->count();
+        $appointmentsThisWeek = Appointment::where('clinic_id', $clinicId)
+            ->whereBetween('start_at', [$startOfWeek, $endOfWeek])
             ->count();
 
         // Doctor analytics
@@ -234,8 +242,12 @@ class ReportsController extends Controller
             ->whereBetween('start_at', [$startOfLastMonth, $endOfLastMonth])
             ->where('status', 'completed')
             ->sum('total_amount') ?? 0;
+        $revenueThisWeek = Appointment::where('clinic_id', $clinicId)
+            ->whereBetween('start_at', [$startOfWeek, $endOfWeek])
+            ->where('status', 'completed')
+            ->sum('total_amount') ?? 0;
 
-        // Appointment status breakdown
+        // Appointment status breakdown (current month)
         $appointmentStatuses = Appointment::where('clinic_id', $clinicId)
             ->whereBetween('start_at', [$startOfMonth, $endOfMonth])
             ->select('status', DB::raw('count(*) as count'))
@@ -251,33 +263,119 @@ class ReportsController extends Controller
             ->orderBy('date')
             ->get();
 
-        // Doctor performance (top 5 by appointment count)
+        // Weekly trends (last 12 weeks)
+        $weeklyTrends = Appointment::where('clinic_id', $clinicId)
+            ->where('start_at', '>=', $now->copy()->subWeeks(12))
+            ->select(DB::raw('YEARWEEK(start_at) as week'), DB::raw('count(*) as count'))
+            ->groupBy('week')
+            ->orderBy('week')
+            ->get();
+
+        // Doctor performance (top 5 by appointment count with detailed metrics)
         $doctorPerformance = Doctor::where('clinic_id', $clinicId)
-            ->withCount(['appointments' => function($query) use ($startOfMonth, $endOfMonth) {
+            ->with(['user', 'appointments' => function($query) use ($startOfMonth, $endOfMonth) {
                 $query->whereBetween('start_at', [$startOfMonth, $endOfMonth]);
             }])
-            ->orderBy('appointments_count', 'desc')
-            ->limit(5)
             ->get()
-            ->map(function($doctor) {
+            ->map(function($doctor) use ($startOfMonth, $endOfMonth) {
+                $appointments = $doctor->appointments;
+                $completedAppointments = $appointments->where('status', 'completed');
+                $cancelledAppointments = $appointments->where('status', 'cancelled');
+                $noShowAppointments = $appointments->where('status', 'no_show');
+                
                 return [
                     'id' => $doctor->id,
-                    'name' => $doctor->user->name,
-                    'specialization' => $doctor->specialization,
-                    'appointments_count' => $doctor->appointments_count
+                    'name' => $doctor->user->name ?? 'Unknown Doctor',
+                    'specialization' => $doctor->specialization ?? 'General Practice',
+                    'appointments_count' => $appointments->count(),
+                    'completed_appointments' => $completedAppointments->count(),
+                    'cancelled_appointments' => $cancelledAppointments->count(),
+                    'no_show_appointments' => $noShowAppointments->count(),
+                    'completion_rate' => $appointments->count() > 0 ? round(($completedAppointments->count() / $appointments->count()) * 100, 2) : 0,
+                    'average_consultation_time' => $this->calculateAverageConsultationTime($completedAppointments),
+                    'total_revenue' => $completedAppointments->sum('total_amount') ?? 0,
                 ];
-            });
+            })
+            ->sortByDesc('appointments_count')
+            ->take(5)
+            ->values();
+
+        // Patient demographics
+        $patientDemographics = Patient::where('clinic_id', $clinicId)
+            ->select('sex', DB::raw('count(*) as count'))
+            ->groupBy('sex')
+            ->get()
+            ->pluck('count', 'sex');
+
+        // Age distribution - calculate from date of birth
+        $ageDistribution = Patient::where('clinic_id', $clinicId)
+            ->whereNotNull('dob')
+            ->selectRaw('
+                CASE 
+                    WHEN TIMESTAMPDIFF(YEAR, dob, CURDATE()) < 18 THEN "0-17"
+                    WHEN TIMESTAMPDIFF(YEAR, dob, CURDATE()) BETWEEN 18 AND 35 THEN "18-35"
+                    WHEN TIMESTAMPDIFF(YEAR, dob, CURDATE()) BETWEEN 36 AND 55 THEN "36-55"
+                    WHEN TIMESTAMPDIFF(YEAR, dob, CURDATE()) BETWEEN 56 AND 75 THEN "56-75"
+                    ELSE "75+"
+                END as age_group,
+                COUNT(*) as count
+            ')
+            ->groupBy('age_group')
+            ->get()
+            ->pluck('count', 'age_group');
+
+        // Appointment types distribution
+        $appointmentTypes = Appointment::where('clinic_id', $clinicId)
+            ->whereBetween('start_at', [$startOfMonth, $endOfMonth])
+            ->select('appointment_type', DB::raw('count(*) as count'))
+            ->groupBy('appointment_type')
+            ->get()
+            ->pluck('count', 'appointment_type');
+
+        // Peak hours analysis
+        $peakHours = Appointment::where('clinic_id', $clinicId)
+            ->whereBetween('start_at', [$startOfMonth, $endOfMonth])
+            ->select(DB::raw('HOUR(start_at) as hour'), DB::raw('count(*) as count'))
+            ->groupBy('hour')
+            ->orderBy('count', 'desc')
+            ->limit(5)
+            ->get();
+
+        // Average wait time calculation
+        $averageWaitTime = Appointment::where('clinic_id', $clinicId)
+            ->whereBetween('start_at', [$startOfMonth, $endOfMonth])
+            ->where('status', 'completed')
+            ->whereNotNull('end_at')
+            ->get()
+            ->map(function($appointment) {
+                $startTime = Carbon::parse($appointment->start_at);
+                $endTime = Carbon::parse($appointment->end_at);
+                return $endTime->diffInMinutes($startTime);
+            })
+            ->avg();
+
+        // No-show rate calculation
+        $totalAppointmentsForNoShow = Appointment::where('clinic_id', $clinicId)
+            ->whereBetween('start_at', [$startOfMonth, $endOfMonth])
+            ->count();
+        $noShowCount = Appointment::where('clinic_id', $clinicId)
+            ->whereBetween('start_at', [$startOfMonth, $endOfMonth])
+            ->where('status', 'no_show')
+            ->count();
+        $noShowRate = $totalAppointmentsForNoShow > 0 ? round(($noShowCount / $totalAppointmentsForNoShow) * 100, 2) : 0;
 
         return [
             'overview' => [
                 'total_patients' => $totalPatients,
                 'new_patients_this_month' => $newPatientsThisMonth,
                 'new_patients_last_month' => $newPatientsLastMonth,
+                'new_patients_this_week' => $newPatientsThisWeek,
                 'patients_growth' => $this->calculateGrowthRate($newPatientsThisMonth, $newPatientsLastMonth),
 
                 'total_appointments' => $totalAppointments,
                 'appointments_this_month' => $appointmentsThisMonth,
                 'appointments_last_month' => $appointmentsLastMonth,
+                'appointments_this_week' => $appointmentsThisWeek,
                 'appointments_growth' => $this->calculateGrowthRate($appointmentsThisMonth, $appointmentsLastMonth),
 
                 'total_doctors' => $totalDoctors,
@@ -285,11 +383,20 @@ class ReportsController extends Controller
 
                 'revenue_this_month' => $revenueThisMonth,
                 'revenue_last_month' => $revenueLastMonth,
+                'revenue_this_week' => $revenueThisWeek,
                 'revenue_growth' => $this->calculateGrowthRate($revenueThisMonth, $revenueLastMonth),
+                
+                'average_wait_time' => round($averageWaitTime ?? 0, 1),
+                'no_show_rate' => $noShowRate,
             ],
             'appointment_statuses' => $appointmentStatuses,
+            'appointment_types' => $appointmentTypes,
             'daily_trends' => $dailyTrends,
+            'weekly_trends' => $weeklyTrends,
             'doctor_performance' => $doctorPerformance,
+            'patient_demographics' => $patientDemographics,
+            'age_distribution' => $ageDistribution,
+            'peak_hours' => $peakHours,
         ];
     }
 
@@ -700,22 +807,62 @@ class ReportsController extends Controller
     private function getTopPerformers($clinicId)
     {
         try {
-            // Get doctors with their appointment counts and basic performance metrics
-            $doctors = Doctor::with(['user', 'appointments'])
+            $now = Carbon::now();
+            $startOfMonth = $now->copy()->startOfMonth();
+            $endOfMonth = $now->copy()->endOfMonth();
+            $startOfLastMonth = $now->copy()->subMonth()->startOfMonth();
+            $endOfLastMonth = $now->copy()->subMonth()->endOfMonth();
+
+            // Get doctors with their appointment counts and performance metrics
+            $doctors = Doctor::with(['user', 'appointments' => function($query) use ($startOfMonth, $endOfMonth) {
+                $query->whereBetween('start_at', [$startOfMonth, $endOfMonth]);
+            }])
                 ->where('clinic_id', $clinicId)
                 ->get()
-                ->map(function ($doctor) {
-                    $appointmentCount = $doctor->appointments()->count();
-                    $recentAppointments = $doctor->appointments()
-                        ->where('appointment_date', '>=', now()->subDays(30))
+                ->map(function ($doctor) use ($startOfMonth, $endOfMonth, $startOfLastMonth, $endOfLastMonth) {
+                    $appointments = $doctor->appointments;
+                    $completedAppointments = $appointments->where('status', 'completed');
+                    $totalRevenue = $completedAppointments->sum('total_amount') ?? 0;
+                    
+                    // Calculate unique patients count
+                    $uniquePatients = $appointments->pluck('patient_id')->unique()->count();
+                    
+                    // Calculate completion rate
+                    $completionRate = $appointments->count() > 0 ? 
+                        round(($completedAppointments->count() / $appointments->count()) * 100, 1) : 0;
+                    
+                    // Calculate average consultation time
+                    $avgConsultationTime = $this->calculateAverageConsultationTime($completedAppointments);
+                    
+                    // Calculate rating based on performance metrics
+                    // Base rating of 4.0, with bonuses for good performance
+                    $baseRating = 4.0;
+                    $completionBonus = min(0.5, ($completionRate - 80) / 100); // Up to 0.5 bonus for >80% completion
+                    $volumeBonus = min(0.3, $appointments->count() / 100); // Up to 0.3 bonus for high volume
+                    $timeBonus = $avgConsultationTime > 0 && $avgConsultationTime <= 30 ? 0.2 : 0; // Bonus for efficient consultations
+                    
+                    $calculatedRating = min(5.0, $baseRating + $completionBonus + $volumeBonus + $timeBonus);
+                    
+                    // Get last month's performance for comparison
+                    $lastMonthAppointments = $doctor->appointments()
+                        ->whereBetween('start_at', [$startOfLastMonth, $endOfLastMonth])
                         ->count();
+                    $lastMonthRevenue = $doctor->appointments()
+                        ->whereBetween('start_at', [$startOfLastMonth, $endOfLastMonth])
+                        ->where('status', 'completed')
+                        ->sum('total_amount') ?? 0;
                     
                     return [
                         'name' => $doctor->user->name ?? 'Unknown Doctor',
                         'specialty' => $doctor->specialization ?? 'General Practice',
-                        'patients' => $appointmentCount,
-                        'rating' => 4.5 + (rand(0, 10) / 10), // Mock rating between 4.5-5.5
-                        'revenue' => '$' . number_format($recentAppointments * 150, 0) // Mock revenue calculation
+                        'patients' => $uniquePatients,
+                        'rating' => round($calculatedRating, 1),
+                        'revenue' => '$' . number_format($totalRevenue, 0),
+                        'appointments_count' => $appointments->count(),
+                        'completion_rate' => $completionRate,
+                        'average_consultation_time' => $avgConsultationTime,
+                        'revenue_growth' => $this->calculateGrowthRate($totalRevenue, $lastMonthRevenue),
+                        'appointments_growth' => $this->calculateGrowthRate($appointments->count(), $lastMonthAppointments),
                     ];
                 })
                 ->sortByDesc('patients')
@@ -723,73 +870,16 @@ class ReportsController extends Controller
                 ->values()
                 ->toArray();
 
-            // If no doctors found, return mock data
+            // If no doctors found, return empty array instead of mock data
             if (empty($doctors)) {
-                return [
-                    [
-                        'name' => 'Dr. Sarah Johnson',
-                        'specialty' => 'Cardiology',
-                        'patients' => 45,
-                        'rating' => 4.8,
-                        'revenue' => '$6,750'
-                    ],
-                    [
-                        'name' => 'Dr. Michael Chen',
-                        'specialty' => 'Orthopedics',
-                        'patients' => 38,
-                        'rating' => 4.7,
-                        'revenue' => '$5,700'
-                    ],
-                    [
-                        'name' => 'Dr. Emily Rodriguez',
-                        'specialty' => 'Pediatrics',
-                        'patients' => 42,
-                        'rating' => 4.9,
-                        'revenue' => '$6,300'
-                    ],
-                    [
-                        'name' => 'Dr. David Thompson',
-                        'specialty' => 'Dermatology',
-                        'patients' => 35,
-                        'rating' => 4.6,
-                        'revenue' => '$5,250'
-                    ],
-                    [
-                        'name' => 'Dr. Lisa Wang',
-                        'specialty' => 'Neurology',
-                        'patients' => 28,
-                        'rating' => 4.8,
-                        'revenue' => '$4,200'
-                    ]
-                ];
+                return [];
             }
 
             return $doctors;
         } catch (\Exception $e) {
-            // Return mock data if there's an error
-            return [
-                [
-                    'name' => 'Dr. Sarah Johnson',
-                    'specialty' => 'Cardiology',
-                    'patients' => 45,
-                    'rating' => 4.8,
-                    'revenue' => '$6,750'
-                ],
-                [
-                    'name' => 'Dr. Michael Chen',
-                    'specialty' => 'Orthopedics',
-                    'patients' => 38,
-                    'rating' => 4.7,
-                    'revenue' => '$5,700'
-                ],
-                [
-                    'name' => 'Dr. Emily Rodriguez',
-                    'specialty' => 'Pediatrics',
-                    'patients' => 42,
-                    'rating' => 4.9,
-                    'revenue' => '$6,300'
-                ]
-            ];
+            // Log the error and return empty array
+            \Log::error('Error getting top performers: ' . $e->getMessage());
+            return [];
         }
     }
 }

@@ -590,14 +590,17 @@ export default function AdminAppointments({ appointments: initialAppointments, p
             </div>
 
             {/* Add Appointment Modal */}
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Schedule New Appointment</DialogTitle>
-                        <DialogDescription>
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsAddModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Schedule New Appointment</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Create a new appointment for a patient.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -742,7 +745,8 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
@@ -760,19 +764,23 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                 </>
                             )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Edit Appointment Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Appointment</DialogTitle>
-                        <DialogDescription>
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsEditModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Appointment</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Update the appointment details for {editingAppointment?.patient_name}.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -910,7 +918,8 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
@@ -928,19 +937,23 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                 </>
                             )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* View Appointment Details Modal */}
-            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Appointment Details</DialogTitle>
-                        <DialogDescription>
+            {isViewModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsViewModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Appointment Details</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Complete information about the appointment
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     {viewingAppointment && (
                         <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-6">
@@ -1040,7 +1053,8 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                             </Tabs>
                         </div>
                     )}
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
                             Close
                         </Button>
@@ -1051,19 +1065,23 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Appointment
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Calendar View Modal */}
-            <Dialog open={isCalendarModalOpen} onOpenChange={setIsCalendarModalOpen}>
-                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Appointment Calendar</DialogTitle>
-                        <DialogDescription>
+            {isCalendarModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsCalendarModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[60vw] min-w-[800px] max-w-[1000px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Appointment Calendar</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             View all appointments in calendar format
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="space-y-6">
                         <div className="grid grid-cols-7 gap-2 text-center">
                             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
@@ -1092,24 +1110,41 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                             ))}
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={() => setIsCalendarModalOpen(false)}>
                             Close
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
-            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete Appointment</DialogTitle>
-                        <DialogDescription>
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsDeleteModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[40vw] min-w-[500px] max-w-[600px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Delete Appointment</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Are you sure you want to delete the appointment for {deletingAppointment?.patient_name}? This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            <div>
+                                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                                    Warning: This action cannot be undone
+                                </p>
+                                <p className="text-sm text-red-600 dark:text-red-400">
+                                    The appointment will be permanently deleted from the system.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                             Cancel
                         </Button>
@@ -1130,9 +1165,10 @@ export default function AdminAppointments({ appointments: initialAppointments, p
                                 </>
                             )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

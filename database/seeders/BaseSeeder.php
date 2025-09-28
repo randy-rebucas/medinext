@@ -597,6 +597,8 @@ class BaseSeeder extends Seeder
                     'prescriptions.view', 'prescriptions.download',
                     'medical_records.view',
                     'dashboard.view',
+                    // Schedule permissions
+                    'schedules.view',
                     // Profile permissions
                     'profile.view',
                     // Billing permissions
@@ -622,6 +624,8 @@ class BaseSeeder extends Seeder
                     'medrep_visits.manage', 'medrep_visits.view', 'interactions.view', 'products.view', 'meetings.create',
                     // Doctor permissions (required for medrep routes)
                     'doctors.view',
+                    // Schedule permissions
+                    'schedules.view',
                     // Reports permissions
                     'reports.view',
                     // Profile permissions

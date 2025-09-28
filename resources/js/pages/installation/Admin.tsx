@@ -25,6 +25,28 @@ export default function Admin() {
 
   const isFormValid = data.name && data.email && data.password && data.password_confirmation && 
                      data.clinic_name && data.clinic_phone && data.clinic_email && data.clinic_address;
+  
+  const getPasswordStrength = (password: string) => {
+    if (!password) return { strength: 0, label: '', color: '' };
+    
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    
+    const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
+    
+    return {
+      strength,
+      label: labels[strength - 1] || '',
+      color: colors[strength - 1] || 'bg-gray-300'
+    };
+  };
+  
+  const passwordStrength = getPasswordStrength(data.password);
 
   return (
     <InstallationLayout 
@@ -138,6 +160,26 @@ export default function Admin() {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
               )}
+              {data.password && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-600">Password strength:</span>
+                    <span className={`text-xs font-medium ${
+                      passwordStrength.strength <= 2 ? 'text-red-600' :
+                      passwordStrength.strength === 3 ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
+                      style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
               <p className="mt-1 text-xs text-gray-500">Minimum 8 characters with letters and numbers</p>
             </div>
 
@@ -173,6 +215,25 @@ export default function Admin() {
               </div>
               {errors.password_confirmation && (
                 <p className="mt-1 text-sm text-red-600">{errors.password_confirmation}</p>
+              )}
+              {data.password_confirmation && (
+                <div className="mt-1 flex items-center">
+                  {data.password === data.password_confirmation ? (
+                    <>
+                      <svg className="h-4 w-4 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-xs text-green-600">Passwords match</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4 text-red-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span className="text-xs text-red-600">Passwords do not match</span>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>

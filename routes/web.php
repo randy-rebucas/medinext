@@ -13,7 +13,7 @@ Route::get('/csrf-token', function () {
     return response()->json(['csrf_token' => csrf_token()]);
 })->name('csrf-token');
 
-Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onboarding.check'])->group(function () {
+Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onboarding.check', 'clinic.current'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Admin routes - Clinic admin has full access to all management areas
@@ -112,54 +112,85 @@ Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onb
             Route::get('reports/analytics', [App\Http\Controllers\ReportsController::class, 'analytics'])->name('admin.reports.analytics');
             Route::get('reports/download/{id}', [App\Http\Controllers\ReportsController::class, 'download'])->name('reports.download');
             Route::post('reports/generate', [App\Http\Controllers\ReportsController::class, 'generate'])->name('admin.reports.generate');
-            
-            // Analytics dashboard
+        });
+
+        // Analytics dashboard - separate route with proper controller
+        Route::middleware(['permission:reports.view'])->group(function () {
             Route::get('analytics', [App\Http\Controllers\ReportsController::class, 'analyticsPage'])->name('admin.analytics');
         });
 
         // ===== CLINIC MANAGEMENT =====
         // Admin has full access to clinic management
-        Route::middleware(['permission:settings.view'])->group(function () {
-            Route::get('clinic-management', [App\Http\Controllers\ClinicSettingsController::class, 'index'])->name('admin.clinic-management');
-            Route::get('settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'getSettings'])->name('admin.settings.clinic');
+        Route::middleware(['permission:clinics.view'])->group(function () {
+            Route::get('clinic-management', [App\Http\Controllers\ClinicManagementController::class, 'index'])->name('admin.clinic-management');
+            Route::get('clinics', [App\Http\Controllers\ClinicManagementController::class, 'index'])->name('admin.clinics.index');
+            Route::get('clinics/{clinic}', [App\Http\Controllers\ClinicManagementController::class, 'show'])->name('admin.clinics.show');
+            Route::get('clinics/{clinic}/statistics', [App\Http\Controllers\ClinicManagementController::class, 'statistics'])->name('admin.clinics.statistics');
+            Route::get('clinics/{clinic}/members', [App\Http\Controllers\ClinicManagementController::class, 'members'])->name('admin.clinics.members');
         });
         
-        Route::middleware(['permission:settings.manage'])->group(function () {
-            Route::post('clinic-management', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-management.store');
-            Route::put('clinic-management/{id}', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-management.update');
-            Route::put('settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'updateSettings'])->name('admin.settings.clinic.update');
+        Route::middleware(['permission:clinics.create'])->group(function () {
+            Route::get('clinics/create', [App\Http\Controllers\ClinicManagementController::class, 'create'])->name('admin.clinics.create');
+            Route::post('clinics', [App\Http\Controllers\ClinicManagementController::class, 'store'])->name('admin.clinics.store');
+        });
+        
+        Route::middleware(['permission:clinics.edit'])->group(function () {
+            Route::get('clinics/{clinic}/edit', [App\Http\Controllers\ClinicManagementController::class, 'edit'])->name('admin.clinics.edit');
+            Route::put('clinics/{clinic}', [App\Http\Controllers\ClinicManagementController::class, 'update'])->name('admin.clinics.update');
+            Route::post('clinics/{clinic}/members', [App\Http\Controllers\ClinicManagementController::class, 'addMember'])->name('admin.clinics.members.add');
+            Route::delete('clinics/{clinic}/members/{member}', [App\Http\Controllers\ClinicManagementController::class, 'removeMember'])->name('admin.clinics.members.remove');
+        });
+        
+        Route::middleware(['permission:clinics.delete'])->group(function () {
+            Route::delete('clinics/{clinic}', [App\Http\Controllers\ClinicManagementController::class, 'destroy'])->name('admin.clinics.destroy');
+        });
+
+
+        // ===== CLINIC SETTINGS =====
+        // Admin has full access to clinic settings
+        Route::middleware(['permission:settings.view'])->group(function () {
+            Route::get('settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'getSettings'])->name('admin.settings.clinic');
         });
 
         // ===== ROOM MANAGEMENT =====
         // Admin has full CRUD access to room management
-        Route::middleware(['permission:rooms.view'])->group(function () {
-            Route::get('rooms', function () {
-                return Inertia::render('admin/rooms');
-            })->name('admin.rooms');
-            Route::get('rooms/{id}', function ($id) {
-                return Inertia::render('admin/rooms', ['roomId' => $id]);
-            })->name('admin.rooms.show');
+        Route::middleware(['auth'])->group(function () {
+            Route::get('rooms', [App\Http\Controllers\RoomController::class, 'index'])->name('admin.rooms');
+            Route::get('rooms/{id}', [App\Http\Controllers\RoomController::class, 'show'])->name('admin.rooms.show');
+            Route::get('rooms/statistics/overview', [App\Http\Controllers\RoomController::class, 'statistics'])->name('admin.rooms.statistics');
+            Route::get('rooms/available/list', [App\Http\Controllers\RoomController::class, 'available'])->name('admin.rooms.available');
+            Route::get('rooms/{id}/availability', [App\Http\Controllers\RoomController::class, 'availability'])->name('admin.rooms.availability');
+            Route::post('rooms/{id}/check-availability', [App\Http\Controllers\RoomController::class, 'checkAvailability'])->name('admin.rooms.check-availability');
+            
+            // Test route for debugging
+            Route::get('test-rooms', function(\Illuminate\Http\Request $request) {
+                $user = $request->user();
+                $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
+                
+                if (!$userClinicRole) {
+                    return response()->json(['error' => 'No clinic access'], 403);
+                }
+                
+                $rooms = App\Models\Room::where('clinic_id', $userClinicRole->clinic_id)->get();
+                
+                return response()->json([
+                    'user' => $user->name,
+                    'clinic' => $userClinicRole->clinic->name,
+                    'role' => $userClinicRole->role->name,
+                    'rooms_count' => $rooms->count(),
+                    'rooms' => $rooms->toArray()
+                ]);
+            });
         });
         
-        Route::middleware(['permission:rooms.create'])->group(function () {
-            Route::post('rooms', function () {
-                // Handle room creation
-                return redirect()->route('admin.rooms')->with('success', 'Room created successfully');
-            })->name('admin.rooms.store');
-        });
-        
-        Route::middleware(['permission:rooms.edit'])->group(function () {
-            Route::put('rooms/{id}', function ($id) {
-                // Handle room update
-                return redirect()->route('admin.rooms')->with('success', 'Room updated successfully');
-            })->name('admin.rooms.update');
-        });
-        
-        Route::middleware(['permission:rooms.delete'])->group(function () {
-            Route::delete('rooms/{id}', function ($id) {
-                // Handle room deletion
-                return redirect()->route('admin.rooms')->with('success', 'Room deleted successfully');
-            })->name('admin.rooms.destroy');
+        Route::middleware(['auth'])->group(function () {
+            Route::post('rooms', [App\Http\Controllers\RoomController::class, 'store'])->name('admin.rooms.store');
+            Route::put('rooms/{id}', [App\Http\Controllers\RoomController::class, 'update'])->name('admin.rooms.update');
+            Route::put('rooms/{id}/status', [App\Http\Controllers\RoomController::class, 'updateStatus'])->name('admin.rooms.status');
+            Route::put('rooms/bulk/status', [App\Http\Controllers\RoomController::class, 'bulkUpdateStatus'])->name('admin.rooms.bulk-status');
+            Route::delete('rooms/{id}', [App\Http\Controllers\RoomController::class, 'destroy'])->name('admin.rooms.destroy');
+            Route::delete('rooms/bulk/delete', [App\Http\Controllers\RoomController::class, 'bulkDelete'])->name('admin.rooms.bulk-delete');
+            Route::get('rooms/export/data', [App\Http\Controllers\RoomController::class, 'export'])->name('admin.rooms.export');
         });
 
         // ===== SCHEDULE MANAGEMENT =====
@@ -181,6 +212,36 @@ Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onb
             Route::delete('schedules/{id}', [App\Http\Controllers\ScheduleController::class, 'destroy'])->name('admin.schedules.destroy');
         });
 
+        // Test route for debugging schedules
+        Route::get('test-schedules', function(\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $userClinicRole = $user->userClinicRoles()->with(['clinic', 'role'])->first();
+            
+            if (!$userClinicRole) {
+                return response()->json(['error' => 'No clinic access'], 403);
+            }
+            
+            $doctors = App\Models\User::whereHas('clinics', function ($q) use ($userClinicRole) {
+                $q->where('clinic_id', $userClinicRole->clinic_id);
+            })->whereHas('roles', function ($q) {
+                $q->where('name', 'doctor');
+            })->get();
+            
+            return response()->json([
+                'user' => $user->name,
+                'clinic' => $userClinicRole->clinic->name,
+                'role' => $userClinicRole->role->name,
+                'doctors_count' => $doctors->count(),
+                'doctors' => $doctors->map(function($doctor) {
+                    return [
+                        'id' => $doctor->id,
+                        'name' => $doctor->name,
+                        'email' => $doctor->email
+                    ];
+                })
+            ]);
+        });
+
         // ===== ADDITIONAL ADMIN FEATURES =====
         // System monitoring and management
         Route::middleware(['permission:system.status'])->group(function () {
@@ -196,17 +257,52 @@ Route::middleware(['installation.check', 'auth', 'verified', 'trial.check', 'onb
             })->name('admin.activity-logs');
         });
         
-        // Backup and maintenance
-        Route::middleware(['permission:backups.manage'])->group(function () {
+        // System backup and restore
+        Route::middleware(['permission:system.backup'])->group(function () {
             Route::get('backup', function () {
                 return Inertia::render('admin/backup');
             })->name('admin.backup');
-            Route::post('backup/create', function () {
-                // Handle backup creation
-                return redirect()->route('admin.backup')->with('success', 'Backup created successfully');
-            })->name('admin.backup.create');
+        });
+        
+        // License management
+        Route::middleware(['permission:license.manage'])->group(function () {
+            Route::get('license', function () {
+                return Inertia::render('admin/license');
+            })->name('admin.license');
+        });
+        
+        // Analytics and reporting - moved to proper location above
+        
+        // Settings management
+        Route::middleware(['permission:settings.manage'])->group(function () {
+            Route::get('settings', function () {
+                return Inertia::render('admin/settings');
+            })->name('admin.settings');
+        });
+
+        // ===== CLINIC SETTINGS (continued) =====
+        Route::middleware(['permission:settings.manage'])->group(function () {
+            Route::post('clinic-management', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-management.store');
+            Route::put('clinic-management/{id}', [App\Http\Controllers\ClinicSettingsController::class, 'update'])->name('admin.clinic-management.update');
+            Route::put('settings/clinic', [App\Http\Controllers\ClinicSettingsController::class, 'updateSettings'])->name('admin.settings.clinic.update');
         });
     });
+
+    // ===== CLINIC SWITCHING =====
+    // These routes are outside admin prefix for easier access
+    Route::middleware(['permission:clinics.view'])->group(function () {
+        Route::get('clinic-selection', [App\Http\Controllers\ClinicSwitchController::class, 'index'])->name('clinic.selection');
+        Route::post('clinics/switch', [App\Http\Controllers\ClinicSwitchController::class, 'switch'])->name('clinics.switch');
+        Route::get('clinics/current', [App\Http\Controllers\ClinicSwitchController::class, 'current'])->name('clinics.current');
+        Route::get('clinics/list', [App\Http\Controllers\ClinicSwitchController::class, 'list'])->name('clinics.list');
+    });
+
+    // ===== TEST ROUTES =====
+    // Test page for clinic selector functionality
+    Route::get('test/clinic-selector', function () {
+        return Inertia::render('test-clinic-selector');
+    })->name('test.clinic-selector');
+
 
     // Medrep routes - Require medrep role and medrep management license feature
     Route::prefix('medrep')->middleware(['permission:medrep_visits.manage', 'license.feature:medrep_management'])->group(function () {

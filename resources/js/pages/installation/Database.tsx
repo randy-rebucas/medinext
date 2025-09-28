@@ -19,7 +19,19 @@ export default function Database() {
     post('/install/database');
   };
 
-  const isFormValid = data.db_name.trim() && data.db_username.trim();
+  const isFormValid = data.db_name.trim() && data.db_username.trim() && data.db_host.trim();
+  
+  const getConnectionStatus = () => {
+    if (Object.keys(errors).length > 0) {
+      return { status: 'error', message: 'Connection failed' };
+    }
+    if (isFormValid) {
+      return { status: 'ready', message: 'Ready to test connection' };
+    }
+    return { status: 'incomplete', message: 'Please fill required fields' };
+  };
+  
+  const connectionStatus = getConnectionStatus();
 
   return (
     <InstallationLayout 
@@ -53,17 +65,46 @@ export default function Database() {
         </div>
       </div>
 
-      {/* Form Status */}
-      {!isFormValid && (
-        <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center">
-            <svg className="h-4 w-4 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Connection Status */}
+      <div className={`mb-6 p-4 rounded-lg border ${
+        connectionStatus.status === 'error' 
+          ? 'bg-red-50 border-red-200' 
+          : connectionStatus.status === 'ready' 
+            ? 'bg-green-50 border-green-200' 
+            : 'bg-yellow-50 border-yellow-200'
+      }`}>
+        <div className="flex items-center">
+          {connectionStatus.status === 'error' && (
+            <svg className="h-5 w-5 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          {connectionStatus.status === 'ready' && (
+            <svg className="h-5 w-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          {connectionStatus.status === 'incomplete' && (
+            <svg className="h-5 w-5 text-yellow-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
-            <span className="text-sm text-yellow-700">Please fill in the database name and username to continue</span>
+          )}
+          <div>
+            <p className={`text-sm font-medium ${
+              connectionStatus.status === 'error' 
+                ? 'text-red-800' 
+                : connectionStatus.status === 'ready' 
+                  ? 'text-green-800' 
+                  : 'text-yellow-800'
+            }`}>
+              {connectionStatus.message}
+            </p>
+            {connectionStatus.status === 'incomplete' && (
+              <p className="text-xs text-yellow-700 mt-1">Fill in the required fields to test your database connection</p>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Connection Details */}

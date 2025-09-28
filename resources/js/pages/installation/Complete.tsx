@@ -161,10 +161,56 @@ export default function Complete({ admin_email }: Props) {
                 For security reasons, we recommend removing the installation files after completing the setup.
                 You can do this by running the following command in your terminal:
               </p>
-              <div className="bg-yellow-100 rounded-lg p-3">
+              <div className="bg-yellow-100 rounded-lg p-3 mb-3">
                 <code className="text-xs font-mono text-yellow-800">
                   php artisan install:cleanup
                 </code>
+              </div>
+              <p className="text-xs text-yellow-600">
+                This will remove installation routes and files to prevent unauthorized access.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Help & Documentation */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <svg className="h-6 w-6 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800 mb-3">Need Help?</h3>
+            <div className="text-sm text-blue-700">
+              <p className="mb-3">Get started with these helpful resources:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <a href="#" className="flex items-center p-2 bg-white rounded border border-blue-200 hover:bg-blue-50 transition-colors">
+                  <svg className="h-4 w-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span className="text-xs">User Manual</span>
+                </a>
+                <a href="#" className="flex items-center p-2 bg-white rounded border border-blue-200 hover:bg-blue-50 transition-colors">
+                  <svg className="h-4 w-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-xs">FAQ & Support</span>
+                </a>
+                <a href="#" className="flex items-center p-2 bg-white rounded border border-blue-200 hover:bg-blue-50 transition-colors">
+                  <svg className="h-4 w-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  <span className="text-xs">Video Tutorials</span>
+                </a>
+                <a href="#" className="flex items-center p-2 bg-white rounded border border-blue-200 hover:bg-blue-50 transition-colors">
+                  <svg className="h-4 w-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <span className="text-xs">Contact Support</span>
+                </a>
               </div>
             </div>
           </div>

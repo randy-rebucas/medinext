@@ -220,13 +220,34 @@ class Clinic extends Model
             return 'Address not specified';
         }
 
-        $parts = [];
-        if (isset($this->address['street'])) $parts[] = $this->address['street'];
-        if (isset($this->address['city'])) $parts[] = $this->address['city'];
-        if (isset($this->address['state'])) $parts[] = $this->address['state'];
-        if (isset($this->address['country'])) $parts[] = $this->address['country'];
+        // Handle case where address might be a string
+        if (is_string($this->address)) {
+            return $this->address;
+        }
 
-        return implode(', ', $parts);
+        // Handle case where address is an array
+        if (is_array($this->address)) {
+            $parts = [];
+            if (isset($this->address['street']) && !empty($this->address['street'])) {
+                $parts[] = $this->address['street'];
+            }
+            if (isset($this->address['city']) && !empty($this->address['city'])) {
+                $parts[] = $this->address['city'];
+            }
+            if (isset($this->address['state']) && !empty($this->address['state'])) {
+                $parts[] = $this->address['state'];
+            }
+            if (isset($this->address['postal_code']) && !empty($this->address['postal_code'])) {
+                $parts[] = $this->address['postal_code'];
+            }
+            if (isset($this->address['country']) && !empty($this->address['country'])) {
+                $parts[] = $this->address['country'];
+            }
+
+            return empty($parts) ? 'Address not specified' : implode(', ', $parts);
+        }
+
+        return 'Address not specified';
     }
 
     /**

@@ -52,6 +52,44 @@ import {
     Syringe
 } from 'lucide-react';
 
+// Simple toast implementation
+const toast = {
+    success: (message: string) => {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
+    error: (message: string) => {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
+};
+
 interface Room {
     id: number;
     name: string;
@@ -69,7 +107,9 @@ export default function RoomManagement() {
     const [typeFilter, setTypeFilter] = useState('all');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+    const [viewingRoom, setViewingRoom] = useState<Room | null>(null);
     const [formData, setFormData] = useState({
         name: '',
         type: '',
@@ -84,11 +124,22 @@ export default function RoomManagement() {
 
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [roomStats, setRoomStats] = useState({
+        total_rooms: 0,
+        available_rooms: 0,
+        occupied_rooms: 0,
+        maintenance_rooms: 0,
+        rooms_by_type: {} as Record<string, number>,
+        rooms_needing_maintenance: 0
+    });
 
     // Fetch rooms data from database
     useEffect(() => {
         const fetchRooms = async () => {
             try {
+                setLoading(true);
                 const response = await fetch('/admin/rooms', {
                     method: 'GET',
                     headers: {
@@ -100,13 +151,17 @@ export default function RoomManagement() {
 
                 if (response.ok) {
                     const data = await response.json();
-                    setRooms(data.rooms || []);
+                    console.log('Fetched rooms data:', data);
+                    setRooms(data.rooms || data.data || []);
                 } else {
-                    console.error('Failed to fetch rooms');
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Failed to fetch rooms:', response.status, response.statusText, errorData);
+                    toast.error(errorData.message || 'Failed to load rooms. Please try again.');
                     setRooms([]);
                 }
             } catch (error) {
                 console.error('Error fetching rooms:', error);
+                toast.error('Network error. Please check your connection and try again.');
                 setRooms([]);
             } finally {
                 setLoading(false);
@@ -114,7 +169,59 @@ export default function RoomManagement() {
         };
 
         fetchRooms();
+        fetchRoomStats();
     }, []);
+
+    // Auto-refresh rooms data every 30 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!loading && !saving) {
+                fetchRooms();
+            }
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [loading, saving]);
+
+    const fetchRooms = async () => {
+        try {
+            const response = await fetch('/admin/rooms', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setRooms(data.rooms || data.data || []);
+            }
+        } catch (error) {
+            console.error('Error refreshing rooms:', error);
+        }
+    };
+
+    const fetchRoomStats = async () => {
+        try {
+            const response = await fetch('/admin/rooms/statistics/overview', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setRoomStats(data.data || roomStats);
+            }
+        } catch (error) {
+            console.error('Error fetching room statistics:', error);
+        }
+    };
 
 
     const filteredRooms = rooms.filter(room => {
@@ -128,6 +235,7 @@ export default function RoomManagement() {
 
     const handleAddRoom = () => {
         setIsAddModalOpen(true);
+        setErrors({});
         setFormData({
             name: '',
             type: '',
@@ -143,6 +251,7 @@ export default function RoomManagement() {
 
     const handleEditRoom = (room: Room) => {
         setEditingRoom(room);
+        setErrors({});
         setFormData({
             name: room.name,
             type: room.type,
@@ -157,10 +266,47 @@ export default function RoomManagement() {
         setIsEditModalOpen(true);
     };
 
+    const handleViewRoom = (room: Room) => {
+        setViewingRoom(room);
+        setIsViewModalOpen(true);
+    };
+
     const handleSaveRoom = async () => {
+        setSaving(true);
+        setErrors({});
+
+        // Basic validation
+        const validationErrors: Record<string, string> = {};
+        if (!formData.name.trim()) validationErrors.name = 'Room name is required';
+        if (!formData.type.trim()) validationErrors.type = 'Room type is required';
+        if (!formData.capacity || isNaN(parseInt(formData.capacity))) {
+            validationErrors.capacity = 'Capacity is required and must be a valid number';
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            setSaving(false);
+            return;
+        }
+
         try {
             const url = editingRoom ? `/admin/rooms/${editingRoom.id}` : '/admin/rooms';
-            // const method = editingRoom ? 'PUT' : 'POST';
+            
+            // Prepare data with proper types
+            const roomData = {
+                name: formData.name.trim(),
+                type: formData.type.trim(),
+                capacity: parseInt(formData.capacity),
+                status: formData.status,
+                location: formData.location.trim(),
+                description: formData.description.trim(),
+                equipment: formData.equipment,
+                maintenance_notes: formData.maintenanceNotes.trim(),
+                special_requirements: formData.specialRequirements.trim(),
+                _method: editingRoom ? 'PUT' : 'POST'
+            };
+
+            console.log('Sending room data:', roomData);
             
             const response = await fetch(url, {
                 method: 'POST',
@@ -169,43 +315,74 @@ export default function RoomManagement() {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({
-                    ...formData,
-                    _method: editingRoom ? 'PUT' : 'POST'
-                }),
+                body: JSON.stringify(roomData),
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
             if (response.ok) {
-                // Refresh rooms data
-                const roomsResponse = await fetch('/admin/rooms', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-                
-                if (roomsResponse.ok) {
-                    const data = await roomsResponse.json();
-                    setRooms(data.rooms || []);
+                try {
+                    const result = await response.json();
+                    console.log('Success response:', result);
+                    
+                    // Refresh rooms data
+                    const roomsResponse = await fetch('/admin/rooms', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    
+                    if (roomsResponse.ok) {
+                        const data = await roomsResponse.json();
+                        console.log('Rooms data:', data);
+                        setRooms(data.rooms || data.data || []);
+                    } else {
+                        console.warn('Failed to refresh rooms data, but room was saved');
+                    }
+                    
+                    toast.success(editingRoom ? 'Room updated successfully!' : 'Room created successfully!');
+                    handleCancel();
+                } catch (parseError) {
+                    console.error('Error parsing success response:', parseError);
+                    toast.error('Room saved but failed to refresh data');
+                    handleCancel();
                 }
-                
-                setIsAddModalOpen(false);
-                setIsEditModalOpen(false);
-                setEditingRoom(null);
             } else {
-                console.error('Failed to save room');
+                try {
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                    
+                    if (errorData.errors) {
+                        setErrors(errorData.errors);
+                    } else if (errorData.message) {
+                        toast.error(errorData.message);
+                    } else {
+                        toast.error(`Failed to save room (${response.status})`);
+                    }
+                } catch (parseError) {
+                    console.error('Error parsing error response:', parseError);
+                    toast.error(`Failed to save room (${response.status})`);
+                }
             }
         } catch (error) {
             console.error('Error saving room:', error);
+            toast.error('An error occurred while saving the room');
+        } finally {
+            setSaving(false);
         }
     };
 
     const handleCancel = () => {
         setIsAddModalOpen(false);
         setIsEditModalOpen(false);
+        setIsViewModalOpen(false);
         setEditingRoom(null);
+        setViewingRoom(null);
+        setErrors({});
         setFormData({
             name: '',
             type: '',
@@ -233,6 +410,71 @@ export default function RoomManagement() {
         }
     };
 
+    const handleStatusChange = async (roomId: number, newStatus: string, notes?: string) => {
+        try {
+            setSaving(true);
+            const response = await fetch(`/admin/rooms/${roomId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    status: newStatus,
+                    notes: notes || ''
+                }),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                toast.success('Room status updated successfully!');
+                // Refresh rooms data
+                await fetchRooms();
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                toast.error(errorData.message || 'Failed to update room status');
+            }
+        } catch (error) {
+            console.error('Error updating room status:', error);
+            toast.error('An error occurred while updating room status');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteRoom = async (roomId: number) => {
+        if (!confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            setSaving(true);
+            const response = await fetch(`/admin/rooms/${roomId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (response.ok) {
+                toast.success('Room deleted successfully!');
+                // Refresh rooms data
+                await fetchRooms();
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                toast.error(errorData.message || 'Failed to delete room');
+            }
+        } catch (error) {
+            console.error('Error deleting room:', error);
+            toast.error('An error occurred while deleting the room');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Room Management - Medinext">
@@ -242,6 +484,65 @@ export default function RoomManagement() {
 
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
                 <div className="space-y-6 p-6">
+                    
+                    {/* Room Statistics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Rooms</p>
+                                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{roomStats.total_rooms}</p>
+                                    </div>
+                                    <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                                        <Building2 className="h-5 w-5 text-white" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Available</p>
+                                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{roomStats.available_rooms}</p>
+                                    </div>
+                                    <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                                        <Activity className="h-5 w-5 text-white" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Occupied</p>
+                                        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{roomStats.occupied_rooms}</p>
+                                    </div>
+                                    <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center">
+                                        <Users className="h-5 w-5 text-white" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Maintenance</p>
+                                        <p className="text-2xl font-bold text-red-600 dark:text-red-400">{roomStats.maintenance_rooms}</p>
+                                    </div>
+                                    <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center">
+                                        <Wrench className="h-5 w-5 text-white" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
 
                     <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
                         <CardHeader>
@@ -255,10 +556,19 @@ export default function RoomManagement() {
                                 <div className="flex space-x-3">
                                     <Button
                                         variant="outline"
+                                        onClick={() => {
+                                            fetchRooms();
+                                            fetchRoomStats();
+                                        }}
+                                        disabled={loading || saving}
                                         className="border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
                                     >
-                                        <Activity className="mr-2 h-4 w-4" />
-                                        Room Status
+                                        {loading ? (
+                                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                                        ) : (
+                                            <Activity className="mr-2 h-4 w-4" />
+                                        )}
+                                        Refresh
                                     </Button>
                                     <Button
                                         onClick={handleAddRoom}
@@ -321,10 +631,13 @@ export default function RoomManagement() {
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center py-8">
-                                                    <div className="flex items-center justify-center">
-                                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                                                        <span className="ml-2 text-slate-600 dark:text-slate-300">Loading rooms...</span>
+                                                <TableCell colSpan={7} className="text-center py-12">
+                                                    <div className="flex flex-col items-center justify-center space-y-4">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                                        <div className="text-center">
+                                                            <p className="text-slate-600 dark:text-slate-300 font-medium">Loading rooms...</p>
+                                                            <p className="text-sm text-slate-500 dark:text-slate-400">Please wait while we fetch the latest data</p>
+                                                        </div>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -354,17 +667,38 @@ export default function RoomManagement() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge
-                                                        className={`font-medium ${
-                                                            room.status === 'Available'
-                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                                                : room.status === 'Occupied'
-                                                                ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
-                                                                : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                                                        }`}
-                                                    >
-                                                        {room.status}
-                                                    </Badge>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Badge
+                                                            className={`font-medium ${
+                                                                room.status === 'Available'
+                                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                                                    : room.status === 'Occupied'
+                                                                    ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+                                                                    : room.status === 'Maintenance'
+                                                                    ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                                                    : room.status === 'Cleaning'
+                                                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                                                            }`}
+                                                        >
+                                                            {room.status}
+                                                        </Badge>
+                                                        <Select 
+                                                            value={room.status} 
+                                                            onValueChange={(value) => handleStatusChange(room.id, value)}
+                                                        >
+                                                            <SelectTrigger className="w-32 h-6 text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="Available">Available</SelectItem>
+                                                                <SelectItem value="Occupied">Occupied</SelectItem>
+                                                                <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                                                <SelectItem value="Cleaning">Cleaning</SelectItem>
+                                                                <SelectItem value="Out of Service">Out of Service</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="text-sm text-slate-700 dark:text-slate-300">
@@ -390,6 +724,7 @@ export default function RoomManagement() {
                                                             variant="ghost"
                                                             size="sm"
                                                             title="View Details"
+                                                            onClick={() => handleViewRoom(room)}
                                                             className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400"
                                                         >
                                                             <Eye className="h-4 w-4" />
@@ -406,10 +741,11 @@ export default function RoomManagement() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            title="More Options"
-                                                            className="h-8 w-8 p-0 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+                                                            title="Delete Room"
+                                                            onClick={() => handleDeleteRoom(room.id)}
+                                                            className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400"
                                                         >
-                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <X className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 </TableCell>
@@ -420,19 +756,42 @@ export default function RoomManagement() {
                                 </Table>
                             </div>
 
-                            {filteredRooms.length === 0 && (
-                                <div className="text-center py-12">
-                                    <div className="mx-auto w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
-                                        <Building2 className="h-8 w-8 text-slate-400" />
+                            {filteredRooms.length === 0 && !loading && (
+                                <div className="text-center py-16">
+                                    <div className="mx-auto w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-full flex items-center justify-center mb-6">
+                                        <Building2 className="h-10 w-10 text-blue-600 dark:text-blue-400" />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No rooms found</h3>
-                                    <p className="text-slate-500 dark:text-slate-400 mb-4">
-                                        Try adjusting your search or filter criteria.
+                                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-3">
+                                        {rooms.length === 0 ? 'No rooms yet' : 'No rooms found'}
+                                    </h3>
+                                    <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+                                        {rooms.length === 0 
+                                            ? 'Get started by adding your first room to organize your clinic space efficiently.'
+                                            : 'Try adjusting your search or filter criteria to find the rooms you\'re looking for.'
+                                        }
                                     </p>
-                                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Add Room
-                                    </Button>
+                                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                        <Button 
+                                            onClick={handleAddRoom}
+                                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                                        >
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add Room
+                                        </Button>
+                                        {rooms.length > 0 && (
+                                            <Button 
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setSearchTerm('');
+                                                    setStatusFilter('all');
+                                                    setTypeFilter('all');
+                                                }}
+                                                className="border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                            >
+                                                Clear Filters
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
@@ -441,14 +800,17 @@ export default function RoomManagement() {
             </div>
 
             {/* Add Room Modal */}
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Add New Room</DialogTitle>
-                        <DialogDescription>
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsAddModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add New Room</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Create a new room in your clinic.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -458,12 +820,14 @@ export default function RoomManagement() {
                                     value={formData.name}
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     placeholder="Room 101"
+                                    className={errors.name ? 'border-red-500' : ''}
                                 />
+                                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="type">Room Type *</Label>
                                 <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={errors.type ? 'border-red-500' : ''}>
                                         <SelectValue placeholder="Select room type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -475,13 +839,14 @@ export default function RoomManagement() {
                                         <SelectItem value="Emergency">Emergency</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="capacity">Capacity *</Label>
                                 <Select value={formData.capacity} onValueChange={(value) => setFormData({...formData, capacity: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={errors.capacity ? 'border-red-500' : ''}>
                                         <SelectValue placeholder="Select capacity" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -492,6 +857,7 @@ export default function RoomManagement() {
                                         <SelectItem value="5">5+ people</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                {errors.capacity && <p className="text-sm text-red-500">{errors.capacity}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
@@ -581,28 +947,42 @@ export default function RoomManagement() {
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveRoom}>
-                            <Save className="mr-2 h-4 w-4" />
-                            Add Room
+                        <Button onClick={handleSaveRoom} disabled={saving}>
+                            {saving ? (
+                                <>
+                                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    Adding...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Add Room
+                                </>
+                            )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Edit Room Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Room</DialogTitle>
-                        <DialogDescription>
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsEditModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Room</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Update the room information for {editingRoom?.name}.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -612,12 +992,14 @@ export default function RoomManagement() {
                                     value={formData.name}
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                                     placeholder="Room 101"
+                                    className={errors.name ? 'border-red-500' : ''}
                                 />
+                                {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-type">Room Type *</Label>
                                 <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={errors.type ? 'border-red-500' : ''}>
                                         <SelectValue placeholder="Select room type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -629,13 +1011,14 @@ export default function RoomManagement() {
                                         <SelectItem value="Emergency">Emergency</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-capacity">Capacity *</Label>
                                 <Select value={formData.capacity} onValueChange={(value) => setFormData({...formData, capacity: value})}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className={errors.capacity ? 'border-red-500' : ''}>
                                         <SelectValue placeholder="Select capacity" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -646,6 +1029,7 @@ export default function RoomManagement() {
                                         <SelectItem value="5">5+ people</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                {errors.capacity && <p className="text-sm text-red-500">{errors.capacity}</p>}
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="edit-status">Status</Label>
@@ -735,18 +1119,123 @@ export default function RoomManagement() {
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveRoom}>
-                            <Save className="mr-2 h-4 w-4" />
-                            Update Room
+                        <Button onClick={handleSaveRoom} disabled={saving}>
+                            {saving ? (
+                                <>
+                                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    Updating...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Update Room
+                                </>
+                            )}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Room Details Modal */}
+            {isViewModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsViewModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Room Details</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                            Complete information about {viewingRoom?.name}
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                    {viewingRoom && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="h-16 w-16 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
+                                            <Building2 className="h-8 w-8 text-white" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-semibold text-slate-900 dark:text-white">{viewingRoom.name}</h3>
+                                            <p className="text-slate-600 dark:text-slate-400">Room ID: {viewingRoom.id}</p>
+                                            <Badge
+                                                className={`font-medium ${
+                                                    viewingRoom.status === 'Available'
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                                        : viewingRoom.status === 'Occupied'
+                                                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+                                                        : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                                }`}
+                                            >
+                                                {viewingRoom.status}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Building2 className="h-4 w-4 text-slate-400" />
+                                        <span className="text-slate-700 dark:text-slate-300">{viewingRoom.type}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Users className="h-4 w-4 text-slate-400" />
+                                        <span className="text-slate-700 dark:text-slate-300">Capacity: {viewingRoom.capacity} people</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Calendar className="h-4 w-4 text-slate-400" />
+                                        <span className="text-slate-700 dark:text-slate-300">{viewingRoom.nextAppointment || 'No upcoming appointments'}</span>
+                                    </div>
+                                    {viewingRoom.doctor && (
+                                        <div className="flex items-center space-x-2">
+                                            <Stethoscope className="h-4 w-4 text-slate-400" />
+                                            <span className="text-slate-700 dark:text-slate-300">{viewingRoom.doctor}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Equipment</Label>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {viewingRoom.equipment.length > 0 ? (
+                                            viewingRoom.equipment.map((equipment, index) => (
+                                                <Badge key={index} variant="secondary" className="text-xs">
+                                                    {equipment}
+                                                </Badge>
+                                            ))
+                                        ) : (
+                                            <span className="text-slate-500 dark:text-slate-400 text-sm">No equipment listed</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                        <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+                            Close
+                        </Button>
+                        <Button onClick={() => {
+                            setIsViewModalOpen(false);
+                            handleEditRoom(viewingRoom!);
+                        }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Room
+                        </Button>
+                    </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

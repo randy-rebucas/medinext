@@ -282,11 +282,46 @@ export interface FileAsset {
 export interface Room {
     id: number;
     name: string;
-    room_number: string;
-    room_type: string;
+    type: string;
     capacity: number;
-    clinic_id: number;
+    status: string;
+    location?: string;
+    description?: string;
+    equipment: string[];
+    maintenance_notes?: string;
+    special_requirements?: string;
+    is_active: boolean;
+    floor_number?: number;
+    wing?: string;
+    accessibility_features: string[];
+    cleaning_schedule?: string;
+    last_maintenance_date?: string;
+    next_maintenance_date?: string;
+    full_location: string;
+    equipment_list: string;
     is_available: boolean;
+    status_color: string;
+    type_icon: string;
+    nextAppointment?: {
+        id: number;
+        start_at: string;
+        end_at: string;
+        patient_name?: string;
+        doctor_name?: string;
+        type: string;
+        status: string;
+    };
+    currentAppointment?: {
+        id: number;
+        start_at: string;
+        end_at: string;
+        patient_name?: string;
+        doctor_name?: string;
+        type: string;
+        status: string;
+    };
+    doctor?: string;
+    clinic_id: number;
     created_at: string;
     updated_at: string;
 }
@@ -664,6 +699,7 @@ export interface StaffFormData {
     role: string;
     department: string;
     status: 'Active' | 'On Leave' | 'Inactive';
+    join_date: string;
     address: string;
     emergency_contact: string;
     emergency_phone: string;

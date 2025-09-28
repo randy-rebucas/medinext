@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type StaffManagementData, type StaffMember, type StaffFormData } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -39,6 +38,50 @@ import {
     CheckCircle
 } from 'lucide-react';
 
+// Simple toast implementation using browser notifications
+const toast = {
+    success: (message: string) => {
+        // Create a temporary success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
+    error: (message: string) => {
+        // Create a temporary error notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    },
+};
+
 interface StaffManagementProps {
     staff: StaffManagementData['staff'];
     roles: StaffManagementData['roles'];
@@ -47,12 +90,28 @@ interface StaffManagementProps {
 }
 
 export default function StaffManagement({ staff, roles, departments }: StaffManagementProps) {
+    const { props } = usePage();
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Staff Management',
             href: '/admin/dashboard',
         },
     ];
+    
+    // Inertia form for creating/updating staff
+    const { data, setData, post, put, processing, errors: formErrors, reset } = useForm({
+        name: '',
+        email: '',
+        phone: '',
+        role: '',
+        department: '',
+        status: 'Active',
+        join_date: '',
+        address: '',
+        emergency_contact: '',
+        emergency_phone: '',
+        notes: ''
+    });
     
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -65,9 +124,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
     const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
     const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null);
     const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
-    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [importErrors, setImportErrors] = useState<string[]>([]);
     const [importResult, setImportResult] = useState<{
         total_rows: number;
@@ -76,7 +133,9 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         errors: string[];
     } | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info', message: string} | null>(null);
+    
+    // Additional state variables
+    const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
     const [formData, setFormData] = useState<StaffFormData>({
         name: '',
         email: '',
@@ -84,13 +143,25 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         role: '',
         department: '',
         status: 'Active',
+        join_date: '',
         address: '',
         emergency_contact: '',
         emergency_phone: '',
         notes: ''
     });
+    const [isLoading, setIsLoading] = useState(false);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-    try {
+    // Handle flash messages
+    useEffect(() => {
+        const flash = props.flash as any;
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [props.flash]);
 
     // Ensure staff is an array
     const staffArray = Array.isArray(staff) ? staff : [];
@@ -128,20 +199,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
 
     const handleAddStaff = () => {
         setIsAddModalOpen(true);
-        setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            role: '',
-            department: '',
-            status: 'Active',
-            address: '',
-            emergency_contact: '',
-            emergency_phone: '',
-            notes: ''
-        });
-        // Reset any previous errors
-        setFormErrors({});
+        reset();
     };
 
     const handleImportStaff = () => {
@@ -262,19 +320,19 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
 
     const handleEditStaff = (staffMember: StaffMember) => {
         setEditingStaff(staffMember);
-        setFormData({
+        setData({
             name: staffMember.name,
             email: staffMember.email,
             phone: staffMember.phone,
             role: staffMember.role,
             department: staffMember.department,
             status: staffMember.status,
+            join_date: staffMember.join_date || '',
             address: staffMember.address || '',
             emergency_contact: staffMember.emergency_contact || '',
             emergency_phone: staffMember.emergency_phone || '',
             notes: staffMember.notes || ''
         });
-        setFormErrors({});
         setIsEditModalOpen(true);
     };
 
@@ -284,57 +342,9 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
     };
 
     const handleSaveStaff = async () => {
-        // Clear previous errors and notifications
-        setFormErrors({});
-        setNotification(null);
-
-        // Enhanced client-side validation
+        // Validate form data
+        const formData = data;
         const errors: Record<string, string> = {};
-
-        // Name validation
-        if (!formData.name.trim()) {
-            errors.name = 'Name is required';
-        } else if (formData.name.trim().length < 2) {
-            errors.name = 'Name must be at least 2 characters long';
-        } else if (formData.name.trim().length > 255) {
-            errors.name = 'Name must not exceed 255 characters';
-        } else if (!/^[a-zA-Z\s\-\.\']+$/.test(formData.name.trim())) {
-            errors.name = 'Name can only contain letters, spaces, hyphens, dots, and apostrophes';
-        }
-
-        // Email validation
-        if (!formData.email.trim()) {
-            errors.email = 'Email is required';
-        } else if (formData.email.trim().length > 255) {
-            errors.email = 'Email must not exceed 255 characters';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-            errors.email = 'Please enter a valid email address';
-        }
-
-        // Phone validation
-        if (!formData.phone.trim()) {
-            errors.phone = 'Phone number is required';
-        } else if (formData.phone.trim().length > 20) {
-            errors.phone = 'Phone number must not exceed 20 characters';
-        } else if (!/^[\+]?[0-9\s\-\(\)]{10,20}$/.test(formData.phone.trim())) {
-            errors.phone = 'Please enter a valid phone number (10-20 digits)';
-        }
-
-        // Role validation
-        if (!formData.role) {
-            errors.role = 'Role is required';
-        } else if (!roles.some(role => role.name === formData.role)) {
-            errors.role = 'Selected role is not valid';
-        }
-
-        // Department validation
-        if (!formData.department) {
-            errors.department = 'Department is required';
-        } else if (formData.department.length > 100) {
-            errors.department = 'Department must not exceed 100 characters';
-        } else if (!departments.includes(formData.department)) {
-            errors.department = 'Selected department is not valid';
-        }
 
         // Status validation
         if (!formData.status || !['Active', 'On Leave', 'Inactive'].includes(formData.status)) {
@@ -370,7 +380,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         }
 
         if (Object.keys(errors).length > 0) {
-            setFormErrors(errors);
+            setValidationErrors(errors);
             showNotification('error', 'Please fix the validation errors before submitting.');
             return;
         }
@@ -498,12 +508,13 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             role: '',
                             department: '',
                             status: 'Active',
+                            join_date: '',
                             address: '',
                             emergency_contact: '',
                             emergency_phone: '',
                             notes: ''
                         });
-                        setFormErrors({});
+                        setValidationErrors({});
                         setIsAddModalOpen(false);
                         setIsEditModalOpen(false);
                         setEditingStaff(null);
@@ -532,7 +543,7 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                     console.log('Error response data:', data);
                     
                     if (data.errors) {
-                        setFormErrors(data.errors);
+                        setValidationErrors(data.errors);
                         showNotification('error', data.message || 'Please fix the validation errors.');
                     } else if (data.message) {
                         showNotification('error', data.message);
@@ -571,60 +582,11 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
     const confirmDeleteStaff = () => {
         if (!deletingStaff) return;
 
-        setIsLoading(true);
-        
-        fetch(`/admin/staff/${deletingStaff.id}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        })
-        .then(response => {
-            if (response.ok) {
-                // Success - show message and refresh
-                setNotification({
-                    type: 'success',
-                    message: `${deletingStaff.name} has been deactivated successfully.`
-                });
-                setIsLoading(false);
+        router.delete(`/admin/staff/${deletingStaff.id}`, {
+            onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setDeletingStaff(null);
-                
-                // Refresh the page to show updated data
-                window.location.reload();
-            } else {
-                // Handle errors
-                return response.json().catch(() => {
-                    throw new Error('Failed to deactivate staff member');
-                });
             }
-        })
-        .then(data => {
-            if (data && data.message) {
-                setNotification({
-                    type: data.success ? 'success' : 'error',
-                    message: data.message
-                });
-            } else {
-                setNotification({
-                    type: 'error',
-                    message: `Failed to deactivate ${deletingStaff?.name}. Please try again.`
-                });
-            }
-            setIsLoading(false);
-            setIsDeleteModalOpen(false);
-            setDeletingStaff(null);
-        })
-        .catch(error => {
-            console.error('Error deleting staff:', error);
-            setNotification({
-                type: 'error',
-                message: `Failed to deactivate ${deletingStaff?.name}. Please try again.`
-            });
-            setIsLoading(false);
-            setIsDeleteModalOpen(false);
-            setDeletingStaff(null);
         });
     };
 
@@ -639,20 +601,8 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
         setDeletingStaff(null);
         setSelectedFile(null);
         setImportErrors([]);
+        reset();
         setImportResult(null);
-        setFormErrors({});
-        setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            role: '',
-            department: '',
-            status: 'Active',
-            address: '',
-            emergency_contact: '',
-            emergency_phone: '',
-            notes: ''
-        });
     };
 
     // Show loading state if no data
@@ -903,25 +853,28 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
             </div>
 
             {/* Add Staff Modal */}
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Add New Staff Member</DialogTitle>
-                        <DialogDescription>
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsAddModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add New Staff Member</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Enter the details for the new staff member.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Full Name *</Label>
                                 <Input
                                     id="name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
                                     placeholder="Enter full name"
                                     className={formErrors.name ? "border-red-500" : ""}
-                                    disabled={isLoading}
+                                    disabled={processing}
                                 />
                                 {formErrors.name && (
                                     <p className="text-sm text-red-500">{formErrors.name}</p>
@@ -932,11 +885,11 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                                 <Input
                                     id="email"
                                     type="email"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    value={data.email}
+                                    onChange={(e) => setData('email', e.target.value)}
                                     placeholder="Enter email address"
                                     className={formErrors.email ? "border-red-500" : ""}
-                                    disabled={isLoading}
+                                    disabled={processing}
                                 />
                                 {formErrors.email && (
                                     <p className="text-sm text-red-500">{formErrors.email}</p>
@@ -1071,28 +1024,33 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             )}
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                        <Button variant="outline" onClick={handleCancel} disabled={processing}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveStaff} disabled={isLoading}>
+                        <Button onClick={handleSaveStaff} disabled={processing}>
                             <Save className="mr-2 h-4 w-4" />
-                            {isLoading ? 'Adding...' : 'Add Staff Member'}
+                            {processing ? 'Adding...' : 'Add Staff Member'}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Edit Staff Modal */}
-            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Staff Member</DialogTitle>
-                        <DialogDescription>
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsEditModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Staff Member</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Update the details for {editingStaff?.name}.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -1250,28 +1208,33 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             )}
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                        <Button variant="outline" onClick={handleCancel} disabled={processing}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveStaff} disabled={isLoading}>
+                        <Button onClick={handleSaveStaff} disabled={processing}>
                             <Save className="mr-2 h-4 w-4" />
-                            {isLoading ? 'Updating...' : 'Update Staff Member'}
+                            {processing ? 'Updating...' : 'Update Staff Member'}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* View Staff Modal */}
-            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Staff Member Details</DialogTitle>
-                        <DialogDescription>
+            {isViewModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsViewModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Staff Member Details</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             View details for {viewingStaff?.name}.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     {viewingStaff && (
                         <div className="grid gap-6 py-4">
                             {/* Basic Information */}
@@ -1369,7 +1332,8 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             </div>
                         </div>
                     )}
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel}>
                             <X className="mr-2 h-4 w-4" />
                             Close
@@ -1381,43 +1345,63 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Staff Member
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Confirm Deactivation</DialogTitle>
-                        <DialogDescription>
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsDeleteModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[40vw] min-w-[500px] max-w-[600px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Confirm Deactivation</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Are you sure you want to deactivate {deletingStaff?.name}? This action can be reversed by editing the staff member.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            <div>
+                                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                                    Warning: This action cannot be undone
+                                </p>
+                                <p className="text-sm text-red-600 dark:text-red-400">
+                                    The staff member will be deactivated and lose access to the system.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                        <Button variant="outline" onClick={handleCancel} disabled={processing}>
                             Cancel
                         </Button>
                         <Button 
                             variant="destructive" 
                             onClick={confirmDeleteStaff} 
-                            disabled={isLoading}
+                            disabled={processing}
                         >
-                            {isLoading ? 'Deactivating...' : 'Deactivate Staff'}
+                            {processing ? 'Deactivating...' : 'Deactivate Staff'}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                    </div>
+                </div>
+            )}
 
             {/* Import Staff Modal */}
-            <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Import Staff Members</DialogTitle>
-                        <DialogDescription>
+            {isImportModalOpen && (
+                <div className="fixed inset-0 z-[9999]">
+                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsImportModalOpen(false)} />
+                    <div className="fixed right-0 top-0 h-full w-[50vw] min-w-[600px] max-w-[800px] bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 rounded-l-lg shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Import Staff Members</h2>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                             Upload a CSV or Excel file to import multiple staff members at once.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     
                     <div className="space-y-6 py-4">
                         {/* Template Download Section */}
@@ -1561,7 +1545,8 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                         </div>
                     </div>
 
-                    <DialogFooter>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
                         <Button variant="outline" onClick={handleCancel} disabled={isImporting}>
                             <X className="mr-2 h-4 w-4" />
                             Cancel
@@ -1574,29 +1559,10 @@ export default function StaffManagement({ staff, roles, departments }: StaffMana
                             <Upload className="mr-2 h-4 w-4" />
                             {isImporting ? 'Importing...' : 'Import Staff'}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </AppLayout>
-    );
-    } catch (error) {
-        console.error('Error in StaffManagement component:', error);
-        return (
-            <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Staff Management - Error" />
-                <div className="flex items-center justify-center min-h-screen">
-                    <div className="text-center">
-                        <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Staff Management</h1>
-                        <p className="text-gray-600 mb-4">There was an error loading the staff management page.</p>
-                        <button 
-                            onClick={() => window.location.reload()} 
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                            Reload Page
-                        </button>
+                    </div>
                     </div>
                 </div>
-            </AppLayout>
-        );
-    }
+            )}
+        </AppLayout>
+    );
 }
